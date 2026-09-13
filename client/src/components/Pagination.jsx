@@ -1,6 +1,6 @@
 import React from 'react';
 import { useSpring, animated } from '@react-spring/web';
-import { ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from 'lucide-react';
+import { ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from '../icons';
 
 export default function Pagination({
   currentPage,

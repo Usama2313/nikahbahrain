@@ -9,7 +9,7 @@ import {
   Home,
   User,
   PhoneCall
-} from 'lucide-react';
+} from '../icons';
 import logoImg from '../assets/logo.jpg';
 
 export const NAV_TABS = [

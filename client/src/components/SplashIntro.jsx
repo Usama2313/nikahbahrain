@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useSpring, animated, config } from '@react-spring/web';
-import { Sparkles, ArrowDown, Heart, ShieldCheck } from 'lucide-react';
+import { Sparkles, ArrowDown, Heart, ShieldCheck } from '../icons';
 import logoImg from '../assets/logo.jpg';
 
 export default function SplashIntro({ onEnter, isVisible = true }) {

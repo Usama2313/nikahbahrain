@@ -10,7 +10,7 @@ import {
   MapPin,
   Clock,
   Sparkles
-} from 'lucide-react';
+} from '../icons';
 import logoImg from '../assets/logo.jpg';
 
 export default function ContactFooter({ onOpenCreateProfile }) {

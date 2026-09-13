@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useSpring, useTrail, animated } from '@react-spring/web';
-import { Search, Globe, Filter, Sparkles, SlidersHorizontal, X, ChevronDown, Calendar, User, BookOpen, Ruler } from 'lucide-react';
+import { Search, Globe, Filter, Sparkles, SlidersHorizontal, X, ChevronDown, Calendar, User, BookOpen, Ruler } from '../icons';
 
 const NATIONALITIES = [
   { id: 'all', label: 'All Nationalities', flag: '🌍' },

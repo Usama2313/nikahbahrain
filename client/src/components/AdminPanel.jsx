@@ -16,7 +16,7 @@ import {
   RefreshCw,
   ExternalLink,
   Edit
-} from 'lucide-react';
+} from '../icons';
 import confetti from 'canvas-confetti';
 import API_BASE from '../api';
 

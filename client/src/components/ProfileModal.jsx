@@ -20,7 +20,7 @@ import {
   Ruler,
   BookOpen,
   Star
-} from 'lucide-react';
+} from '../icons';
 
 export default function ProfileModal({ profile, isFavorite, onToggleFavorite, onClose }) {
   useEffect(() => {

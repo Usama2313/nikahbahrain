@@ -15,7 +15,7 @@ import {
   User,
   Ruler,
   BookOpen
-} from 'lucide-react';
+} from '../icons';
 import confetti from 'canvas-confetti';
 
 export default function ProfileCard({ 

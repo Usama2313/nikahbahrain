@@ -10,7 +10,7 @@ import AdminPanel from './components/AdminPanel';
 import ContactFooter from './components/ContactFooter';
 import Pagination from './components/Pagination';
 import SplashIntro from './components/SplashIntro';
-import { Sparkles, AlertCircle, RefreshCw, PlusCircle, RotateCcw } from 'lucide-react';
+import { Sparkles, AlertCircle, RefreshCw, PlusCircle, RotateCcw } from './icons';
 
 import API_BASE from './api';
 
