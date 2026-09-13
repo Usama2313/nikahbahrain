@@ -181,6 +181,10 @@ export function parseProfileFromAltText(post) {
 }
 
 export async function syncLiveInstagramPosts(targetCount = 50) {
+  if (!fs.existsSync(CHROME_PATH)) {
+    throw new Error('Local Chrome browser binary not found in this cloud environment. Run live sync on your local machine using "npm run sync-ig" and push the updated profiles.');
+  }
+
   console.log(`[Instagram Sync] Connecting to @nikah_bahrain via Chrome...`);
 
   const browser = await puppeteer.launch({
