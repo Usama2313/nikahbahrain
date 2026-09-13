@@ -6,7 +6,6 @@ import morgan from 'morgan';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { syncLiveInstagramPosts } from './scripts/sync_live_instagram.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -21,8 +20,12 @@ app.use(express.urlencoded({ extended: true }));
 
 // Static directory for logos and uploads
 const publicDir = path.join(__dirname, 'public');
-if (!fs.existsSync(publicDir)) {
-  fs.mkdirSync(publicDir, { recursive: true });
+if (!process.env.VERCEL && !fs.existsSync(publicDir)) {
+  try {
+    fs.mkdirSync(publicDir, { recursive: true });
+  } catch (e) {
+    console.error('Could not create public dir:', e);
+  }
 }
 app.use('/public', express.static(publicDir));
 
@@ -372,6 +375,7 @@ app.get('/api/stats', (req, res) => {
 // 6b. POST /api/sync-instagram (Instagram Sync Agent)
 app.post('/api/sync-instagram', async (req, res) => {
   try {
+    const { syncLiveInstagramPosts } = await import('./scripts/sync_live_instagram.js');
     const limit = Number(req.query.limit) || 25;
     const result = await syncLiveInstagramPosts(limit);
     res.json({
