@@ -8,6 +8,8 @@
     "server": "node server/index.js",
     "client": "npm --prefix client run dev",
     "sync-ig": "node server/scripts/sync_live_instagram.js",
+    "deep-scrape": "node server/scripts/deep_scrape_all.js",
+    "deep-scrape-auth": "node server/scripts/deep_scrape_auth.js",
     "dev": "node -e \"const { spawn } = require('child_process'); spawn('node', ['server/index.js'], { stdio: 'inherit', shell: true }); spawn('npm', ['--prefix', 'client', 'run', 'dev'], { stdio: 'inherit', shell: true });\""
   },
   "dependencies": {
