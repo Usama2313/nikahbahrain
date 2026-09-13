@@ -325,6 +325,7 @@ export default function App() {
             {/* Profiles Feed Section */}
             <div
               ref={profilesTopRef}
+              className="responsive-container"
               style={{
                 maxWidth: '1440px',
                 margin: '24px auto',
@@ -414,13 +415,7 @@ export default function App() {
               ) : (
                 <>
                   {/* Grid of Profile Cards (without images, text-based modern glass design) */}
-                  <div
-                    style={{
-                      display: 'grid',
-                      gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))',
-                      gap: '24px'
-                    }}
-                  >
+                  <div className="profiles-grid">
                     {cardTrail.map((style, index) => {
                       const profile = paginatedProfiles[index];
                       if (!profile) return null;

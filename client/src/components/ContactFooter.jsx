@@ -79,6 +79,7 @@ export default function ContactFooter({ onOpenCreateProfile }) {
 
           {/* 3 Main Contact Cards: MALE, FEMALE, INSTAGRAM */}
           <div
+            className="contact-cards-grid"
             style={{
               display: 'grid',
               gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
@@ -243,7 +244,8 @@ export default function ContactFooter({ onOpenCreateProfile }) {
         </div>
 
         {/* Brand Footer Info & Islamic Copyright */}
-        <div 
+        <div
+          className="contact-footer-bottom"
           style={{
             display: 'flex',
             alignItems: 'center',
@@ -270,7 +272,7 @@ export default function ContactFooter({ onOpenCreateProfile }) {
             </div>
           </div>
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: '16px', fontSize: '0.82rem', color: 'var(--text-muted)' }}>
+          <div className="contact-footer-links" style={{ display: 'flex', alignItems: 'center', gap: '16px', fontSize: '0.82rem', color: 'var(--text-muted)', flexWrap: 'wrap' }}>
             <button
               onClick={onOpenCreateProfile}
               style={{ background: 'transparent', border: 'none', color: 'var(--gold-light)', cursor: 'pointer', fontWeight: 600 }}

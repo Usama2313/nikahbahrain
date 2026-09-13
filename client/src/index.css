@@ -425,3 +425,155 @@ button:active, .btn-gold:active, .btn-whatsapp:active, .btn-ghost:active, a[role
 .pulse-glow {
   animation: pulseGlow 3s infinite ease-in-out;
 }
+
+/* ============================================================
+   RESPONSIVE DESIGN — Full Mobile / Tablet Support
+   ============================================================ */
+
+/* Responsive profiles grid */
+.profiles-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 24px;
+}
+
+@media (max-width: 640px) {
+  .profiles-grid {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+}
+
+@media (min-width: 641px) and (max-width: 1024px) {
+  .profiles-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 18px;
+  }
+}
+
+/* Responsive contact footer cards */
+@media (max-width: 640px) {
+  .contact-cards-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  .contact-footer-bottom {
+    flex-direction: column !important;
+    align-items: flex-start !important;
+    gap: 12px !important;
+  }
+
+  .contact-footer-links {
+    flex-wrap: wrap !important;
+    gap: 8px !important;
+  }
+}
+
+/* Responsive glass panel padding */
+@media (max-width: 480px) {
+  .glass-panel {
+    padding: 20px 16px;
+  }
+}
+
+/* Responsive category bar pills */
+@media (max-width: 480px) {
+  .category-pill {
+    padding: 6px 14px !important;
+    font-size: 0.8rem !important;
+  }
+}
+
+/* Make all padding containers responsive */
+@media (max-width: 640px) {
+  .responsive-container {
+    padding: 0 12px !important;
+    margin: 16px auto !important;
+  }
+
+  /* Stats bar responsive */
+  .stats-bar-inner {
+    flex-direction: column !important;
+    gap: 12px !important;
+    align-items: flex-start !important;
+  }
+
+  .stats-bar-search {
+    width: 100% !important;
+  }
+}
+
+/* Google form iframe responsive */
+.google-form-wrapper {
+  width: 100%;
+  overflow: hidden;
+  border-radius: var(--radius-lg);
+}
+
+.google-form-wrapper iframe {
+  width: 100%;
+  min-height: 520px;
+  border: none;
+  border-radius: var(--radius-lg);
+}
+
+@media (max-width: 640px) {
+  .google-form-wrapper iframe {
+    min-height: 680px;
+  }
+}
+
+/* Pagination responsive */
+@media (max-width: 480px) {
+  .pagination-wrapper {
+    flex-wrap: wrap !important;
+    justify-content: center !important;
+    gap: 8px !important;
+  }
+
+  .pagination-btn {
+    padding: 6px 10px !important;
+    font-size: 0.8rem !important;
+    min-width: 36px !important;
+  }
+}
+
+/* Modal responsive */
+@media (max-width: 640px) {
+  .modal-content {
+    margin: 0 !important;
+    max-width: 100% !important;
+    width: 100% !important;
+    border-radius: var(--radius-md) var(--radius-md) 0 0 !important;
+    max-height: 92vh !important;
+  }
+
+  .modal-overlay {
+    align-items: flex-end !important;
+  }
+}
+
+/* Profile card responsive */
+@media (max-width: 420px) {
+  .profile-card-actions {
+    flex-direction: column !important;
+    gap: 8px !important;
+  }
+
+  .profile-card-actions .btn-whatsapp,
+  .profile-card-actions .btn-gold {
+    width: 100% !important;
+  }
+}
+
+/* Admin panel responsive */
+@media (max-width: 768px) {
+  .admin-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  .admin-table-wrapper {
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch !important;
+  }
+}
