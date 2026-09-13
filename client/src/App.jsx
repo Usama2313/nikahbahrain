@@ -16,7 +16,7 @@ import API_BASE from './api';
 
 export default function App() {
   // 1. Splash Intro Screen State
-  const [showSplash, setShowSplash] = useState(false);
+  const [showSplash, setShowSplash] = useState(true);
 
   // 2. Navigation State ('groom' default to match screenshot)
   const [activeTab, setActiveTab] = useState('groom');

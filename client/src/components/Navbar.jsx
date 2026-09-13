@@ -218,27 +218,6 @@ export default function Navbar({
             <span>Create Profile</span>
           </button>
 
-          <button
-            id="admin-portal-btn"
-            onClick={onOpenAdmin}
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '5px',
-              padding: '7px 13px',
-              borderRadius: '9999px',
-              background: isAdminActive ? '#d4af37' : 'rgba(255, 255, 255, 0.1)',
-              border: `1px solid ${isAdminActive ? '#fae182' : 'rgba(255, 255, 255, 0.2)'}`,
-              color: isAdminActive ? '#0d251c' : '#ffffff',
-              fontSize: '0.8rem',
-              fontWeight: 600,
-              cursor: 'pointer',
-              transition: 'all 0.2s ease'
-            }}
-          >
-            <Lock size={13} />
-            <span>Admin</span>
-          </button>
         </div>
       </div>
     </header>

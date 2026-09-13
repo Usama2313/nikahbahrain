@@ -161,6 +161,21 @@ Please provide more details. JazakAllah Khair!`;
         label: 'BRIDE'
       };
 
+  // Elegant Dark Backgrounds
+  const backgrounds = [
+    'linear-gradient(145deg, rgba(9, 25, 48, 0.95) 0%, rgba(6, 17, 34, 0.98) 100%)', // Default Navy
+    'linear-gradient(145deg, rgba(16, 30, 24, 0.95) 0%, rgba(8, 20, 16, 0.98) 100%)', // Dark Emerald
+    'linear-gradient(145deg, rgba(30, 15, 20, 0.95) 0%, rgba(20, 8, 12, 0.98) 100%)', // Deep Burgundy
+    'linear-gradient(145deg, rgba(20, 20, 30, 0.95) 0%, rgba(12, 12, 20, 0.98) 100%)', // Charcoal Indigo
+    'linear-gradient(145deg, rgba(25, 18, 10, 0.95) 0%, rgba(15, 10, 5, 0.98) 100%)', // Dark Bronze
+    'linear-gradient(145deg, rgba(10, 25, 30, 0.95) 0%, rgba(5, 15, 20, 0.98) 100%)' // Dark Teal
+  ];
+  
+  const bgIndex = profile.id 
+    ? profile.id.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0) % backgrounds.length 
+    : 0;
+  const cardBackground = backgrounds[bgIndex];
+
   return (
     <animated.div
       ref={cardRef}
@@ -176,7 +191,7 @@ Please provide more details. JazakAllah Khair!`;
         display: 'flex',
         flexDirection: 'column',
         borderRadius: 'var(--radius-lg)',
-        background: 'linear-gradient(145deg, rgba(9, 25, 48, 0.95) 0%, rgba(6, 17, 34, 0.98) 100%)',
+        background: cardBackground,
         border: '1px solid',
         overflow: 'hidden',
         position: 'relative',
