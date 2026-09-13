@@ -11,6 +11,8 @@
   "dependencies": {
     "cors": "^2.8.5",
     "express": "^4.19.2",
-    "morgan": "^1.10.0"
+    "morgan": "^1.10.0",
+    "puppeteer-core": "^25.10.0",
+    "tesseract.js": "^7.0.0"
   }
 }

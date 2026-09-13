@@ -4,6 +4,7 @@ import morgan from 'morgan';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { syncLiveInstagramPosts } from './scripts/sync_live_instagram.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -235,15 +236,23 @@ app.get('/api/stats', (req, res) => {
 });
 
 // 6b. POST /api/sync-instagram (Instagram Sync Agent)
-app.post('/api/sync-instagram', (req, res) => {
-  const profiles = getProfiles();
-  const currentCount = profiles.length;
-
-  res.json({
-    success: true,
-    message: `Instagram Sync Agent verified ${currentCount} posts from @nikah_bahrain. All categories and labels synchronized!`,
-    totalPosts: currentCount
-  });
+app.post('/api/sync-instagram', async (req, res) => {
+  try {
+    const limit = Number(req.query.limit) || 25;
+    const result = await syncLiveInstagramPosts(limit);
+    res.json({
+      success: true,
+      message: `Successfully synchronized live feed from @nikah_bahrain! Loaded ${result.freshlyFetched} fresh Instagram flyers. Total database: ${result.totalProfiles} profiles.`,
+      freshlyFetched: result.freshlyFetched,
+      totalPosts: result.totalProfiles
+    });
+  } catch (err) {
+    console.error('Instagram sync error:', err);
+    res.status(500).json({
+      success: false,
+      message: `Instagram sync failed: ${err.message}`
+    });
+  }
 });
 
 // 7. GET & POST Favorites for unique visitor ID

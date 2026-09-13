@@ -91,13 +91,27 @@ export default function AdminPanel({ onBackToPortal }) {
     }
   };
 
-  const handleSyncToInstagram = () => {
+  const handleSyncToInstagram = async () => {
     setSyncingInstagram(true);
-    setTimeout(() => {
+    try {
+      showNotification('Connecting to @nikah_bahrain Instagram feed & extracting post cards...');
+      const res = await fetch(`${API_BASE}/sync-instagram`, {
+        method: 'POST'
+      });
+      const data = await res.json();
+      if (data.success) {
+        showNotification(data.message || 'Successfully synced with @nikah_bahrain feed!');
+        confetti({ particleCount: 70, spread: 70, origin: { y: 0.4 } });
+        await fetchData();
+      } else {
+        showNotification(data.message || 'Instagram sync failed.');
+      }
+    } catch (err) {
+      console.error('Sync error:', err);
+      showNotification('Error connecting to Instagram scraper agent.');
+    } finally {
       setSyncingInstagram(false);
-      showNotification('Successfully synced latest approved forms with @nikah_bahrain Instagram feed!');
-      confetti({ particleCount: 50, spread: 60, origin: { y: 0.4 } });
-    }, 1200);
+    }
   };
 
   const showNotification = (msg) => {

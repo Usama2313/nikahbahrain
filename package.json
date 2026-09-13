@@ -5,6 +5,7 @@
   "scripts": {
     "server": "node server/index.js",
     "client": "npm --prefix client run dev",
+    "sync-ig": "node server/scripts/sync_live_instagram.js",
     "dev": "node -e \"const { spawn } = require('child_process'); spawn('node', ['server/index.js'], { stdio: 'inherit', shell: true }); spawn('npm', ['--prefix', 'client', 'run', 'dev'], { stdio: 'inherit', shell: true });\""
   }
 }
