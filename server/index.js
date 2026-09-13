@@ -2,6 +2,7 @@ import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 dotenv.config();
+import morgan from 'morgan';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
