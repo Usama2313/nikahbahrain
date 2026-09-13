@@ -15,12 +15,30 @@ import {
   Sparkles, 
   RefreshCw,
   ExternalLink,
-  Edit
+  Edit,
+  Lock
 } from '../icons';
 import confetti from 'canvas-confetti';
 import API_BASE from '../api';
+import logoImg from '../assets/logo.jpg';
+
+// Standard Admin Credentials
+export const ADMIN_CREDENTIALS = {
+  username: 'admin',
+  password: 'NikahBahrain@2026',
+  altUsername: 'admin@nikahbahrain.com'
+};
 
 export default function AdminPanel({ onBackToPortal }) {
+  // Authentication State (persisted in sessionStorage)
+  const [isAuthenticated, setIsAuthenticated] = useState(() => {
+    return sessionStorage.getItem('nikah_admin_authenticated') === 'true';
+  });
+  const [usernameInput, setUsernameInput] = useState('admin');
+  const [passwordInput, setPasswordInput] = useState('');
+  const [loginError, setLoginError] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+
   const [stats, setStats] = useState(null);
   const [profiles, setProfiles] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -33,6 +51,31 @@ export default function AdminPanel({ onBackToPortal }) {
     to: { opacity: 1, transform: 'translateY(0px)' },
     config: config.gentle
   });
+
+  const handleLogin = (e) => {
+    e?.preventDefault();
+    setLoginError('');
+
+    const cleanUser = usernameInput.trim().toLowerCase();
+    const cleanPass = passwordInput.trim();
+
+    if (
+      (cleanUser === ADMIN_CREDENTIALS.username || cleanUser === ADMIN_CREDENTIALS.altUsername) &&
+      cleanPass === ADMIN_CREDENTIALS.password
+    ) {
+      sessionStorage.setItem('nikah_admin_authenticated', 'true');
+      setIsAuthenticated(true);
+      confetti({ particleCount: 50, spread: 60, origin: { y: 0.5 } });
+    } else {
+      setLoginError('Invalid username or password. Please use the official admin credentials.');
+    }
+  };
+
+  const handleLogout = () => {
+    sessionStorage.removeItem('nikah_admin_authenticated');
+    setIsAuthenticated(false);
+    setPasswordInput('');
+  };
 
   const fetchData = async () => {
     try {
@@ -54,8 +97,10 @@ export default function AdminPanel({ onBackToPortal }) {
   };
 
   useEffect(() => {
-    fetchData();
-  }, []);
+    if (isAuthenticated) {
+      fetchData();
+    }
+  }, [isAuthenticated]);
 
   const handleDeleteProfile = async (id) => {
     if (!window.confirm(`Are you sure you want to remove profile ${id}?`)) return;
@@ -119,6 +164,233 @@ export default function AdminPanel({ onBackToPortal }) {
     setTimeout(() => setNotification(null), 4000);
   };
 
+  // If not authenticated, render Luxury Admin Login Gate
+  if (!isAuthenticated) {
+    return (
+      <animated.div
+        style={{
+          ...adminSpring,
+          minHeight: '75vh',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          padding: '40px 20px'
+        }}
+      >
+        <div
+          className="glass-panel"
+          style={{
+            maxWidth: '460px',
+            width: '100%',
+            padding: '36px 30px',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            gap: '20px',
+            position: 'relative'
+          }}
+        >
+          {/* Back button */}
+          <button
+            onClick={onBackToPortal}
+            className="btn-ghost"
+            style={{
+              position: 'absolute',
+              top: '18px',
+              left: '18px',
+              padding: '6px 12px',
+              fontSize: '0.78rem'
+            }}
+          >
+            <ArrowLeft size={13} />
+            <span>Portal</span>
+          </button>
+
+          {/* Logo & Header */}
+          <div
+            style={{
+              width: '64px',
+              height: '64px',
+              borderRadius: '50%',
+              padding: '3px',
+              background: 'linear-gradient(135deg, #fae182, #d4af37, #b8860b)',
+              boxShadow: '0 0 20px rgba(212, 175, 55, 0.45)',
+              marginTop: '10px'
+            }}
+          >
+            <img
+              src={logoImg}
+              alt="Qabul Hai"
+              style={{ width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover' }}
+            />
+          </div>
+
+          <div style={{ textAlign: 'center' }}>
+            <h2 className="font-cinzel gold-text-gradient" style={{ fontSize: '1.5rem', fontWeight: 800 }}>
+              ADMINISTRATIVE ACCESS
+            </h2>
+            <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: '4px' }}>
+              Qabul Hai Official Management Portal
+            </p>
+          </div>
+
+          {/* Login Form */}
+          <form
+            onSubmit={handleLogin}
+            style={{
+              width: '100%',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '14px'
+            }}
+          >
+            <div>
+              <label
+                style={{
+                  display: 'block',
+                  fontSize: '0.78rem',
+                  fontWeight: 700,
+                  color: 'var(--gold-light)',
+                  marginBottom: '6px',
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.5px'
+                }}
+              >
+                Admin Username
+              </label>
+              <input
+                id="admin-username-input"
+                type="text"
+                value={usernameInput}
+                onChange={(e) => setUsernameInput(e.target.value)}
+                placeholder="admin"
+                required
+                style={{
+                  width: '100%',
+                  padding: '11px 14px',
+                  borderRadius: 'var(--radius-md)',
+                  background: 'rgba(5, 12, 22, 0.8)',
+                  border: '1px solid var(--gold-border)',
+                  color: '#ffffff',
+                  fontSize: '0.9rem',
+                  outline: 'none'
+                }}
+              />
+            </div>
+
+            <div>
+              <label
+                style={{
+                  display: 'block',
+                  fontSize: '0.78rem',
+                  fontWeight: 700,
+                  color: 'var(--gold-light)',
+                  marginBottom: '6px',
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.5px'
+                }}
+              >
+                Admin Password
+              </label>
+              <div style={{ position: 'relative' }}>
+                <input
+                  id="admin-password-input"
+                  type={showPassword ? 'text' : 'password'}
+                  value={passwordInput}
+                  onChange={(e) => setPasswordInput(e.target.value)}
+                  placeholder="Enter admin password"
+                  required
+                  style={{
+                    width: '100%',
+                    padding: '11px 40px 11px 14px',
+                    borderRadius: 'var(--radius-md)',
+                    background: 'rgba(5, 12, 22, 0.8)',
+                    border: '1px solid var(--gold-border)',
+                    color: '#ffffff',
+                    fontSize: '0.9rem',
+                    outline: 'none'
+                  }}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  style={{
+                    position: 'absolute',
+                    right: '10px',
+                    top: '50%',
+                    transform: 'translateY(-50%)',
+                    background: 'none',
+                    border: 'none',
+                    color: 'var(--text-muted)',
+                    cursor: 'pointer',
+                    fontSize: '0.75rem',
+                    padding: '4px'
+                  }}
+                >
+                  {showPassword ? 'Hide' : 'Show'}
+                </button>
+              </div>
+            </div>
+
+            {loginError && (
+              <div
+                style={{
+                  background: 'rgba(239, 68, 68, 0.15)',
+                  border: '1px solid rgba(239, 68, 68, 0.4)',
+                  color: '#fca5a5',
+                  padding: '8px 12px',
+                  borderRadius: 'var(--radius-sm)',
+                  fontSize: '0.8rem',
+                  textAlign: 'center'
+                }}
+              >
+                {loginError}
+              </div>
+            )}
+
+            <button
+              id="admin-login-submit-btn"
+              type="submit"
+              className="btn-gold"
+              style={{
+                width: '100%',
+                padding: '12px',
+                fontSize: '0.92rem',
+                marginTop: '6px',
+                letterSpacing: '0.5px'
+              }}
+            >
+              <Lock size={15} />
+              <span>Login to Command Center</span>
+            </button>
+          </form>
+
+          {/* Credentials Info Callout for Admin Convenience */}
+          <div
+            style={{
+              width: '100%',
+              background: 'rgba(212, 175, 55, 0.08)',
+              border: '1px dashed rgba(212, 175, 55, 0.35)',
+              borderRadius: 'var(--radius-md)',
+              padding: '12px 14px',
+              fontSize: '0.78rem',
+              color: 'var(--text-muted)',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '4px'
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--gold-light)', fontWeight: 700 }}>
+              <ShieldCheck size={14} /> Official Admin Credentials
+            </div>
+            <div><strong>Username:</strong> <code style={{ color: '#ffffff', background: 'rgba(0,0,0,0.3)', padding: '2px 6px', borderRadius: '4px' }}>admin</code></div>
+            <div><strong>Password:</strong> <code style={{ color: '#ffffff', background: 'rgba(0,0,0,0.3)', padding: '2px 6px', borderRadius: '4px' }}>NikahBahrain@2026</code></div>
+          </div>
+        </div>
+      </animated.div>
+    );
+  }
+
   return (
     <animated.div 
       style={{
@@ -149,6 +421,15 @@ export default function AdminPanel({ onBackToPortal }) {
           >
             <ArrowLeft size={16} />
             <span>Back to Portal</span>
+          </button>
+          <button
+            onClick={handleLogout}
+            className="btn-ghost"
+            style={{ padding: '8px 14px', color: '#fca5a5' }}
+            title="Log out of Admin Panel"
+          >
+            <Lock size={15} />
+            <span>Log Out</span>
           </button>
           <div>
             <h1 

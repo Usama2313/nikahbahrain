@@ -346,6 +346,70 @@ body::before {
   font-family: var(--font-arabic);
 }
 
+/* World-Class Button Click Recoil & Tactile Physics */
+button, .btn-gold, .btn-whatsapp, .btn-ghost, a[role="button"] {
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-tap-highlight-color: transparent;
+  transition: transform 0.28s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.25s ease, filter 0.2s ease;
+}
+
+button:active, .btn-gold:active, .btn-whatsapp:active, .btn-ghost:active, a[role="button"]:active {
+  transform: scale(0.93) translateY(2px) !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.5), inset 0 2px 4px rgba(0, 0, 0, 0.3) !important;
+  filter: brightness(0.94);
+  transition: transform 0.06s ease, box-shadow 0.06s ease !important;
+}
+
+/* Click Ripple Wave Effect */
+.btn-click-ripple {
+  position: absolute;
+  border-radius: 50%;
+  pointer-events: none;
+  transform: scale(0);
+  background: radial-gradient(circle, rgba(255, 255, 255, 0.85) 0%, rgba(250, 225, 130, 0.5) 45%, rgba(212, 175, 55, 0.2) 70%, transparent 100%);
+  animation: btnRippleAnim 0.65s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+  z-index: 50;
+}
+
+@keyframes btnRippleAnim {
+  0% {
+    transform: scale(0);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(3.5);
+    opacity: 0;
+  }
+}
+
+/* Sparkle click burst keyframes */
+@keyframes clickSparkle {
+  0% {
+    transform: translate(-50%, -50%) scale(0) rotate(0deg);
+    opacity: 1;
+  }
+  50% {
+    opacity: 1;
+  }
+  100% {
+    transform: translate(calc(-50% + var(--dx)), calc(-50% + var(--dy))) scale(1.2) rotate(180deg);
+    opacity: 0;
+  }
+}
+
+.click-sparkle-particle {
+  position: fixed;
+  pointer-events: none;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #fae182;
+  box-shadow: 0 0 10px #fae182, 0 0 20px #d4af37;
+  animation: clickSparkle 0.55s ease-out forwards;
+  z-index: 99999;
+}
+
 /* Pulse animation for live updates */
 @keyframes pulseGlow {
   0%, 100% {
