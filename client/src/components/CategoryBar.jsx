@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useSpring, animated } from '@react-spring/web';
 
 export const CATEGORIES = [
@@ -61,16 +61,31 @@ export default function CategoryBar({
 }
 
 function CategoryPill({ label, isSelected, count, onClick }) {
-  // Spring animation for smooth bounce on active toggle
+  const [hovered, setHovered] = useState(false);
+  const [pressed, setPressed] = useState(false);
+
+  // World-Class Spring animation for Category Pills
   const spring = useSpring({
-    transform: isSelected ? 'scale(1.03)' : 'scale(1)',
-    backgroundColor: isSelected ? '#235d46' : 'rgba(255, 255, 255, 0.95)',
-    borderColor: '#235d46',
+    transform: pressed 
+      ? 'scale(0.95) translateY(1px)' 
+      : hovered 
+      ? 'scale(1.04) translateY(-2px)' 
+      : isSelected 
+      ? 'scale(1.02) translateY(0px)' 
+      : 'scale(1) translateY(0px)',
+    backgroundColor: isSelected 
+      ? '#235d46' 
+      : hovered 
+      ? '#ecfdf5' 
+      : 'rgba(255, 255, 255, 0.96)',
+    borderColor: isSelected ? '#1b4332' : hovered ? '#1e5641' : '#235d46',
     color: isSelected ? '#ffffff' : '#1e5641',
     boxShadow: isSelected 
-      ? '0 4px 14px rgba(35, 93, 70, 0.35)' 
+      ? '0 6px 18px rgba(35, 93, 70, 0.4), 0 0 10px rgba(35, 93, 70, 0.2)' 
+      : hovered 
+      ? '0 4px 14px rgba(35, 93, 70, 0.2)' 
       : '0 2px 6px rgba(0, 0, 0, 0.08)',
-    config: { tension: 360, friction: 22 }
+    config: { tension: 400, friction: 22 }
   });
 
   return (
@@ -78,11 +93,12 @@ function CategoryPill({ label, isSelected, count, onClick }) {
       onClick={onClick}
       style={{
         ...spring,
-        border: '1.5px solid #235d46',
+        position: 'relative',
+        border: '1.5px solid',
         borderRadius: '9999px',
         padding: '7px 22px',
         fontSize: '0.85rem',
-        fontWeight: isSelected ? 700 : 600,
+        fontWeight: isSelected ? 800 : 600,
         letterSpacing: '0.6px',
         cursor: 'pointer',
         display: 'inline-flex',
@@ -90,31 +106,27 @@ function CategoryPill({ label, isSelected, count, onClick }) {
         gap: '8px',
         whiteSpace: 'nowrap',
         outline: 'none',
-        transition: 'border-color 0.2s ease, transform 0.15s ease'
+        overflow: 'hidden'
       }}
-      onMouseEnter={(e) => {
-        if (!isSelected) {
-          e.currentTarget.style.backgroundColor = '#ecfdf5';
-          e.currentTarget.style.borderColor = '#1b4332';
-        }
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => {
+        setHovered(false);
+        setPressed(false);
       }}
-      onMouseLeave={(e) => {
-        if (!isSelected) {
-          e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.95)';
-          e.currentTarget.style.borderColor = '#235d46';
-        }
-      }}
+      onMouseDown={() => setPressed(true)}
+      onMouseUp={() => setPressed(false)}
     >
       <span>{label}</span>
       {typeof count === 'number' && count > 0 && (
         <span
           style={{
-            background: isSelected ? 'rgba(255, 255, 255, 0.22)' : 'rgba(35, 93, 70, 0.12)',
+            background: isSelected ? 'rgba(255, 255, 255, 0.25)' : 'rgba(35, 93, 70, 0.12)',
             color: isSelected ? '#ffffff' : '#1e5641',
             fontSize: '0.72rem',
-            padding: '1px 7px',
+            padding: '1px 8px',
             borderRadius: '12px',
-            fontWeight: 700
+            fontWeight: 800,
+            transition: 'all 0.2s ease'
           }}
         >
           {count}

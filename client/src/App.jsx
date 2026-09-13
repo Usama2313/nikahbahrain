@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useTrail, animated } from '@react-spring/web';
 import Navbar from './components/Navbar';
 import CategoryBar from './components/CategoryBar';
-import FilterBar, { AGE_RANGES } from './components/FilterBar';
+import ProposalStatsBar from './components/ProposalStatsBar';
 import ProfileCard from './components/ProfileCard';
 import ProfileModal from './components/ProfileModal';
 import CreateProfileModal from './components/CreateProfileModal';
@@ -18,8 +18,8 @@ export default function App() {
   // 1. Splash Intro Screen State
   const [showSplash, setShowSplash] = useState(true);
 
-  // 2. Navigation State ('groom' default to match screenshot)
-  const [activeTab, setActiveTab] = useState('groom');
+  // 2. Navigation State ('home' default)
+  const [activeTab, setActiveTab] = useState('home');
   const [activeCategory, setActiveCategory] = useState('all');
   const [isAdminActive, setIsAdminActive] = useState(false);
 
@@ -39,11 +39,7 @@ export default function App() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  // 5. Additional Search & Nationality Filters State
-  const [selectedNationality, setSelectedNationality] = useState('all');
-  const [selectedGender, setSelectedGender] = useState('all');
-  const [selectedMaritalStatus, setSelectedMaritalStatus] = useState('all');
-  const [selectedAgeRange, setSelectedAgeRange] = useState('all');
+  // 5. Search query
   const [searchQuery, setSearchQuery] = useState('');
 
   // 6. Pagination State
@@ -121,7 +117,7 @@ export default function App() {
   // Reset pagination to page 1 whenever any filter or tab changes
   useEffect(() => {
     setCurrentPage(1);
-  }, [activeTab, activeCategory, selectedNationality, selectedGender, selectedMaritalStatus, selectedAgeRange, searchQuery]);
+  }, [activeTab, activeCategory, searchQuery]);
 
   // Toggle favorite with unique visitor ID
   const handleToggleFavorite = async (profileId) => {
@@ -144,28 +140,29 @@ export default function App() {
     }
   };
 
-  // Tab change handler
+  // Tab change handler - properly sets activeTab for Contact as well
   const handleTabChange = (tabId) => {
+    setActiveTab(tabId);
+    setIsAdminActive(false);
+    window.history.pushState(null, '', window.location.pathname);
+
     if (tabId === 'contact') {
       const el = document.getElementById('contact-section');
       if (el) {
         el.scrollIntoView({ behavior: 'smooth' });
+        el.classList.add('contact-highlight-pulse');
+        setTimeout(() => {
+          el.classList.remove('contact-highlight-pulse');
+        }, 3000);
       }
-      return;
+    } else {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
     }
-    setActiveTab(tabId);
-    setIsAdminActive(false);
-    setActiveCategory('all');
-    window.history.pushState(null, '', window.location.pathname);
   };
 
   // Reset all filters
   const handleResetFilters = () => {
     setActiveCategory('all');
-    setSelectedNationality('all');
-    setSelectedGender('all');
-    setSelectedMaritalStatus('all');
-    setSelectedAgeRange('all');
     setSearchQuery('');
   };
 
@@ -181,9 +178,9 @@ export default function App() {
     } else if (activeTab === 'favorites') {
       result = result.filter((p) => favorites.includes(p.id));
     }
-    // 'home' tab shows all profiles (no filter)
+    // 'home' and 'contact' tabs display all profiles
 
-    // 2. Category Filter (from uploaded picture: ALL, NEVER MARRIED, DIVORCED, 2ND MARRIAGE, LATE WIFE)
+    // 2. Category Filter (ALL, NEVER MARRIED, DIVORCED, 2ND MARRIAGE, LATE WIFE)
     if (activeCategory === 'never-married') {
       result = result.filter((p) => p.maritalStatus === 'Never Married');
     } else if (activeCategory === 'divorced') {
@@ -199,27 +196,7 @@ export default function App() {
       result = result.filter((p) => p.maritalStatus === 'Widowed');
     }
 
-    // 3. Nationality Filter
-    if (selectedNationality !== 'all') {
-      result = result.filter(
-        (p) => p.nationality.toLowerCase() === selectedNationality.toLowerCase()
-      );
-    }
-
-    // 4. Marital Status filter from dropdown (if any)
-    if (selectedMaritalStatus !== 'all') {
-      result = result.filter((p) => p.maritalStatus === selectedMaritalStatus);
-    }
-
-    // 5. Age Range
-    if (selectedAgeRange !== 'all') {
-      const range = AGE_RANGES.find(r => r.id === selectedAgeRange);
-      if (range) {
-        result = result.filter((p) => p.age >= range.min && p.age <= range.max);
-      }
-    }
-
-    // 6. Search query
+    // 3. Search query
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase();
       result = result.filter(
@@ -236,7 +213,7 @@ export default function App() {
     }
 
     return result;
-  }, [profiles, activeTab, activeCategory, selectedNationality, selectedMaritalStatus, selectedAgeRange, searchQuery, favorites]);
+  }, [profiles, activeTab, activeCategory, searchQuery, favorites]);
 
   // Compute pagination
   const totalPages = Math.max(1, Math.ceil(filteredProfiles.length / itemsPerPage));
@@ -333,29 +310,16 @@ export default function App() {
               counts={categoryCounts}
             />
 
-            {/* 3B. Refined Search & Nationality Filter Bar */}
-            <FilterBar
-              selectedNationality={selectedNationality}
-              onSelectNationality={setSelectedNationality}
-              selectedGender={selectedGender}
-              onSelectGender={setSelectedGender}
-              selectedMaritalStatus={selectedMaritalStatus}
-              onSelectMaritalStatus={setSelectedMaritalStatus}
-              selectedAgeRange={selectedAgeRange}
-              onSelectAgeRange={setSelectedAgeRange}
+            {/* 3B. Total Proposals Display & Clean Search Bar */}
+            <ProposalStatsBar
+              totalProposals={profiles.length}
+              filteredCount={filteredProfiles.length}
+              maleCount={profiles.filter((p) => p.gender === 'male').length}
+              femaleCount={profiles.filter((p) => p.gender === 'female').length}
               searchQuery={searchQuery}
               onSearchChange={setSearchQuery}
-              totalCount={filteredProfiles.length}
-              currentCategoryTitle={
-                activeTab === 'groom' 
-                  ? 'Grooms / Male Proposals' 
-                  : activeTab === 'bride' 
-                  ? 'Brides / Female Proposals' 
-                  : activeTab === 'favorites'
-                  ? 'My Favorited Proposals'
-                  : 'All Nikah Proposals'
-              }
-              onResetFilters={handleResetFilters}
+              activeTab={activeTab}
+              activeCategory={activeCategory}
             />
 
             {/* Profiles Feed Section */}

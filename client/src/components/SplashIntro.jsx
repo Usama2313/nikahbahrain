@@ -1,18 +1,42 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useSpring, animated, config } from '@react-spring/web';
 import { Sparkles, ArrowDown, Heart, ShieldCheck } from '../icons';
 import logoImg from '../assets/logo.jpg';
 
+const READING_DURATION_MS = 14000; // 14 seconds for comfortable, peaceful reading
+
 export default function SplashIntro({ onEnter, isVisible = true }) {
   const [isExiting, setIsExiting] = useState(false);
+  const [isPaused, setIsPaused] = useState(false);
+  const [progress, setProgress] = useState(0); // 0 to 100%
+  const [btnHovered, setBtnHovered] = useState(false);
+  const startTimeRef = useRef(Date.now());
+  const elapsedRef = useRef(0);
 
-  // Auto-slide into portal after 2.8s preview or immediate click
-  React.useEffect(() => {
-    const timer = setTimeout(() => {
-      setIsExiting(true);
-    }, 2800);
-    return () => clearTimeout(timer);
-  }, []);
+  // Comfortable reading timer with progress tracking and pause on hover
+  useEffect(() => {
+    if (!isVisible || isExiting) return;
+
+    startTimeRef.current = Date.now() - elapsedRef.current;
+
+    const interval = setInterval(() => {
+      if (!isPaused) {
+        const elapsed = Date.now() - startTimeRef.current;
+        elapsedRef.current = elapsed;
+        const pct = Math.min(100, (elapsed / READING_DURATION_MS) * 100);
+        setProgress(pct);
+
+        if (elapsed >= READING_DURATION_MS) {
+          clearInterval(interval);
+          setIsExiting(true);
+        }
+      } else {
+        startTimeRef.current = Date.now() - elapsedRef.current;
+      }
+    }, 50);
+
+    return () => clearInterval(interval);
+  }, [isVisible, isExiting, isPaused]);
 
   // Logo spring animation: dramatic 3D pop, subtle float and glow
   const logoSpring = useSpring({
@@ -48,11 +72,22 @@ export default function SplashIntro({ onEnter, isVisible = true }) {
     }
   });
 
+  // Button spring
+  const enterBtnSpring = useSpring({
+    transform: btnHovered ? 'translateY(-3px) scale(1.03)' : 'translateY(0px) scale(1)',
+    boxShadow: btnHovered 
+      ? '0 12px 36px rgba(212, 175, 55, 0.65), 0 0 20px rgba(250, 225, 130, 0.4)' 
+      : '0 8px 30px rgba(212, 175, 55, 0.45)',
+    config: { tension: 350, friction: 20 }
+  });
+
   const handleSlideEnter = () => {
     setIsExiting(true);
   };
 
   if (!isVisible && !isExiting) return null;
+
+  const secondsRemaining = Math.max(0, Math.ceil((READING_DURATION_MS - elapsedRef.current) / 1000));
 
   return (
     <animated.div
@@ -69,6 +104,8 @@ export default function SplashIntro({ onEnter, isVisible = true }) {
         padding: '24px',
         overflow: 'hidden'
       }}
+      onMouseEnter={() => setIsPaused(true)}
+      onMouseLeave={() => setIsPaused(false)}
     >
       {/* Background ambient lighting effects */}
       <div 
@@ -100,10 +137,10 @@ export default function SplashIntro({ onEnter, isVisible = true }) {
         <p 
           className="font-arabic"
           style={{
-            fontSize: '1.75rem',
+            fontSize: '1.85rem',
             color: 'var(--gold-light)',
             letterSpacing: '1px',
-            textShadow: '0 0 16px rgba(212, 175, 55, 0.5)'
+            textShadow: '0 0 18px rgba(212, 175, 55, 0.5)'
           }}
         >
           بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ
@@ -138,8 +175,8 @@ export default function SplashIntro({ onEnter, isVisible = true }) {
         <div 
           style={{
             position: 'relative',
-            width: '240px',
-            height: '240px',
+            width: '220px',
+            height: '220px',
             borderRadius: '50%',
             padding: '6px',
             background: 'linear-gradient(135deg, #fae182 0%, #d4af37 40%, #b8860b 80%, #fae182 100%)',
@@ -167,17 +204,17 @@ export default function SplashIntro({ onEnter, isVisible = true }) {
           ...textSpring,
           textAlign: 'center',
           maxWidth: '680px',
-          marginTop: '24px',
+          marginTop: '22px',
           display: 'flex',
           flexDirection: 'column',
           alignItems: 'center',
-          gap: '12px'
+          gap: '10px'
         }}
       >
         <h1 
           className="font-cinzel gold-text-gradient"
           style={{
-            fontSize: '2.5rem',
+            fontSize: '2.4rem',
             fontWeight: 800,
             letterSpacing: '1px',
             lineHeight: 1.2
@@ -200,7 +237,7 @@ export default function SplashIntro({ onEnter, isVisible = true }) {
           style={{
             fontSize: '1.25rem',
             color: 'var(--gold-light)',
-            marginTop: '8px',
+            marginTop: '6px',
             lineHeight: 1.7,
             opacity: 0.95
           }}
@@ -208,40 +245,72 @@ export default function SplashIntro({ onEnter, isVisible = true }) {
           وَمِنْ آيَاتِهِ أَنْ خَلَقَ لَكُم مِّنْ أَنفُسِكُمْ أَزْوَاجًا لِّتَسْكُنُوا إِلَيْهَا وَجَعَلَ بَيْنَكُم مَّوَدَّةً وَرَحْمَةً
         </p>
 
-        <p style={{ color: 'var(--text-muted)', fontSize: '0.92rem', maxWidth: '560px', fontStyle: 'italic' }}>
+        <p style={{ color: 'var(--text-muted)', fontSize: '0.92rem', maxWidth: '560px', fontStyle: 'italic', lineHeight: 1.6 }}>
           "And among His signs is that He created for you mates from among yourselves, that you may dwell in tranquility with them, and He has put love and mercy between your hearts."
         </p>
       </animated.div>
 
-      {/* Slide / Enter Action with React-Spring */}
+      {/* Slide / Enter Action with World-Class Button Animations */}
       <animated.div 
         style={{
           ...textSpring,
-          marginTop: '28px',
+          marginTop: '24px',
           display: 'flex',
           flexDirection: 'column',
           alignItems: 'center',
           gap: '12px'
         }}
       >
-        <button
+        <animated.button
           onClick={handleSlideEnter}
           className="btn-gold"
           style={{
-            padding: '14px 38px',
+            ...enterBtnSpring,
+            padding: '14px 40px',
             fontSize: '1.05rem',
             letterSpacing: '1px',
-            boxShadow: '0 8px 30px rgba(212, 175, 55, 0.45)'
+            borderRadius: '9999px',
+            cursor: 'pointer'
           }}
+          onMouseEnter={() => setBtnHovered(true)}
+          onMouseLeave={() => setBtnHovered(false)}
         >
           <Sparkles size={18} />
           <span>ENTER MATRIMONIAL PORTAL</span>
-          <ArrowDown size={18} style={{ transform: 'rotate(-90deg)' }} />
-        </button>
+          <ArrowDown size={18} style={{ transform: 'rotate(-90deg)', transition: 'transform 0.2s ease' }} />
+        </animated.button>
 
-        <span style={{ fontSize: '0.8rem', color: 'var(--text-dim)', letterSpacing: '0.5px' }}>
-          Click to slide into verified proposals feed
-        </span>
+        {/* Reading Timer Progress Bar & Status */}
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '6px', width: '280px', marginTop: '4px' }}>
+          <div 
+            style={{ 
+              width: '100%', 
+              height: '4px', 
+              background: 'rgba(255, 255, 255, 0.1)', 
+              borderRadius: '2px', 
+              overflow: 'hidden' 
+            }}
+          >
+            <div 
+              style={{ 
+                width: `${progress}%`, 
+                height: '100%', 
+                background: 'linear-gradient(90deg, #d4af37, #fae182)', 
+                transition: 'width 0.1s linear',
+                boxShadow: '0 0 8px rgba(250, 225, 130, 0.6)'
+              }} 
+            />
+          </div>
+
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', fontSize: '0.74rem', color: 'var(--text-dim)' }}>
+            <span>
+              {isPaused ? '⏸️ Reading paused' : `Auto-entering in ${secondsRemaining}s`}
+            </span>
+            <span style={{ color: 'var(--gold-light)', cursor: 'pointer' }} onClick={handleSlideEnter}>
+              Click to enter now ➔
+            </span>
+          </div>
+        </div>
       </animated.div>
     </animated.div>
   );
