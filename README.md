@@ -1,18 +1,20 @@
-# nikahbahrain
+# Qabul Hai (Matrimonial Platform)
 
-Nikah Bahrain Matrimonial Platform - A modern matchmaking web platform for Bahrain residents.
+**Qabul Hai** - Verified Muslim Matrimonial & Matchmaking Web Platform for Bahrain and GCC residents.
 
 ## Features
-- **Categorized Profiles**: Grooms, Brides, Divorced Grooms/Brides, Widowed Grooms/Brides.
-- **Search & Filters**: Filter by nationality (Pakistani, Indian, etc.), marital status, sect, education, and keywords.
-- **Direct WhatsApp & Social Connect**: Connect with matchmaking admin via official WhatsApp and Instagram.
-- **Favorites & Shortlisting**: Save favorite profiles locally.
-- **Express Backend & Vite React Frontend**: Fast REST API with rich responsive UI.
+- **All 227 Instagram Matrimonial Records**: Fully synchronized profiles across Grooms, Brides, Divorced, and Widowed candidates with complete flyer labels.
+- **Detailed Instagram Labels**: Explicit labeled fields for **Siblings**, **Father's Details**, **Mother's Details**, **Family Background**, **Languages**, **Caste**, **Sect**, **Complexion & Build**, **Education**, and **Profession**.
+- **Google Form & Live Synchronization**: Seamless integration where candidates submitted via the official Google Form or Webhook immediately appear on the live feed.
+- **Search & Filters**: Multi-criteria filtering by nationality (Pakistani, Indian, Bahraini), marital status, sect, caste, siblings, education, and keywords.
+- **Direct WhatsApp & Social Connect**: Direct one-click inquiry to family coordinators via WhatsApp and official Instagram reference.
+- **Favorites & Shortlisting**: Save favorite profiles locally with animated confetti reactions.
+- **Express Backend & Vite React Frontend**: Ultra-fast REST API with rich responsive UI.
 
 ## Tech Stack
-- **Frontend**: React, Vite, Lucide Icons, Canvas Confetti, CSS
+- **Frontend**: React, Vite, Lucide Icons, Canvas Confetti, React Spring, CSS
 - **Backend**: Node.js, Express, RESTful API
-- **Data Storage**: JSON file database
+- **Data Storage**: JSON file database (`server/data/profiles.json`)
 
 ## Getting Started
 
@@ -28,7 +30,6 @@ npm install
 ```
 
 ### 2. Run Locally
-You can run both client and server:
 ```bash
 # From the root directory:
 npm run dev

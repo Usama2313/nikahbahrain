@@ -114,7 +114,7 @@ export default function ProfileCard({
   const handleWhatsAppChat = (e) => {
     e.stopPropagation();
     const phone = '97337188557';
-    const message = `Assalamu Alaikum Nikah Bahrain Team,
+    const message = `Assalamu Alaikum Qabul Hai Team,
 
 I am interested in this verified proposal:
 • Profile ID: ${profile.id}
@@ -122,6 +122,7 @@ I am interested in this verified proposal:
 • Age & Marital Status: ${profile.age} yrs (${profile.maritalStatus})
 • Nationality: ${profile.nationality}
 • Profession: ${profile.profession}
+• Siblings: ${profile.siblings || 'N/A'}
 • Location: ${profile.location}
 • Instagram Ref: ${profile.instagramPostUrl}
 
@@ -390,6 +391,26 @@ Please provide more details. JazakAllah Khair!`;
           <span>{maritalBadge.emoji} {profile.maritalStatus}</span>
         </span>
 
+        {/* Caste tag */}
+        {profile.caste && profile.caste !== 'General' && (
+          <span
+            style={{
+              background: 'rgba(212, 175, 55, 0.1)',
+              border: '1px solid rgba(212, 175, 55, 0.25)',
+              color: 'var(--gold-light)',
+              fontSize: '0.7rem',
+              fontWeight: 600,
+              padding: '3px 8px',
+              borderRadius: 'var(--radius-full)',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '3px'
+            }}
+          >
+            <User size={10} /> Caste: {profile.caste}
+          </span>
+        )}
+
         {/* Sect small tag */}
         {profile.sect && (
           <span
@@ -445,6 +466,28 @@ Please provide more details. JazakAllah Khair!`;
               </animated.div>
             );
           })}
+
+          {/* Explicit Siblings Label Row if available */}
+          {profile.siblings && (
+            <div 
+              style={{
+                display: 'flex',
+                alignItems: 'flex-start',
+                gap: '8px',
+                fontSize: '0.79rem',
+                color: '#cbd5e1',
+                background: 'rgba(255, 255, 255, 0.03)',
+                padding: '6px 10px',
+                borderRadius: 'var(--radius-sm)',
+                border: '1px solid rgba(212, 175, 55, 0.15)'
+              }}
+            >
+              <strong style={{ color: 'var(--gold-light)', flexShrink: 0 }}>Siblings:</strong>
+              <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                {profile.siblings}
+              </span>
+            </div>
+          )}
         </div>
 
         {/* Action Buttons: Chat on WhatsApp & View Details */}

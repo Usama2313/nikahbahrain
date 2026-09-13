@@ -12,6 +12,7 @@ import {
   CheckCircle2, 
   Sparkles, 
   User, 
+  Users,
   Home, 
   FileText,
   PhoneCall,
@@ -48,7 +49,7 @@ export default function ProfileModal({ profile, isFavorite, onToggleFavorite, on
   });
 
   // Staggered reveal for detail sections
-  const sections = ['badges', 'info', 'about', 'requirements', 'actions'];
+  const sections = ['badges', 'info', 'family', 'about', 'requirements', 'actions'];
   const sectionTrail = useTrail(sections.length, {
     from: { opacity: 0, transform: 'translateY(15px)' },
     to: { opacity: 1, transform: 'translateY(0px)' },
@@ -67,7 +68,7 @@ export default function ProfileModal({ profile, isFavorite, onToggleFavorite, on
 
   const handleWhatsAppChat = () => {
     const phone = '97337188557';
-    const message = `Assalamu Alaikum Nikah Bahrain,
+    const message = `Assalamu Alaikum Qabul Hai Team,
 
 I would like to inquire regarding profile:
 • ID: ${profile.id} - ${profile.name}
@@ -75,6 +76,7 @@ I would like to inquire regarding profile:
 • Marital Status: ${profile.maritalStatus}
 • Nationality: ${profile.nationality}
 • Profession: ${profile.profession}
+• Siblings: ${profile.siblings || 'N/A'}
 • Location: ${profile.location}
 • Official Instagram: ${profile.instagramPostUrl}
 
@@ -103,7 +105,10 @@ Please share requirements & family verification steps.`;
     { icon: GraduationCap, label: 'Education', value: profile.education },
     { icon: MapPin, label: 'Location', value: profile.location },
     { icon: Home, label: 'Residency', value: profile.residence },
-    { icon: BookOpen, label: 'Sect & Caste', value: [profile.sect, profile.caste].filter(Boolean).join(' • ') },
+    { icon: BookOpen, label: 'Sect', value: profile.sect },
+    { icon: User, label: 'Caste', value: profile.caste },
+    { icon: FileText, label: 'Languages', value: profile.languages },
+    { icon: Sparkles, label: 'Complexion & Build', value: [profile.complexion, profile.build].filter(Boolean).join(' • ') }
   ];
 
   return (
@@ -345,14 +350,82 @@ Please share requirements & family verification steps.`;
             </div>
           </animated.div>
 
-          {/* About Section */}
+          {/* Dedicated Family & Siblings Section (Instagram Flyer Exact Labels) */}
           <animated.div style={sectionTrail[2]}>
+            <h4 
+              className="font-cinzel"
+              style={{ fontSize: '1rem', color: 'var(--gold-light)', marginBottom: '10px', display: 'flex', alignItems: 'center', gap: '6px' }}
+            >
+              <Users size={16} color="var(--gold-primary)" />
+              Family & Sibling Information (Original Flyer Details)
+            </h4>
+            <div
+              style={{
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '8px',
+                background: 'rgba(212, 175, 55, 0.04)',
+                padding: '16px',
+                borderRadius: 'var(--radius-md)',
+                border: '1px solid rgba(212, 175, 55, 0.15)'
+              }}
+            >
+              {/* Siblings Labeled Row */}
+              <div style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', fontSize: '0.88rem' }}>
+                <span style={{ color: 'var(--gold-light)', fontWeight: 700, minWidth: '130px', flexShrink: 0 }}>
+                  • Siblings:
+                </span>
+                <span style={{ color: '#ffffff', fontWeight: 600 }}>
+                  {profile.siblings || 'Available upon family request'}
+                </span>
+              </div>
+
+              {/* Father Labeled Row */}
+              {profile.father && (
+                <div style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', fontSize: '0.88rem' }}>
+                  <span style={{ color: 'var(--gold-light)', fontWeight: 700, minWidth: '130px', flexShrink: 0 }}>
+                    • Father:
+                  </span>
+                  <span style={{ color: '#e2e8f0' }}>
+                    {profile.father}
+                  </span>
+                </div>
+              )}
+
+              {/* Mother Labeled Row */}
+              {profile.mother && (
+                <div style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', fontSize: '0.88rem' }}>
+                  <span style={{ color: 'var(--gold-light)', fontWeight: 700, minWidth: '130px', flexShrink: 0 }}>
+                    • Mother:
+                  </span>
+                  <span style={{ color: '#e2e8f0' }}>
+                    {profile.mother}
+                  </span>
+                </div>
+              )}
+
+              {/* Family Background Row */}
+              {profile.family && (
+                <div style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', fontSize: '0.88rem' }}>
+                  <span style={{ color: 'var(--gold-light)', fontWeight: 700, minWidth: '130px', flexShrink: 0 }}>
+                    • Family:
+                  </span>
+                  <span style={{ color: '#cbd5e1' }}>
+                    {profile.family}
+                  </span>
+                </div>
+              )}
+            </div>
+          </animated.div>
+
+          {/* About Section */}
+          <animated.div style={sectionTrail[3]}>
             <h4 
               className="font-cinzel"
               style={{ fontSize: '1rem', color: 'var(--gold-light)', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '6px' }}
             >
               <FileText size={16} color="var(--gold-primary)" />
-              Candidate Profile & Family Background
+              Candidate Profile & Short Bio
             </h4>
             <p style={{ color: '#e2e8f0', fontSize: '0.9rem', lineHeight: '1.7', background: 'rgba(255,255,255,0.03)', padding: '14px 16px', borderRadius: 'var(--radius-md)', border: '1px solid rgba(255,255,255,0.06)' }}>
               {profile.about}
@@ -360,7 +433,7 @@ Please share requirements & family verification steps.`;
           </animated.div>
 
           {/* Requirements Section */}
-          <animated.div style={sectionTrail[3]}>
+          <animated.div style={sectionTrail[4]}>
             <h4 
               className="font-cinzel"
               style={{ fontSize: '1rem', color: 'var(--gold-light)', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '6px' }}
@@ -376,7 +449,7 @@ Please share requirements & family verification steps.`;
           {/* Action Buttons */}
           <animated.div 
             style={{
-              ...sectionTrail[4],
+              ...sectionTrail[5],
               display: 'flex', 
               alignItems: 'center', 
               justifyContent: 'space-between', 

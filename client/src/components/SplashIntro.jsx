@@ -149,7 +149,7 @@ export default function SplashIntro({ onEnter, isVisible = true }) {
         >
           <img
             src={logoImg}
-            alt="Nikah Bahrain Logo"
+            alt="Qabul Hai Logo"
             style={{
               width: '100%',
               height: '100%',
@@ -183,7 +183,7 @@ export default function SplashIntro({ onEnter, isVisible = true }) {
             lineHeight: 1.2
           }}
         >
-          NIKAH BAHRAIN
+          QABUL HAI
         </h1>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>

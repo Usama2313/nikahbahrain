@@ -70,7 +70,7 @@ export default function ContactFooter({ onOpenCreateProfile }) {
               <Sparkles size={13} /> Official Confidential Family Support
             </div>
             <h2 className="font-cinzel gold-text-gradient" style={{ fontSize: '2rem', fontWeight: 800 }}>
-              GET IN TOUCH WITH NIKAH BAHRAIN
+              GET IN TOUCH WITH QABUL HAI
             </h2>
             <p style={{ color: 'var(--text-muted)', fontSize: '0.92rem', marginTop: '6px' }}>
               Connect with our dedicated family coordinators for personal profile inquiries, proposal sharing, and family background verifications.
@@ -257,15 +257,15 @@ export default function ContactFooter({ onOpenCreateProfile }) {
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
             <img 
               src={logoImg} 
-              alt="Nikah Bahrain" 
+              alt="Qabul Hai" 
               style={{ width: '42px', height: '42px', borderRadius: '50%', border: '1px solid var(--gold-border)' }}
             />
             <div>
               <div className="font-cinzel gold-text-gradient" style={{ fontWeight: 800, fontSize: '1.1rem' }}>
-                NIKAH BAHRAIN
+                QABUL HAI
               </div>
               <div style={{ fontSize: '0.74rem', color: 'var(--text-dim)' }}>
-                Kingdom of Bahrain • Serving Pakistani & Indian Expatriates
+                Kingdom of Bahrain & GCC • Matrimonial Services
               </div>
             </div>
           </div>
@@ -298,7 +298,7 @@ export default function ContactFooter({ onOpenCreateProfile }) {
           </div>
 
           <div style={{ fontSize: '0.76rem', color: 'var(--text-dim)', textAlign: 'right' }}>
-            © {new Date().getFullYear()} Nikah Bahrain. All matrimonial profiles verified according to Islamic guidelines.
+            © {new Date().getFullYear()} Qabul Hai. All matrimonial profiles verified according to Islamic guidelines.
           </div>
         </div>
       </div>

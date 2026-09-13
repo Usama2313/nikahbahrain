@@ -28,6 +28,11 @@ export default function CreateProfileModal({ isOpen, onClose, onProfileCreated }
     profession: '',
     location: 'Manama, Bahrain',
     residence: 'Bahrain Resident',
+    siblings: '',
+    father: '',
+    mother: '',
+    family: '',
+    languages: 'English, Urdu',
     image: '',
     about: '',
     requirements: ''
@@ -142,7 +147,7 @@ export default function CreateProfileModal({ isOpen, onClose, onProfileCreated }
               </span>
             </div>
             <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: '2px' }}>
-              Fill the form below in this window to list your proposal on Nikah Bahrain & Instagram
+              Fill the form below in this window to list your proposal on Qabul Hai & Instagram
             </p>
           </div>
 
@@ -233,7 +238,7 @@ export default function CreateProfileModal({ isOpen, onClose, onProfileCreated }
         {activeSubTab === 'embed' && (
           <div style={{ flex: 1, position: 'relative', background: '#ffffff', overflow: 'hidden' }}>
             <iframe
-              title="Nikah Bahrain Matrimonial Application Form"
+              title="Qabul Hai Matrimonial Application Form"
               src="https://docs.google.com/forms/d/e/1FAIpQLSe8p6bnqIMv7sPlDrYdREZHkpmuVb5c5pWrSVWqr70NhvvRCQ/viewform?embedded=true"
               style={{
                 width: '100%',
@@ -423,16 +428,91 @@ export default function CreateProfileModal({ isOpen, onClose, onProfileCreated }
                     />
                   </div>
 
-                  {/* Sect & Caste */}
+                  {/* Sect */}
                   <div>
                     <label style={{ display: 'block', fontSize: '0.8rem', color: 'var(--gold-light)', marginBottom: '6px', fontWeight: 600 }}>
-                      Sect & Caste
+                      Sect
                     </label>
                     <input
                       type="text"
                       name="sect"
-                      placeholder="e.g. Sunni Hanafi / Syed"
+                      placeholder="e.g. Sunni / Hanafi / Ahle Hadith"
                       value={formData.sect}
+                      onChange={handleInputChange}
+                      style={inputStyle}
+                    />
+                  </div>
+
+                  {/* Caste */}
+                  <div>
+                    <label style={{ display: 'block', fontSize: '0.8rem', color: 'var(--gold-light)', marginBottom: '6px', fontWeight: 600 }}>
+                      Caste
+                    </label>
+                    <input
+                      type="text"
+                      name="caste"
+                      placeholder="e.g. Arain / Syed / Sheikh / Malik"
+                      value={formData.caste}
+                      onChange={handleInputChange}
+                      style={inputStyle}
+                    />
+                  </div>
+
+                  {/* Languages */}
+                  <div>
+                    <label style={{ display: 'block', fontSize: '0.8rem', color: 'var(--gold-light)', marginBottom: '6px', fontWeight: 600 }}>
+                      Languages Spoken
+                    </label>
+                    <input
+                      type="text"
+                      name="languages"
+                      placeholder="e.g. English, Urdu, Punjabi, Arabic"
+                      value={formData.languages}
+                      onChange={handleInputChange}
+                      style={inputStyle}
+                    />
+                  </div>
+
+                  {/* Siblings */}
+                  <div>
+                    <label style={{ display: 'block', fontSize: '0.8rem', color: 'var(--gold-light)', marginBottom: '6px', fontWeight: 600 }}>
+                      Siblings Details (Instagram Label) *
+                    </label>
+                    <input
+                      type="text"
+                      name="siblings"
+                      placeholder="e.g. 2 brothers (1 married), 1 sister"
+                      value={formData.siblings}
+                      onChange={handleInputChange}
+                      style={inputStyle}
+                    />
+                  </div>
+
+                  {/* Father's Details */}
+                  <div>
+                    <label style={{ display: 'block', fontSize: '0.8rem', color: 'var(--gold-light)', marginBottom: '6px', fontWeight: 600 }}>
+                      Father's Name & Occupation
+                    </label>
+                    <input
+                      type="text"
+                      name="father"
+                      placeholder="e.g. Businessman in Bahrain / Retired Officer"
+                      value={formData.father}
+                      onChange={handleInputChange}
+                      style={inputStyle}
+                    />
+                  </div>
+
+                  {/* Mother's Details */}
+                  <div>
+                    <label style={{ display: 'block', fontSize: '0.8rem', color: 'var(--gold-light)', marginBottom: '6px', fontWeight: 600 }}>
+                      Mother's Occupation
+                    </label>
+                    <input
+                      type="text"
+                      name="mother"
+                      placeholder="e.g. Homemaker / Educator"
+                      value={formData.mother}
                       onChange={handleInputChange}
                       style={inputStyle}
                     />

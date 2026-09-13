@@ -1,6 +1,7 @@
 import express from 'express';
 import cors from 'cors';
-import morgan from 'morgan';
+import dotenv from 'dotenv';
+dotenv.config();
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -23,6 +24,25 @@ if (!fs.existsSync(publicDir)) {
   fs.mkdirSync(publicDir, { recursive: true });
 }
 app.use('/public', express.static(publicDir));
+
+// Admin route to trigger full Instagram sync (requires simple token for demo)
+app.post('/api/sync-instagram', (req, res) => {
+  // In production, protect this route with proper auth
+  const token = req.headers['x-admin-token'];
+  if (!token || token !== process.env.ADMIN_TOKEN) {
+    return res.status(403).json({ success: false, message: 'Forbidden' });
+  }
+  const { exec } = require('child_process');
+  const scriptPath = path.join(__dirname, 'scripts', 'sync_instagram_all.js');
+  exec(`node "${scriptPath}"`, (error, stdout, stderr) => {
+    if (error) {
+      console.error('Sync error:', error);
+      return res.status(500).json({ success: false, message: 'Sync failed', error: error.message });
+    }
+    console.log('Sync output:', stdout);
+    return res.json({ success: true, message: 'Instagram sync completed' });
+  });
+});
 
 // Profiles data file
 const dataFilePath = path.join(__dirname, 'data', 'profiles.json');
@@ -96,17 +116,23 @@ app.get('/api/profiles', (req, res) => {
     profiles = profiles.filter((p) => userFavs.includes(p.id));
   }
 
-  // Search filter
+  // Search filter across all key and labeled fields
   if (search) {
     const term = search.toLowerCase();
     profiles = profiles.filter(
       (p) =>
-        p.name.toLowerCase().includes(term) ||
-        p.profession.toLowerCase().includes(term) ||
-        p.education.toLowerCase().includes(term) ||
-        p.location.toLowerCase().includes(term) ||
+        (p.name && p.name.toLowerCase().includes(term)) ||
+        (p.profession && p.profession.toLowerCase().includes(term)) ||
+        (p.education && p.education.toLowerCase().includes(term)) ||
+        (p.location && p.location.toLowerCase().includes(term)) ||
         (p.sect && p.sect.toLowerCase().includes(term)) ||
-        (p.caste && p.caste.toLowerCase().includes(term))
+        (p.caste && p.caste.toLowerCase().includes(term)) ||
+        (p.siblings && p.siblings.toLowerCase().includes(term)) ||
+        (p.father && p.father.toLowerCase().includes(term)) ||
+        (p.mother && p.mother.toLowerCase().includes(term)) ||
+        (p.family && p.family.toLowerCase().includes(term)) ||
+        (p.languages && p.languages.toLowerCase().includes(term)) ||
+        (p.id && p.id.toLowerCase().includes(term))
     );
   }
 
@@ -127,54 +153,161 @@ app.get('/api/profiles/:id', (req, res) => {
   res.json({ success: true, profile });
 });
 
-// 3. POST /api/profiles (Add new profile from Form or Admin)
-app.post('/api/profiles', (req, res) => {
-  const profiles = getProfiles();
-  const newProfile = {
-    id: `NB-${Date.now().toString().slice(-4)}`,
-    name: req.body.name || 'Anonymous Applicant',
-    gender: req.body.gender || 'male',
-    maritalStatus: req.body.maritalStatus || 'Never Married',
-    category: req.body.category || 'grooms',
-    nationality: req.body.nationality || 'Pakistani',
-    age: Number(req.body.age) || 28,
-    height: req.body.height || "5'8\"",
-    sect: req.body.sect || 'Sunni / Hanafi',
-    caste: req.body.caste || 'General',
-    education: req.body.education || 'Graduate',
-    profession: req.body.profession || 'Professional in Bahrain',
-    salary: req.body.salary || 'Competitive',
-    location: req.body.location || 'Manama, Bahrain',
-    residence: req.body.residence || 'Bahrain Resident',
-    image: req.body.image || (req.body.gender === 'female' 
-      ? 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=800&q=80'
-      : 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=800&q=80'),
-    instagramPostUrl: req.body.instagramPostUrl || 'https://www.instagram.com/nikah_bahrain/',
-    about: req.body.about || 'Practicing Muslim seeking a righteous partner.',
-    requirements: req.body.requirements || 'Seeking a Deen-conscious, respectful partner.',
-    verified: req.body.verified !== undefined ? req.body.verified : true,
+// Helper to generate next NPF profile ID
+function getNextProfileId(profiles) {
+  let maxNum = 0;
+  for (const p of profiles) {
+    if (p.id) {
+      const m = p.id.match(/\d+/);
+      if (m) {
+        const n = parseInt(m[0], 10);
+        if (n > maxNum && n < 9000) maxNum = n;
+      }
+    }
+  }
+  return `NPF-${String(maxNum + 1).padStart(3, '0')}`;
+}
+
+// Helper to construct profile object from inputs or Google Form
+function buildProfileObject(reqBody, profiles) {
+  const gender = (reqBody.gender || 'male').toLowerCase() === 'female' ? 'female' : 'male';
+  const maritalStatus = reqBody.maritalStatus || 'Never Married';
+  const id = reqBody.id || getNextProfileId(profiles);
+  const name = reqBody.name || `${id} (${gender === 'female' ? 'Bride' : 'Groom'})`;
+  const nationality = reqBody.nationality || 'Pakistani';
+  const age = Number(reqBody.age) || (gender === 'male' ? 29 : 25);
+  const height = reqBody.height || (gender === 'male' ? "5'10\"" : "5'4\"");
+  const sect = reqBody.sect || 'Sunni';
+  const caste = reqBody.caste || 'General';
+  const education = reqBody.education || 'Graduate';
+  const profession = reqBody.profession || (gender === 'male' ? 'Professional in Bahrain' : 'Qualified Candidate');
+  const location = reqBody.location || 'Bahrain';
+  const residence = reqBody.residence || 'Bahrain Resident';
+  const siblings = reqBody.siblings || reqBody['Siblings'] || reqBody['Sibling Details'] || '';
+  const father = reqBody.father || reqBody["Father's Details"] || reqBody["Father's Occupation"] || reqBody['Father'] || '';
+  const mother = reqBody.mother || reqBody["Mother's Details"] || reqBody["Mother's Occupation"] || reqBody['Mother'] || '';
+  const family = reqBody.family || reqBody['Family Background'] || reqBody['Family Details'] || '';
+  const languages = reqBody.languages || reqBody['Languages'] || (nationality === 'Pakistani' ? 'English, Urdu' : 'Arabic, English');
+  const complexion = reqBody.complexion || '';
+  const build = reqBody.build || '';
+  const about = reqBody.about || reqBody['Short Bio'] || `Practicing, Deen-conscious candidate from a respectable Muslim family settled in Bahrain.`;
+  const requirements = reqBody.requirements || reqBody['Partner Requirements'] || reqBody['Looking For'] || `Seeking a righteous, well-mannered practicing partner residing in Bahrain or GCC.`;
+  const contact = reqBody.contact || reqBody['WhatsApp Number'] || reqBody['Phone'] || '+973 3718 8557';
+
+  let category = 'grooms';
+  if (maritalStatus === 'Divorced') {
+    category = gender === 'male' ? 'divorced-grooms' : 'divorced-brides';
+  } else if (maritalStatus === 'Widowed') {
+    category = gender === 'male' ? 'widowed-grooms' : 'widowed-brides';
+  } else {
+    category = gender === 'male' ? 'grooms' : 'brides';
+  }
+
+  const defaultImage = gender === 'female'
+    ? 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=800&q=80'
+    : 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=800&q=80';
+
+  const rawFlyerText = `Profile #${id} Gender ${gender === 'female' ? 'Female' : 'Male'} Location: ${location} Height: ${height} Age: ${age} Nationality: ${nationality} Marital Status: ${maritalStatus} Languages: ${languages} Sect: ${sect} Caste: ${caste} Education: ${education} Profession: ${profession} Father: ${father} Mother: ${mother} Siblings: ${siblings} Family: ${family} Short Bio: ${about} Seeking: ${requirements} Interested In: DM ${id} Qabul Hai`;
+
+  return {
+    id,
+    name,
+    gender,
+    maritalStatus,
+    category,
+    nationality,
+    age,
+    height,
+    sect,
+    caste,
+    education,
+    profession,
+    salary: reqBody.salary || 'Confidential / As per discussion',
+    location,
+    residence,
+    siblings,
+    father,
+    mother,
+    family,
+    languages,
+    complexion,
+    build,
+    image: reqBody.image || defaultImage,
+    instagramPostUrl: reqBody.instagramPostUrl || `https://www.instagram.com/nikah_bahrain/`,
+    instagramPostId: reqBody.instagramPostId || `ig_post_${id.toLowerCase().replace(/[^a-z0-9]/g, '_')}`,
+    about,
+    requirements,
+    contact,
+    rawFlyerText,
+    verified: true,
     featured: false,
     createdAt: new Date().toISOString()
   };
+}
 
-  // Auto-align category based on marital status & gender
-  if (newProfile.maritalStatus === 'Divorced') {
-    newProfile.category = newProfile.gender === 'male' ? 'divorced-grooms' : 'divorced-brides';
-  } else if (newProfile.maritalStatus === 'Widowed') {
-    newProfile.category = newProfile.gender === 'male' ? 'widowed-grooms' : 'widowed-brides';
-  } else {
-    newProfile.category = newProfile.gender === 'male' ? 'grooms' : 'brides';
-  }
+// 3. POST /api/profiles (Add new profile from Form or Admin)
+app.post('/api/profiles', (req, res) => {
+  const profiles = getProfiles();
+  const newProfile = buildProfileObject(req.body, profiles);
 
   profiles.unshift(newProfile);
   saveProfiles(profiles);
 
   res.status(201).json({
     success: true,
-    message: 'Profile created and added to category successfully!',
+    message: 'Profile created and added to Qabul Hai successfully!',
     profile: newProfile
   });
 });
+
+// 3b. POST /api/google-form-submission (Google Form Webhook & Response Handler)
+app.post(['/api/google-form-submission', '/api/webhook/google-form'], (req, res) => {
+  try {
+    const profiles = getProfiles();
+    const payload = req.body || {};
+    
+    // Normalize possible Google Form keys or flat body
+    const normalizedBody = {
+      name: payload.name || payload['Full Name'] || payload['Candidate Name'] || payload['Name'],
+      gender: payload.gender || payload['Gender'] || (payload['Looking for Groom'] ? 'female' : 'male'),
+      maritalStatus: payload.maritalStatus || payload['Marital Status'] || payload['Status'] || 'Never Married',
+      nationality: payload.nationality || payload['Nationality'] || 'Pakistani',
+      age: payload.age || payload['Age'] || payload['Date of Birth'],
+      height: payload.height || payload['Height'],
+      sect: payload.sect || payload['Sect'] || payload['Religion'] || 'Sunni',
+      caste: payload.caste || payload['Caste'] || payload['Cast'] || 'General',
+      education: payload.education || payload['Education'] || payload['Qualification'],
+      profession: payload.profession || payload['Profession'] || payload['Occupation'] || payload['Job Title'],
+      location: payload.location || payload['Location'] || payload['Current City'] || 'Bahrain',
+      residence: payload.residence || payload['Residence Status'] || payload['Residency'],
+      siblings: payload.siblings || payload['Siblings'] || payload['Sibling Details'] || payload['Number of Siblings'],
+      father: payload.father || payload["Father's Name/Occupation"] || payload["Father's Occupation"] || payload['Father Details'],
+      mother: payload.mother || payload["Mother's Occupation"] || payload['Mother Details'],
+      family: payload.family || payload['Family Background'] || payload['Family Details'],
+      languages: payload.languages || payload['Languages Spoken'] || payload['Languages'],
+      about: payload.about || payload['Short Bio'] || payload['About Yourself'],
+      requirements: payload.requirements || payload['Partner Requirements'] || payload['Expectations from Partner'],
+      contact: payload.contact || payload['WhatsApp Number'] || payload['Contact Number'] || payload['Phone'],
+      image: payload.image || payload['Photo URL'] || payload['Flyer Image URL']
+    };
+
+    const newProfile = buildProfileObject(normalizedBody, profiles);
+    profiles.unshift(newProfile);
+    saveProfiles(profiles);
+
+    console.log(`[Google Form Sync] Successfully recorded proposal: ${newProfile.id} (${newProfile.name})`);
+
+    res.status(201).json({
+      success: true,
+      message: `Google Form response received and live profile created with ID ${newProfile.id}! Displayed on Qabul Hai and Instagram feed.`,
+      profile: newProfile
+    });
+  } catch (err) {
+    console.error('Google Form submission error:', err);
+    res.status(500).json({ success: false, message: `Failed to process Google Form: ${err.message}` });
+  }
+});
+
 
 // 4. PUT /api/profiles/:id (Admin update)
 app.put('/api/profiles/:id', (req, res) => {
@@ -296,14 +429,14 @@ app.post('/api/favorites/toggle', (req, res) => {
 app.get('/', (req, res) => {
   res.json({
     status: 'online',
-    service: 'Nikah Bahrain API',
-    endpoints: ['/api/profiles', '/api/stats', '/api/favorites']
+    service: 'Qabul Hai API',
+    endpoints: ['/api/profiles', '/api/stats', '/api/favorites', '/api/google-form-submission']
   });
 });
 
 if (!process.env.VERCEL) {
   app.listen(PORT, '0.0.0.0', () => {
-    console.log(`Nikah Bahrain Server running on http://localhost:${PORT}`);
+    console.log(`Qabul Hai Server running on http://localhost:${PORT}`);
   });
 }
 

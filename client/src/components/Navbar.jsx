@@ -139,7 +139,7 @@ export default function Navbar({
           >
             <img 
               src={logoImg} 
-              alt="Nikah Bahrain" 
+              alt="Qabul Hai" 
               style={{
                 width: '100%',
                 height: '100%',
@@ -156,11 +156,14 @@ export default function Navbar({
                 fontSize: '1.25rem', 
                 fontWeight: 800, 
                 color: '#ffffff',
-                letterSpacing: '0.5px',
+                letterSpacing: '0.8px',
                 lineHeight: 1.1
               }}
             >
-              NIKAH BAHRAIN
+              QABUL HAI
+            </div>
+            <div style={{ fontSize: '0.68rem', color: 'var(--gold-light)', letterSpacing: '0.5px' }}>
+              Muslim Matrimony • Bahrain & GCC
             </div>
           </div>
         </div>
