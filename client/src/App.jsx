@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { useTrail, useSpring, animated } from '@react-spring/web';
+import { useTrail, animated } from '@react-spring/web';
 import Navbar from './components/Navbar';
 import CategoryBar from './components/CategoryBar';
 import FilterBar, { AGE_RANGES } from './components/FilterBar';
@@ -10,7 +10,7 @@ import AdminPanel from './components/AdminPanel';
 import ContactFooter from './components/ContactFooter';
 import Pagination from './components/Pagination';
 import SplashIntro from './components/SplashIntro';
-import { Sparkles, AlertCircle, RefreshCw, PlusCircle, RotateCcw } from './icons';
+import { Sparkles, AlertCircle, RefreshCw, RotateCcw } from './icons';
 
 import API_BASE from './api';
 
@@ -54,21 +54,6 @@ export default function App() {
   // 7. Modals State
   const [selectedProfile, setSelectedProfile] = useState(null);
   const [isCreateProfileOpen, setIsCreateProfileOpen] = useState(false);
-
-  // Floating CTA spring
-  const ctaSpring = useSpring({
-    loop: { reverse: true },
-    from: { transform: 'translateY(0px) scale(1)' },
-    to: { transform: 'translateY(-3px) scale(1.02)' },
-    config: { tension: 140, friction: 14 }
-  });
-
-  const ctaGlowSpring = useSpring({
-    loop: { reverse: true },
-    from: { boxShadow: '0 6px 25px rgba(212, 175, 55, 0.25)' },
-    to: { boxShadow: '0 6px 36px rgba(212, 175, 55, 0.5)' },
-    config: { duration: 1500 }
-  });
 
   // Handle URL hash / route for /admin
   useEffect(() => {
@@ -196,6 +181,7 @@ export default function App() {
     } else if (activeTab === 'favorites') {
       result = result.filter((p) => favorites.includes(p.id));
     }
+    // 'home' tab shows all profiles (no filter)
 
     // 2. Category Filter (from uploaded picture: ALL, NEVER MARRIED, DIVORCED, 2ND MARRIAGE, LATE WIFE)
     if (activeCategory === 'never-married') {
@@ -458,25 +444,7 @@ export default function App() {
                       <RotateCcw size={14} />
                       <span>View All In This Tab</span>
                     </button>
-                    <button
-                      onClick={() => setIsCreateProfileOpen(true)}
-                      style={{
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        gap: '6px',
-                        background: 'transparent',
-                        color: '#fae182',
-                        border: '1px solid rgba(212, 175, 55, 0.4)',
-                        borderRadius: '9999px',
-                        padding: '8px 20px',
-                        fontSize: '0.85rem',
-                        fontWeight: 600,
-                        cursor: 'pointer'
-                      }}
-                    >
-                      <PlusCircle size={14} />
-                      <span>Create A Proposal</span>
-                    </button>
+
                   </div>
                 </div>
               ) : (
@@ -526,38 +494,7 @@ export default function App() {
         )}
       </main>
 
-      {/* Floating Create Profile CTA Button */}
-      {!isAdminActive && !showSplash && (
-        <animated.button
-          onClick={() => setIsCreateProfileOpen(true)}
-          style={{
-            ...ctaSpring,
-            ...ctaGlowSpring,
-            position: 'fixed',
-            bottom: '28px',
-            right: '28px',
-            zIndex: 200,
-            display: 'flex',
-            alignItems: 'center',
-            gap: '8px',
-            padding: '14px 24px',
-            borderRadius: '9999px',
-            background: 'linear-gradient(135deg, #d4af37 0%, #b8860b 50%, #d4af37 100%)',
-            border: '2px solid rgba(250, 225, 130, 0.6)',
-            color: '#0a1628',
-            fontSize: '0.95rem',
-            fontWeight: 800,
-            cursor: 'pointer',
-            letterSpacing: '0.3px',
-            fontFamily: 'var(--font-cinzel)',
-            outline: 'none'
-          }}
-          title="Create your matrimonial profile"
-        >
-          <PlusCircle size={20} />
-          <span>Create Profile</span>
-        </animated.button>
-      )}
+
 
       {/* 4. Contact Us Section & Islamic Footer */}
       <ContactFooter 
@@ -578,12 +515,6 @@ export default function App() {
       <CreateProfileModal
         isOpen={isCreateProfileOpen}
         onClose={() => setIsCreateProfileOpen(false)}
-        onProfileCreated={(newProfile) => {
-          fetchProfiles();
-          if (newProfile && newProfile.category) {
-            setActiveTab(newProfile.gender === 'female' ? 'bride' : 'groom');
-          }
-        }}
       />
     </div>
   );

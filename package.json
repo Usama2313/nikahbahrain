@@ -4,7 +4,7 @@
   "type": "module",
   "description": "Nikah Bahrain Matrimonial Platform",
   "scripts": {
-    "build": "npm install --no-package-lock --prefix client && npm run build --prefix client",
+    "build": "npm install --prefix client && npm run build --prefix client",
     "server": "node server/index.js",
     "client": "npm --prefix client run dev",
     "sync-ig": "node server/scripts/sync_live_instagram.js",
@@ -14,6 +14,7 @@
   },
   "dependencies": {
     "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
     "express": "^4.19.2",
     "morgan": "^1.10.0"
   }
