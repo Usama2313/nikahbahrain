@@ -3,29 +3,29 @@
   --font-serif: 'Cinzel', Georgia, serif;
   --font-arabic: 'Scheherazade New', serif;
 
-  --bg-darkest: #040913;
-  --bg-dark: #071220;
-  --bg-card: rgba(12, 25, 45, 0.82);
-  --bg-card-hover: rgba(18, 36, 64, 0.92);
-  --bg-glass: rgba(15, 30, 55, 0.65);
+  --bg-darkest: #060e1d;
+  --bg-dark: #0a162a;
+  --bg-card: rgba(12, 28, 54, 0.98);
+  --bg-card-hover: rgba(16, 36, 68, 0.99);
+  --bg-glass: rgba(12, 28, 54, 0.95);
   
   --gold-primary: #d4af37;
   --gold-light: #fae182;
-  --gold-metallic: #b8860b;
-  --gold-dim: rgba(212, 175, 55, 0.18);
+  --gold-metallic: #c59b27;
+  --gold-dim: rgba(212, 175, 55, 0.22);
   --gold-glow: rgba(212, 175, 55, 0.35);
-  --gold-border: rgba(212, 175, 55, 0.28);
+  --gold-border: rgba(212, 175, 55, 0.32);
   
   --blue-sapphire: #102a4e;
   --blue-royal: #1b4b8a;
   --blue-bright: #3b82f6;
 
-  --text-main: #f8fafc;
-  --text-muted: #94a3b8;
-  --text-dim: #64748b;
-  --text-gold: #f5d47a;
+  --text-main: #ffffff;
+  --text-muted: #e2e8f0;
+  --text-dim: #cbd5e1;
+  --text-gold: #fae182;
 
-  --border-subtle: rgba(255, 255, 255, 0.08);
+  --border-subtle: rgba(255, 255, 255, 0.12);
   --radius-sm: 8px;
   --radius-md: 14px;
   --radius-lg: 20px;
@@ -44,29 +44,21 @@
 
 body {
   font-family: var(--font-sans);
-  background-color: var(--bg-darkest);
+  background-color: #060e1d;
   color: var(--text-main);
-  line-height: 1.5;
+  line-height: 1.6;
   min-height: 100vh;
   overflow-x: hidden;
   background-image: 
-    radial-gradient(circle at 50% 0%, rgba(27, 75, 138, 0.25) 0%, transparent 60%),
-    radial-gradient(circle at 100% 50%, rgba(212, 175, 55, 0.06) 0%, transparent 40%),
-    radial-gradient(circle at 0% 80%, rgba(16, 42, 78, 0.3) 0%, transparent 50%);
+    radial-gradient(ellipse 90% 60% at 50% -10%, rgba(27, 75, 138, 0.28) 0%, transparent 70%),
+    radial-gradient(ellipse 70% 50% at 100% 50%, rgba(212, 175, 55, 0.04) 0%, transparent 60%),
+    radial-gradient(ellipse 80% 60% at 0% 90%, rgba(16, 42, 78, 0.25) 0%, transparent 70%);
   background-attachment: fixed;
 }
 
-/* Islamic arabesque pattern overlay */
+/* Islamic background - clean and subtle without noisy dots */
 body::before {
-  content: "";
-  position: fixed;
-  inset: 0;
-  pointer-events: none;
-  z-index: 0;
-  opacity: 0.035;
-  background-image: radial-gradient(var(--gold-primary) 1px, transparent 1px), radial-gradient(var(--gold-primary) 1px, transparent 1px);
-  background-size: 40px 40px;
-  background-position: 0 0, 20px 20px;
+  display: none;
 }
 
 #root {
@@ -627,41 +619,78 @@ button:active, .btn-gold:active, .btn-whatsapp:active, .btn-ghost:active, a[role
 }
 
 /* ============================================================
-   GLOBAL RESPONSIVENESS IMPROVEMENTS
+   GLOBAL RESPONSIVENESS & READABILITY ENHANCEMENTS
    ============================================================ */
 
-/* Navbar responsiveness */
+/* Mobile Container Padding */
 @media (max-width: 768px) {
+  .responsive-main-container {
+    padding-left: 12px !important;
+    padding-right: 12px !important;
+  }
+
   .admin-grid {
     grid-template-columns: 1fr !important;
   }
 }
 
-/* Ensure no horizontal overflow on any screen */
+/* Category Pills Row - Smooth Touch Scrolling */
+.category-pills-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  padding-bottom: 6px;
+}
+.category-pills-row::-webkit-scrollbar {
+  display: none;
+}
+
+/* Stats bar mobile responsiveness */
+@media (max-width: 768px) {
+  #search-proposals-input {
+    font-size: 16px !important; /* Prevents auto-zoom on iOS Safari */
+  }
+
+  .profiles-grid {
+    grid-template-columns: 1fr !important;
+    gap: 16px !important;
+  }
+}
+
 @media (max-width: 480px) {
   body {
     overflow-x: hidden;
   }
 
   .glass-panel {
-    padding: 16px 14px;
+    padding: 16px 12px !important;
   }
 
-  /* Better readability on small screens */
   h1, h2, h3 {
     word-break: break-word;
+  }
+
+  /* Compact button padding on very small screens */
+  .btn-gold, .btn-ghost, .btn-whatsapp {
+    padding: 9px 14px !important;
+    font-size: 0.82rem !important;
   }
 }
 
 /* ============================================================
-   ENHANCED READABILITY — Higher contrast backgrounds
+   ENHANCED READABILITY — High Contrast Glass Panels
    ============================================================ */
 
-/* Make glass panels more readable */
 .glass-panel {
-  background: rgba(8, 17, 38, 0.92) !important;
+  background: rgba(10, 24, 48, 0.96) !important;
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
+  border: 1.5px solid rgba(212, 175, 55, 0.32) !important;
+  box-shadow: 0 16px 36px rgba(0, 0, 0, 0.65), 0 0 1px rgba(212, 175, 55, 0.3) !important;
 }
 
 /* Table row readability */
@@ -669,13 +698,20 @@ table tbody tr {
   transition: background 0.15s ease;
 }
 
+table tbody tr:hover {
+  background: rgba(212, 175, 55, 0.08) !important;
+}
+
 table thead th {
-  background: rgba(212, 175, 55, 0.08);
+  background: rgba(12, 28, 54, 0.98) !important;
+  color: var(--gold-light) !important;
+  font-weight: 700 !important;
+  border-bottom: 2px solid rgba(212, 175, 55, 0.35) !important;
 }
 
 /* Input focus readability */
 input:focus, textarea:focus, select:focus {
   border-color: var(--gold-primary) !important;
-  box-shadow: 0 0 0 2px rgba(212, 175, 55, 0.15) !important;
+  box-shadow: 0 0 0 2px rgba(212, 175, 55, 0.25) !important;
   outline: none !important;
 }

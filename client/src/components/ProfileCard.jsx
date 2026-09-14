@@ -141,40 +141,29 @@ Please provide more details. JazakAllah Khair!`;
 
   // Marital status badge styling
   const maritalBadge = {
-    'Never Married': { emoji: '💍', bg: 'rgba(212, 175, 55, 0.15)', border: 'rgba(212, 175, 55, 0.4)', text: '#fce588' },
-    'Divorced': { emoji: '🔄', bg: 'rgba(168, 85, 247, 0.15)', border: 'rgba(168, 85, 247, 0.4)', text: '#d8b4fe' },
-    'Widowed': { emoji: '🕊️', bg: 'rgba(14, 165, 233, 0.15)', border: 'rgba(14, 165, 233, 0.4)', text: '#7dd3fc' }
-  }[profile.maritalStatus] || { emoji: '📋', bg: 'rgba(255, 255, 255, 0.1)', border: 'rgba(255, 255, 255, 0.2)', text: '#ffffff' };
+    'Never Married': { emoji: '💍', bg: 'rgba(212, 175, 55, 0.2)', border: 'rgba(212, 175, 55, 0.55)', text: '#fce588' },
+    'Divorced': { emoji: '🔄', bg: 'rgba(168, 85, 247, 0.2)', border: 'rgba(168, 85, 247, 0.55)', text: '#e9d5ff' },
+    '2nd Marriage': { emoji: '✨', bg: 'rgba(249, 115, 22, 0.22)', border: 'rgba(249, 115, 22, 0.55)', text: '#fed7aa' },
+    'Widowed': { emoji: '🕊️', bg: 'rgba(14, 165, 233, 0.2)', border: 'rgba(14, 165, 233, 0.55)', text: '#bae6fd' }
+  }[profile.maritalStatus] || { emoji: '📋', bg: 'rgba(255, 255, 255, 0.15)', border: 'rgba(255, 255, 255, 0.3)', text: '#ffffff' };
 
   // Gender gradient and icon
   const genderConfig = profile.gender === 'male' 
     ? { 
         gradient: 'linear-gradient(135deg, #1e3a5f 0%, #0c2340 100%)',
-        accentBorder: 'rgba(59, 130, 246, 0.4)',
+        accentBorder: 'rgba(59, 130, 246, 0.5)',
         iconBg: 'linear-gradient(135deg, #3b82f6, #1d4ed8)',
         label: 'GROOM'
       }
     : {
         gradient: 'linear-gradient(135deg, #4a1942 0%, #2d1033 100%)',
-        accentBorder: 'rgba(236, 72, 153, 0.4)',
+        accentBorder: 'rgba(236, 72, 153, 0.5)',
         iconBg: 'linear-gradient(135deg, #ec4899, #be185d)',
         label: 'BRIDE'
       };
 
-  // Elegant Dark Backgrounds
-  const backgrounds = [
-    'linear-gradient(145deg, rgba(9, 25, 48, 0.95) 0%, rgba(6, 17, 34, 0.98) 100%)', // Default Navy
-    'linear-gradient(145deg, rgba(16, 30, 24, 0.95) 0%, rgba(8, 20, 16, 0.98) 100%)', // Dark Emerald
-    'linear-gradient(145deg, rgba(30, 15, 20, 0.95) 0%, rgba(20, 8, 12, 0.98) 100%)', // Deep Burgundy
-    'linear-gradient(145deg, rgba(20, 20, 30, 0.95) 0%, rgba(12, 12, 20, 0.98) 100%)', // Charcoal Indigo
-    'linear-gradient(145deg, rgba(25, 18, 10, 0.95) 0%, rgba(15, 10, 5, 0.98) 100%)', // Dark Bronze
-    'linear-gradient(145deg, rgba(10, 25, 30, 0.95) 0%, rgba(5, 15, 20, 0.98) 100%)' // Dark Teal
-  ];
-  
-  const bgIndex = profile.id 
-    ? profile.id.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0) % backgrounds.length 
-    : 0;
-  const cardBackground = backgrounds[bgIndex];
+  // High-contrast deep navy luxury card surface for maximum text clarity
+  const cardBackground = 'linear-gradient(165deg, rgba(12, 28, 54, 0.98) 0%, rgba(6, 17, 36, 1) 100%)';
 
   return (
     <animated.div
@@ -470,8 +459,9 @@ Please provide more details. JazakAllah Khair!`;
                   display: 'flex', 
                   alignItems: 'center', 
                   gap: '8px', 
-                  fontSize: '0.83rem', 
-                  color: '#e2e8f0'
+                  fontSize: '0.86rem', 
+                  fontWeight: 500,
+                  color: '#ffffff'
                 }}
               >
                 <Icon size={14} color={item.color} style={{ flexShrink: 0 }} />
@@ -489,12 +479,12 @@ Please provide more details. JazakAllah Khair!`;
                 display: 'flex',
                 alignItems: 'flex-start',
                 gap: '8px',
-                fontSize: '0.79rem',
-                color: '#cbd5e1',
-                background: 'rgba(255, 255, 255, 0.03)',
+                fontSize: '0.82rem',
+                color: '#ffffff',
+                background: 'rgba(212, 175, 55, 0.08)',
                 padding: '6px 10px',
                 borderRadius: 'var(--radius-sm)',
-                border: '1px solid rgba(212, 175, 55, 0.15)'
+                border: '1px solid rgba(212, 175, 55, 0.25)'
               }}
             >
               <strong style={{ color: 'var(--gold-light)', flexShrink: 0 }}>Siblings:</strong>

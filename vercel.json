@@ -3,6 +3,11 @@
   "buildCommand": "npm install --prefix client && npm run build --prefix client",
   "outputDirectory": "client/dist",
   "installCommand": "npm install",
+  "functions": {
+    "api/**/*.js": {
+      "includeFiles": "{server/data/**,client/src/data/**}"
+    }
+  },
   "routes": [
     {
       "src": "/api/(.*)",

@@ -48,15 +48,29 @@ app.post('/api/sync-instagram', (req, res) => {
   });
 });
 
-// Profiles data file
-const dataFilePath = path.join(__dirname, 'data', 'profiles.json');
+// Profiles data file multi-path resolution (works across local and Vercel serverless functions)
+function getDataFilePath() {
+  const candidates = [
+    path.join(__dirname, 'data', 'profiles.json'),
+    path.join(process.cwd(), 'server', 'data', 'profiles.json'),
+    path.join(process.cwd(), 'data', 'profiles.json'),
+    path.join(__dirname, '..', 'server', 'data', 'profiles.json'),
+    path.join(__dirname, '..', 'client', 'src', 'data', 'profiles.json'),
+  ];
+  for (const c of candidates) {
+    if (fs.existsSync(c)) return c;
+  }
+  return path.join(__dirname, 'data', 'profiles.json');
+}
+
 const favoritesFilePath = path.join(__dirname, 'data', 'favorites.json');
 
 // Helper to read profiles
 function getProfiles() {
   try {
-    if (!fs.existsSync(dataFilePath)) return [];
-    const data = fs.readFileSync(dataFilePath, 'utf8');
+    const targetFile = getDataFilePath();
+    if (!fs.existsSync(targetFile)) return [];
+    const data = fs.readFileSync(targetFile, 'utf8');
     return JSON.parse(data);
   } catch (err) {
     console.error('Error reading profiles:', err);

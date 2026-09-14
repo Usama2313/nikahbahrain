@@ -26,6 +26,7 @@ import {
 import confetti from 'canvas-confetti';
 import API_BASE from '../api';
 import logoImg from '../assets/logo.jpg';
+import fallbackProfiles from '../data/profiles.json';
 
 // Standard Admin Credentials
 const ADMIN_CREDENTIALS = {
@@ -147,15 +148,35 @@ export default function AdminPanel({ onBackToPortal }) {
     try {
       setLoading(true);
       const [statsRes, profilesRes] = await Promise.all([
-        fetch(`${API_BASE}/stats`),
-        fetch(`${API_BASE}/profiles`),
+        fetch(`${API_BASE}/stats`).catch(() => null),
+        fetch(`${API_BASE}/profiles`).catch(() => null),
       ]);
-      const statsData = await statsRes.json();
-      const profilesData = await profilesRes.json();
-      if (statsData.success) setStats(statsData.stats);
-      if (profilesData.success) setProfiles(profilesData.profiles);
+      if (statsRes && statsRes.ok) {
+        const statsData = await statsRes.json();
+        if (statsData.success) setStats(statsData.stats);
+      }
+      if (profilesRes && profilesRes.ok) {
+        const profilesData = await profilesRes.json();
+        if (profilesData.success && Array.isArray(profilesData.profiles)) {
+          setProfiles(profilesData.profiles);
+          return;
+        }
+      }
+      // Fallback if API is offline
+      setProfiles((prev) => (prev && prev.length > 0 ? prev : fallbackProfiles));
+      const pList = fallbackProfiles || [];
+      setStats((prev) => prev || {
+        total: pList.length,
+        grooms: pList.filter(p => p.gender === 'male').length,
+        brides: pList.filter(p => p.gender === 'female').length,
+        divorcedGrooms: pList.filter(p => p.gender === 'male' && p.maritalStatus === 'Divorced').length,
+        widowedGrooms: pList.filter(p => p.gender === 'male' && p.maritalStatus === 'Widowed').length,
+        pakistani: pList.filter(p => p.nationality === 'Pakistani').length,
+        indian: pList.filter(p => p.nationality === 'Indian').length,
+      });
     } catch (err) {
-      console.error('Admin fetch error:', err);
+      console.warn('Admin fetch API fallback used:', err.message);
+      setProfiles((prev) => (prev && prev.length > 0 ? prev : fallbackProfiles));
     } finally {
       setLoading(false);
     }
