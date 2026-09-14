@@ -444,7 +444,7 @@ app.post('/api/favorites/toggle', (req, res) => {
   });
 });
 
-// Root ping
+// Google Sheet responses endpoint\napp.get('/api/google-form-responses', async (req, res) => {\n  const sheetUrl = process.env.GOOGLE_SHEET_CSV_URL;\n  if (!sheetUrl) {\n    return res.status(500).json({ success: false, message: 'Google Sheet URL not configured.' });\n  }\n  try {\n    const fetchRes = await fetch(sheetUrl);\n    if (!fetchRes.ok) throw new Error(`HTTP ${fetchRes.status}`);\n    const csvText = await fetchRes.text();\n    const [headerLine, ...rows] = csvText.split('\n').filter(l => l.trim() !== '');\n    const headers = headerLine.split(',');\n    const data = rows.map(row => {\n      const values = row.split(',');\n      const obj = {};\n      headers.forEach((h, i) => { obj[h.trim()] = values[i]?.trim(); });\n      return obj;\n    });\n    res.json({ success: true, responses: data });\n  } catch (err) {\n    console.error('Google Sheet fetch error:', err);\n    res.status(500).json({ success: false, message: err.message });\n  }\n});\n\n// Root ping
 app.get('/', (req, res) => {
   res.json({
     status: 'online',

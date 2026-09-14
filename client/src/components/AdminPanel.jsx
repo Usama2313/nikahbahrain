@@ -110,10 +110,22 @@ export default function AdminPanel({ onBackToPortal }) {
   const [activeSection, setActiveSection] = useState('dashboard');
   const [expandedGroup, setExpandedGroup] = useState(null);
 
-  // Table controls
-  const [searchQuery, setSearchQuery] = useState('');
-  const [currentPage, setCurrentPage] = useState(1);
+  const [formResponses, setFormResponses] = useState([]);
+  const [responsesLoading, setResponsesLoading] = useState(false);
 
+  const fetchFormResponses = async () => {
+    try {
+      setResponsesLoading(true);
+      const res = await fetch(`${API_BASE}/google-form-responses`);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = await res.json();
+      if (data.success) setFormResponses(data.responses);
+    } catch (err) {
+      console.error('Failed to fetch form responses', err);
+    } finally {
+      setResponsesLoading(false);
+    }
+  };
   // Spring animation
   const adminSpring = useSpring({
     from: { opacity: 0, transform: 'translateY(15px)' },
@@ -312,7 +324,7 @@ export default function AdminPanel({ onBackToPortal }) {
             alignItems: 'center',
             gap: '20px',
             position: 'relative',
-            background: 'rgba(4, 12, 28, 0.96)',
+            background: '#ffffff',
           }}
         >
           <button
@@ -411,7 +423,7 @@ export default function AdminPanel({ onBackToPortal }) {
         alignItems: 'center',
         justifyContent: 'space-between',
         padding: '12px 20px',
-        background: 'rgba(4, 10, 24, 0.98)',
+        background: '#ffffff',
         borderBottom: '1px solid rgba(212,175,55,0.25)',
         position: 'sticky',
         top: 0,
@@ -595,7 +607,7 @@ export default function AdminPanel({ onBackToPortal }) {
         </aside>
 
         {/* ── MAIN CONTENT ── */}
-        <main style={{ flex: 1, overflowX: 'hidden', overflowY: 'auto', background: 'rgba(5, 11, 26, 0.97)', minWidth: 0 }}>
+        <main style={{ flex: 1, overflowX: 'hidden', overflowY: 'auto', background: '#ffffff', minWidth: 0 }}>
           <div style={{ padding: '24px 20px', maxWidth: '1200px', margin: '0 auto' }}>
 
             {/* ════ DASHBOARD VIEW ════ */}
@@ -729,7 +741,7 @@ export default function AdminPanel({ onBackToPortal }) {
                               <td style={{ padding: '11px 14px', fontWeight: 700, color: 'var(--gold-light)', fontSize: '0.8rem', whiteSpace: 'nowrap' }}>{p.id}</td>
                               <td style={{ padding: '11px 14px' }}>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                                  <img src={p.image} alt="" style={{ width: '34px', height: '34px', borderRadius: '50%', objectFit: 'cover', border: '1px solid var(--gold-border)', flexShrink: 0 }} />
+                                  {/* Image removed */}
                                   <div>
                                     <div style={{ fontWeight: 600, color: '#fff', fontSize: '0.875rem', whiteSpace: 'nowrap' }}>{p.name}</div>
                                     <div style={{ fontSize: '0.7rem', color: 'var(--text-dim)' }}>{p.sect}</div>
