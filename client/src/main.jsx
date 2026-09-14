@@ -1,7 +1,8 @@
-import { StrictMode } from 'react';
+import React, { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import './index.css';
 import App from './App.jsx';
+
 
 // World-Class Button Click Animations: Dynamic Ripple Wave + Golden Micro-Sparkles Burst
 if (typeof window !== 'undefined') {
@@ -58,8 +59,37 @@ if (typeof window !== 'undefined') {
   });
 }
 
+class ErrorBoundary extends React.Component {
+  constructor(props) {
+    super(props);
+    this.state = { hasError: false, error: null };
+  }
+  static getDerivedStateFromError(error) {
+    return { hasError: true, error };
+  }
+  componentDidCatch(error, errorInfo) {
+    console.error('REACT_ERROR_BOUNDARY_CAUGHT:', error, errorInfo);
+  }
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div style={{ padding: '30px', color: '#b91c1c', background: '#fef2f2', fontFamily: 'monospace', maxWidth: '800px', margin: '40px auto', borderRadius: '12px', border: '1.5px solid #f87171' }}>
+          <h2 style={{ fontSize: '1.4rem', marginBottom: '10px' }}>Application Error Encountered</h2>
+          <pre style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-all' }}>{String(this.state.error?.stack || this.state.error)}</pre>
+          <button onClick={() => { window.location.href = '/'; }} style={{ marginTop: '16px', padding: '8px 16px', cursor: 'pointer', background: '#b91c1c', color: '#fff', border: 'none', borderRadius: '6px' }}>Return to Home</button>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
+
 createRoot(document.getElementById('root')).render(
   <StrictMode>
-    <App />
+    <ErrorBoundary>
+      <App />
+    </ErrorBoundary>
   </StrictMode>,
 );
+
+

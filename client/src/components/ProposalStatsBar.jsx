@@ -30,19 +30,21 @@ export default function ProposalStatsBar({
       }}
     >
       <div
-        className="glass-panel stats-bar-inner"
+        className="stats-bar-inner"
         style={{
-          padding: '12px 18px',
+          padding: '14px 20px',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
           gap: '14px',
           flexWrap: 'wrap',
-          background: '#ffffff',
-          borderColor: 'var(--gold-border)',
-          boxShadow: '0 2px 12px rgba(0, 0, 0, 0.04)'
+          background: 'linear-gradient(135deg, #0e2038 0%, #081424 100%)',
+          border: '1.5px solid rgba(212, 175, 55, 0.45)',
+          borderRadius: 'var(--radius-lg)',
+          boxShadow: '0 4px 20px rgba(0, 0, 0, 0.25), 0 0 0 1px rgba(212, 175, 55, 0.2)'
         }}
       >
+
         {/* Left: Total Numbers of Proposals Prominent Display */}
         <animated.div 
           className="stats-bar-counts"
@@ -54,28 +56,28 @@ export default function ProposalStatsBar({
             flexWrap: 'wrap' 
           }}
         >
-          {/* Main Total Proposals Counter */}
+          {/* Main Total Proposals Counter (Ivory & Gold Pill from uploaded screenshot) */}
           <div
             style={{
               display: 'inline-flex',
               alignItems: 'center',
               gap: '8px',
-              padding: '6px 14px',
+              padding: '6px 16px',
               borderRadius: '9999px',
               background: '#fefce8',
-              border: '1.5px solid rgba(196, 155, 31, 0.45)',
-              boxShadow: '0 2px 8px rgba(196, 155, 31, 0.15)'
+              border: '1.5px solid rgba(196, 155, 31, 0.55)',
+              boxShadow: '0 2px 10px rgba(196, 155, 31, 0.2)'
             }}
           >
-            <Sparkles size={16} color="var(--gold-primary)" />
-            <span style={{ fontSize: '0.88rem', fontWeight: 700, color: '#0f172a', letterSpacing: '0.2px' }}>
+            <Sparkles size={16} color="#b45309" />
+            <span style={{ fontSize: '0.9rem', fontWeight: 800, color: '#0f172a', letterSpacing: '0.2px' }}>
               Total Proposals:
             </span>
             <span
               style={{
                 fontSize: '1.05rem',
-                fontWeight: 800,
-                color: 'var(--text-gold)',
+                fontWeight: 900,
+                color: '#92400e',
                 fontFamily: 'var(--font-cinzel)',
                 letterSpacing: '0.5px'
               }}
@@ -85,18 +87,18 @@ export default function ProposalStatsBar({
           </div>
 
           {/* Breakdown Chips */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
             <span
               style={{
                 display: 'inline-flex',
                 alignItems: 'center',
-                gap: '5px',
-                padding: '4px 10px',
+                gap: '6px',
+                padding: '5px 12px',
                 borderRadius: '9999px',
                 background: '#eff6ff',
-                border: '1px solid #bfdbfe',
+                border: '1.5px solid #bfdbfe',
                 color: '#1d4ed8',
-                fontSize: '0.78rem',
+                fontSize: '0.82rem',
                 fontWeight: 700
               }}
             >
@@ -106,13 +108,13 @@ export default function ProposalStatsBar({
               style={{
                 display: 'inline-flex',
                 alignItems: 'center',
-                gap: '5px',
-                padding: '4px 10px',
+                gap: '6px',
+                padding: '5px 12px',
                 borderRadius: '9999px',
                 background: '#fdf2f8',
-                border: '1px solid #fbcfe8',
+                border: '1.5px solid #fbcfe8',
                 color: '#be185d',
-                fontSize: '0.78rem',
+                fontSize: '0.82rem',
                 fontWeight: 700
               }}
             >
@@ -126,30 +128,31 @@ export default function ProposalStatsBar({
               style={{
                 display: 'inline-flex',
                 alignItems: 'center',
-                gap: '5px',
-                padding: '4px 10px',
+                gap: '6px',
+                padding: '5px 12px',
                 borderRadius: '9999px',
                 background: '#ecfdf5',
-                border: '1px solid #a7f3d0',
+                border: '1.5px solid #a7f3d0',
                 color: '#065f46',
-                fontSize: '0.78rem',
-                fontWeight: 600
+                fontSize: '0.82rem',
+                fontWeight: 700
               }}
             >
-              <CheckCircle2 size={13} />
+              <CheckCircle2 size={14} />
               Showing {filteredCount} matching
             </span>
           )}
         </animated.div>
 
-        {/* Right: Sleek Search Bar */}
+        {/* Right: Clean High-Contrast Search Bar */}
         <div 
           className="stats-bar-search"
           style={{ 
             position: 'relative', 
-            minWidth: '0', 
-            flex: '1 1 260px',
-            maxWidth: '100%'
+            minWidth: '260px', 
+            flex: '0 1 360px',
+            maxWidth: '100%',
+            height: '42px'
           }}
         >
           <Search 
@@ -159,9 +162,9 @@ export default function ProposalStatsBar({
               left: '14px', 
               top: '50%', 
               transform: 'translateY(-50%)', 
-              color: 'var(--gold-primary)',
-              opacity: 0.9,
-              pointerEvents: 'none'
+              color: '#b45309',
+              pointerEvents: 'none',
+              zIndex: 2
             }} 
           />
           <input
@@ -172,25 +175,25 @@ export default function ProposalStatsBar({
             onChange={(e) => onSearchChange(e.target.value)}
             style={{
               width: '100%',
-              padding: '9px 36px 9px 38px',
-              borderRadius: 'var(--radius-full)',
-              background: '#f8fafc',
-              border: '1.5px solid rgba(196, 155, 31, 0.35)',
+              height: '42px',
+              padding: '9px 38px 9px 40px',
+              borderRadius: '9999px',
+              background: '#ffffff',
+              border: '1.5px solid rgba(196, 155, 31, 0.45)',
               color: '#0f172a',
-              fontSize: '0.86rem',
+              fontSize: '0.88rem',
               fontFamily: 'var(--font-sans)',
               outline: 'none',
-              transition: 'all 0.25s cubic-bezier(0.34, 1.56, 0.64, 1)'
+              boxSizing: 'border-box',
+              transition: 'all 0.2s ease'
             }}
             onFocus={(e) => {
               e.target.style.borderColor = 'var(--gold-primary)';
-              e.target.style.boxShadow = '0 0 0 3px rgba(196, 155, 31, 0.15)';
-              e.target.style.background = '#ffffff';
+              e.target.style.boxShadow = '0 0 0 3px rgba(196, 155, 31, 0.25)';
             }}
             onBlur={(e) => {
-              e.target.style.borderColor = 'rgba(196, 155, 31, 0.35)';
+              e.target.style.borderColor = 'rgba(196, 155, 31, 0.45)';
               e.target.style.boxShadow = 'none';
-              e.target.style.background = '#f8fafc';
             }}
           />
           {searchQuery && (
@@ -209,7 +212,8 @@ export default function ProposalStatsBar({
                 padding: '4px',
                 display: 'flex',
                 alignItems: 'center',
-                justifyContent: 'center'
+                justifyContent: 'center',
+                zIndex: 2
               }}
             >
               <X size={15} />

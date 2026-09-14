@@ -486,16 +486,7 @@ Please provide more details. JazakAllah Khair!`;
         </div>
 
         {/* Action Buttons: Chat on WhatsApp & View Details */}
-        <div 
-          className="profile-card-actions"
-          style={{ 
-            display: 'grid', 
-            gridTemplateColumns: '1fr 1fr', 
-            gap: '8px', 
-            borderTop: '1px solid #f1f5f9',
-            paddingTop: '12px'
-          }}
-        >
+        <div className="profile-card-actions">
           {/* Chat Button -> WhatsApp to Male +97337188557 */}
           <button
             onClick={handleWhatsAppChat}

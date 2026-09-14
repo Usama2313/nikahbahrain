@@ -444,20 +444,40 @@ button:active, .btn-gold:active, .btn-whatsapp:active, .btn-ghost:active, a[role
 }
 
 /* ============================================================
-   STATS BAR — Mobile Responsive
+   STATS BAR — Royal Blue Background & Mobile Responsive
    ============================================================ */
+
+.stats-bar-inner {
+  background: linear-gradient(135deg, #0e2038 0%, #081424 100%) !important;
+  border: 1.5px solid rgba(212, 175, 55, 0.45) !important;
+  border-radius: var(--radius-lg) !important;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.25), 0 0 0 1px rgba(212, 175, 55, 0.2) !important;
+  height: auto !important;
+  min-height: unset !important;
+}
+
+.stats-bar-search {
+  flex: 0 1 360px;
+  position: relative !important;
+  height: 42px !important;
+}
 
 @media (max-width: 768px) {
   .stats-bar-inner {
     flex-direction: column !important;
-    gap: 10px !important;
+    gap: 12px !important;
     align-items: stretch !important;
-    padding: 12px !important;
+    padding: 14px 16px !important;
+    height: auto !important;
+    min-height: unset !important;
   }
 
   .stats-bar-search {
     width: 100% !important;
     max-width: 100% !important;
+    flex: none !important;
+    height: 42px !important;
+    min-height: 42px !important;
   }
 
   .stats-bar-counts {
@@ -467,8 +487,11 @@ button:active, .btn-gold:active, .btn-whatsapp:active, .btn-ghost:active, a[role
   }
 
   #search-proposals-input {
-    font-size: 16px !important;
+    font-size: 14px !important;
     width: 100% !important;
+    box-sizing: border-box !important;
+    height: 42px !important;
+    padding-left: 38px !important;
   }
 }
 
@@ -476,16 +499,29 @@ button:active, .btn-gold:active, .btn-whatsapp:active, .btn-ghost:active, a[role
    PROFILE CARD — Responsive Actions
    ============================================================ */
 
-@media (max-width: 420px) {
+.profile-card-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  border-top: 1px solid #f1f5f9;
+  padding-top: 12px;
+}
+
+@media (max-width: 640px) {
   .profile-card-actions {
+    display: flex !important;
     flex-direction: column !important;
     gap: 8px !important;
+    width: 100% !important;
   }
 
   .profile-card-actions .btn-whatsapp,
   .profile-card-actions .btn-ghost {
     width: 100% !important;
     justify-content: center !important;
+    box-sizing: border-box !important;
+    padding: 11px 16px !important;
+    font-size: 0.88rem !important;
   }
 }
 
@@ -691,15 +727,14 @@ button:active, .btn-gold:active, .btn-whatsapp:active, .btn-ghost:active, a[role
 }
 
 /* ============================================================
-   ENHANCED READABILITY — High Contrast Glass Panels
+   ENHANCED READABILITY — Clean High Contrast Light Theme
    ============================================================ */
 
 .glass-panel {
-  background: rgba(10, 24, 48, 0.96) !important;
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  border: 1.5px solid rgba(212, 175, 55, 0.32) !important;
-  box-shadow: 0 16px 36px rgba(0, 0, 0, 0.65), 0 0 1px rgba(212, 175, 55, 0.3) !important;
+  background: #ffffff !important;
+  border: 1.5px solid var(--gold-border) !important;
+  border-radius: var(--radius-lg);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05) !important;
 }
 
 /* Table row readability */
@@ -708,19 +743,19 @@ table tbody tr {
 }
 
 table tbody tr:hover {
-  background: rgba(212, 175, 55, 0.08) !important;
+  background: rgba(196, 155, 31, 0.06) !important;
 }
 
 table thead th {
-  background: rgba(12, 28, 54, 0.98) !important;
-  color: var(--gold-light) !important;
+  background: #f8fafc !important;
+  color: #0f172a !important;
   font-weight: 700 !important;
-  border-bottom: 2px solid rgba(212, 175, 55, 0.35) !important;
+  border-bottom: 2px solid var(--gold-border) !important;
 }
 
 /* Input focus readability */
 input:focus, textarea:focus, select:focus {
   border-color: var(--gold-primary) !important;
-  box-shadow: 0 0 0 2px rgba(212, 175, 55, 0.25) !important;
+  box-shadow: 0 0 0 2px rgba(196, 155, 31, 0.25) !important;
   outline: none !important;
 }

@@ -13,7 +13,7 @@ import {
 } from '../icons';
 import logoImg from '../assets/logo.jpg';
 
-export default function ContactFooter({ onOpenCreateProfile }) {
+export default function ContactFooter({ onOpenCreateProfile, onOpenAdmin }) {
   // Gentle floating spring for contact card badges
   const floatSpring = useSpring({
     loop: { reverse: true },
@@ -289,6 +289,17 @@ export default function ContactFooter({ onOpenCreateProfile }) {
             >
               Instagram
             </a>
+            {onOpenAdmin && (
+              <>
+                <span>•</span>
+                <button
+                  onClick={onOpenAdmin}
+                  style={{ background: 'transparent', border: 'none', color: '#64748b', cursor: 'pointer', fontSize: '0.82rem', textDecoration: 'underline' }}
+                >
+                  Admin Portal
+                </button>
+              </>
+            )}
           </div>
 
           <div style={{ fontSize: '0.76rem', color: 'var(--text-dim)', textAlign: 'right' }}>

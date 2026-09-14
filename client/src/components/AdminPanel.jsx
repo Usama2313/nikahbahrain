@@ -110,6 +110,11 @@ export default function AdminPanel({ onBackToPortal }) {
   const [activeSection, setActiveSection] = useState('dashboard');
   const [expandedGroup, setExpandedGroup] = useState(null);
 
+  // Table Search & Pagination
+  const [searchQuery, setSearchQuery] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
+
+
   const [formResponses, setFormResponses] = useState([]);
   const [responsesLoading, setResponsesLoading] = useState(false);
 

@@ -15,14 +15,28 @@ import { Sparkles, AlertCircle, RefreshCw, RotateCcw } from './icons';
 import API_BASE from './api';
 import fallbackProfiles from './data/profiles.json';
 
+const checkIsAdminRoute = () => {
+  if (typeof window === 'undefined') return false;
+  const path = window.location.pathname.toLowerCase();
+  const hash = window.location.hash.toLowerCase();
+  return (
+    path === '/admin' ||
+    path.startsWith('/admin/') ||
+    path.startsWith('/admin') ||
+    hash.includes('admin')
+  );
+};
+
 export default function App() {
-  // 1. Splash Intro Screen State
-  const [showSplash, setShowSplash] = useState(true);
+  const isInitialAdmin = checkIsAdminRoute();
+
+  // 1. Splash Intro Screen State — NEVER show splash if directly accessing /admin
+  const [showSplash, setShowSplash] = useState(() => !isInitialAdmin);
 
   // 2. Navigation State ('home' default)
   const [activeTab, setActiveTab] = useState('home');
   const [activeCategory, setActiveCategory] = useState('all');
-  const [isAdminActive, setIsAdminActive] = useState(false);
+  const [isAdminActive, setIsAdminActive] = useState(isInitialAdmin);
 
   // 3. Unique Visitor ID (persisted in localStorage)
   const [visitorId] = useState(() => {
@@ -55,8 +69,11 @@ export default function App() {
   // Handle URL hash / route for /admin
   useEffect(() => {
     const handleLocationChange = () => {
-      if (window.location.pathname === '/admin' || window.location.hash === '#/admin' || window.location.hash === '#admin') {
+      if (checkIsAdminRoute()) {
         setIsAdminActive(true);
+        setShowSplash(false);
+      } else {
+        setIsAdminActive(false);
       }
     };
     handleLocationChange();
@@ -264,7 +281,7 @@ export default function App() {
       if (next) {
         window.history.pushState(null, '', '#admin');
       } else {
-        window.history.pushState(null, '', window.location.pathname);
+        window.history.pushState(null, '', '/');
       }
       return next;
     });
@@ -296,7 +313,7 @@ export default function App() {
           <AdminPanel 
             onBackToPortal={() => {
               setIsAdminActive(false);
-              window.history.pushState(null, '', window.location.pathname);
+              window.history.pushState(null, '', '/');
             }} 
           />
         ) : (

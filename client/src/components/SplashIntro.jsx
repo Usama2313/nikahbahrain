@@ -124,7 +124,7 @@ export default function SplashIntro({ onEnter, isVisible = true }) {
         position: 'fixed',
         inset: 0,
         zIndex: 9999,
-        background: 'radial-gradient(circle at 50% 25%, #ffffff 0%, #fbfbfc 50%, #f1f5f9 100%)',
+        background: 'radial-gradient(circle at 50% 30%, #0d213e 0%, #061122 55%, #030812 100%)',
         display: 'flex',
         flexDirection: 'column',
         alignItems: 'center',
@@ -298,11 +298,11 @@ export default function SplashIntro({ onEnter, isVisible = true }) {
         </h1>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap', justifyContent: 'center' }}>
-          <span className="gold-badge" style={{ fontSize: '0.72rem', padding: '3px 10px' }}>
+          <span className="gold-badge" style={{ fontSize: '0.72rem', padding: '3px 10px', background: 'rgba(212, 175, 55, 0.18)', borderColor: '#fae182', color: '#fae182' }}>
             <ShieldCheck size={13} /> 100% Verified Matrimonial Services
           </span>
-          <span className="gold-badge" style={{ background: 'rgba(59, 130, 246, 0.12)', borderColor: 'rgba(59, 130, 246, 0.35)', color: '#1d4ed8', fontSize: '0.72rem', padding: '3px 10px' }}>
-            <Heart size={12} fill="#1d4ed8" /> Bahrain • GCC • Expats
+          <span className="gold-badge" style={{ background: 'rgba(59, 130, 246, 0.2)', borderColor: 'rgba(59, 130, 246, 0.5)', color: '#93c5fd', fontSize: '0.72rem', padding: '3px 10px' }}>
+            <Heart size={12} fill="#93c5fd" /> Bahrain • GCC • Expats
           </span>
         </div>
 
@@ -310,7 +310,7 @@ export default function SplashIntro({ onEnter, isVisible = true }) {
           className="font-arabic"
           style={{
             fontSize: 'clamp(0.92rem, 3.2vw, 1.2rem)',
-            color: 'var(--text-gold)',
+            color: '#fae182',
             marginTop: '4px',
             lineHeight: 1.7,
             wordBreak: 'break-word',
@@ -320,7 +320,7 @@ export default function SplashIntro({ onEnter, isVisible = true }) {
           وَمِنْ آيَاتِهِ أَنْ خَلَقَ لَكُم مِّنْ أَنفُسِكُمْ أَزْوَاجًا لِّتَسْكُنُوا إِلَيْهَا وَجَعَلَ بَيْنَكُم مَّوَدَّةً وَرَحْمَةً
         </p>
 
-        <p style={{ color: 'var(--text-muted)', fontSize: 'clamp(0.75rem, 2.2vw, 0.88rem)', maxWidth: '520px', fontStyle: 'italic', lineHeight: 1.5, wordBreak: 'break-word' }}>
+        <p style={{ color: '#cbd5e1', fontSize: 'clamp(0.75rem, 2.2vw, 0.88rem)', maxWidth: '520px', fontStyle: 'italic', lineHeight: 1.5, wordBreak: 'break-word' }}>
           "And among His signs is that He created for you mates from among yourselves, that you may dwell in tranquility with them, and He has put love and mercy between your hearts."
         </p>
       </animated.div>
@@ -380,11 +380,11 @@ export default function SplashIntro({ onEnter, isVisible = true }) {
               }}
             />
           </div>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', fontSize: '0.74rem', color: 'var(--text-dim)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', fontSize: '0.74rem', color: '#94a3b8' }}>
             <span>
               {isPaused ? '⏸️ Reading paused' : `Auto-entering in ${secondsRemaining}s`}
             </span>
-            <span style={{ color: 'var(--gold-light)', cursor: 'pointer' }} onClick={handleSlideEnter}>
+            <span style={{ color: '#fae182', cursor: 'pointer' }} onClick={handleSlideEnter}>
               Tap to enter ➔
             </span>
           </div>
