@@ -9,8 +9,7 @@ import {
   User,
   PhoneCall,
   Menu,
-  X,
-  ShieldCheck
+  X
 } from '../icons';
 import logoImg from '../assets/logo.jpg';
 
@@ -129,28 +128,7 @@ export default function Navbar({
             <Sparkles size={11} color="#fae182" />
             <span>Intro</span>
           </button>
-          {onOpenAdmin && (
-            <button
-              onClick={onOpenAdmin}
-              title="Admin Management Portal"
-              style={{
-                background: isAdminActive ? 'rgba(250, 225, 130, 0.25)' : 'transparent',
-                border: isAdminActive ? '1px solid #fae182' : 'none',
-                borderRadius: '4px',
-                color: '#fae182',
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '4px',
-                fontSize: '0.72rem',
-                padding: '2px 6px',
-                fontWeight: 700
-              }}
-            >
-              <ShieldCheck size={11} color="#fae182" />
-              <span>Admin</span>
-            </button>
-          )}
+
         </div>
       </div>
 
@@ -363,32 +341,6 @@ export default function Navbar({
               );
             })}
 
-            {onOpenAdmin && (
-              <button
-                onClick={() => {
-                  setMobileMenuOpen(false);
-                  onOpenAdmin();
-                }}
-                style={{
-                  width: '100%',
-                  background: isAdminActive ? 'rgba(212,175,55,0.18)' : 'transparent',
-                  border: 'none',
-                  borderLeft: isAdminActive ? '3px solid #d4af37' : '3px solid transparent',
-                  color: isAdminActive ? '#fae182' : '#cbd5e1',
-                  padding: '14px 20px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '12px',
-                  fontSize: '0.95rem',
-                  fontWeight: isAdminActive ? 700 : 500,
-                  cursor: 'pointer',
-                  textAlign: 'left'
-                }}
-              >
-                <ShieldCheck size={18} color="#fae182" />
-                <span>Admin Portal</span>
-              </button>
-            )}
 
             <div style={{ padding: '12px 20px', borderTop: '1px solid rgba(255,255,255,0.06)', marginTop: '4px' }}>
               <button

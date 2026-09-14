@@ -346,7 +346,9 @@ export default function App() {
               style={{
                 maxWidth: '1440px',
                 margin: '24px auto',
-                padding: '0 20px'
+                padding: '0 16px',
+                boxSizing: 'border-box',
+                overflowX: 'hidden'
               }}
             >
               {loading ? (

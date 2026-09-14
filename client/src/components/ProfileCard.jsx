@@ -486,15 +486,16 @@ Please provide more details. JazakAllah Khair!`;
         </div>
 
         {/* Action Buttons: Chat on WhatsApp & View Details */}
-        <div className="profile-card-actions">
+        <div className="profile-card-actions" style={{ width: '100%', boxSizing: 'border-box' }}>
           {/* Chat Button -> WhatsApp to Male +97337188557 */}
           <button
             onClick={handleWhatsAppChat}
             className="btn-whatsapp"
             title="Chat via WhatsApp with details to Male Coordinator +97337188557"
+            style={{ minWidth: 0, overflow: 'hidden' }}
           >
-            <MessageCircle size={15} />
-            <span>Chat WhatsApp</span>
+            <MessageCircle size={15} style={{ flexShrink: 0 }} />
+            <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>Chat WhatsApp</span>
           </button>
 
           {/* View Details Modal */}
@@ -505,11 +506,13 @@ Please provide more details. JazakAllah Khair!`;
             }}
             className="btn-ghost"
             style={{
-              padding: '8px 12px',
-              fontSize: '0.84rem'
+              padding: '8px 14px',
+              fontSize: '0.84rem',
+              flexShrink: 0,
+              whiteSpace: 'nowrap'
             }}
           >
-            <Eye size={15} color="var(--gold-primary)" />
+            <Eye size={15} color="var(--gold-primary)" style={{ flexShrink: 0 }} />
             <span>Details</span>
           </button>
         </div>
