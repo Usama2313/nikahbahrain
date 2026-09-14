@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useSpring, animated, config } from '@react-spring/web';
-import { Sparkles, ArrowDown, Heart, ShieldCheck } from '../icons';
+import { Heart, ShieldCheck } from '../icons';
 import logoImg from '../assets/logo.jpg';
 
 const READING_DURATION_MS = 14000; // 14 seconds for comfortable reading
@@ -294,7 +294,7 @@ export default function SplashIntro({ onEnter, isVisible = true }) {
             lineHeight: 1.2
           }}
         >
-          QABUL HAI
+          Welcome to Qabul Hai
         </h1>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap', justifyContent: 'center' }}>
@@ -306,19 +306,8 @@ export default function SplashIntro({ onEnter, isVisible = true }) {
           </span>
         </div>
 
-        <p
-          className="font-arabic"
-          style={{
-            fontSize: 'clamp(0.92rem, 3.2vw, 1.2rem)',
-            color: '#fae182',
-            marginTop: '4px',
-            lineHeight: 1.7,
-            wordBreak: 'break-word',
-            width: '100%'
-          }}
-        >
-          وَمِنْ آيَاتِهِ أَنْ خَلَقَ لَكُم مِّنْ أَنفُسِكُمْ أَزْوَاجًا لِّتَسْكُنُوا إِلَيْهَا وَجَعَلَ بَيْنَكُم مَّوَدَّةً وَرَحْمَةً
-        </p>
+        
+
 
         <p style={{ color: '#cbd5e1', fontSize: 'clamp(0.75rem, 2.2vw, 0.88rem)', maxWidth: '520px', fontStyle: 'italic', lineHeight: 1.5, wordBreak: 'break-word' }}>
           "And among His signs is that He created for you mates from among yourselves, that you may dwell in tranquility with them, and He has put love and mercy between your hearts."
@@ -326,70 +315,7 @@ export default function SplashIntro({ onEnter, isVisible = true }) {
       </animated.div>
 
       {/* Enter Button & Progress */}
-      <animated.div
-        style={{
-          ...textSpring,
-          marginTop: '16px',
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          gap: '10px',
-          width: '100%',
-          maxWidth: '320px',
-          padding: '0 12px'
-        }}
-      >
-        <animated.button
-          onClick={handleSlideEnter}
-          className="btn-gold"
-          style={{
-            ...enterBtnSpring,
-            padding: '12px 28px',
-            fontSize: 'clamp(0.82rem, 2.8vw, 0.95rem)',
-            letterSpacing: '0.6px',
-            borderRadius: '9999px',
-            cursor: 'pointer',
-            width: '100%'
-          }}
-          onMouseEnter={() => setBtnHovered(true)}
-          onMouseLeave={() => setBtnHovered(false)}
-        >
-          <Sparkles size={16} />
-          <span>ENTER MATRIMONIAL PORTAL</span>
-          <ArrowDown size={16} style={{ transform: 'rotate(-90deg)' }} />
-        </animated.button>
-
-        {/* Progress Bar */}
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '6px', width: '100%', marginTop: '4px' }}>
-          <div
-            style={{
-              width: '100%',
-              height: '4px',
-              background: 'rgba(255, 255, 255, 0.1)',
-              borderRadius: '2px',
-              overflow: 'hidden'
-            }}
-          >
-            <div
-              style={{
-                width: `${progress}%`,
-                height: '100%',
-                background: 'linear-gradient(90deg, #d4af37, #fae182)',
-                transition: 'width 0.1s linear',
-                boxShadow: '0 0 8px rgba(250, 225, 130, 0.6)'
-              }}
-            />
-          </div>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', fontSize: '0.74rem', color: '#94a3b8' }}>
-            <span>
-              {isPaused ? '⏸️ Reading paused' : `Auto-entering in ${secondsRemaining}s`}
-            </span>
-            <span style={{ color: '#fae182', cursor: 'pointer' }} onClick={handleSlideEnter}>
-              Tap to enter ➔
-            </span>
-          </div>
-        </div>
-      </animated.div>
+      
     </animated.div>
   );
 }

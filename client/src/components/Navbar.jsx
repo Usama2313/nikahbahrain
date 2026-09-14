@@ -15,6 +15,7 @@ import logoImg from '../assets/logo.jpg';
 
 export const NAV_TABS = [
   { id: 'home', label: 'Home', icon: Home },
+  { id: 'dashboard', label: 'Dashboard', icon: Home },
   { id: 'groom', label: 'View Groom', icon: User, gender: 'male' },
   { id: 'bride', label: 'View Bride', icon: User, gender: 'female' },
   { id: 'favorites', label: 'Favorites', icon: Heart, isFav: true },
