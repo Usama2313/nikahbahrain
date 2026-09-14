@@ -894,7 +894,7 @@ export default function AdminPanel({ onBackToPortal }) {
 
                 <CategorySection title="Candidate Registration Form" accent="#3b82f6">
                   <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
-                    <a href="https://docs.google.com/forms/d/e/1FAIpQLSe8p6bnqIMv7sPlDrYdREZHkpmuVb5c5pWrSVWqr70NhvvRCQ/viewform" target="_blank" rel="noopener noreferrer" className="btn-ghost" style={{ fontSize: '0.85rem' }}>
+                    <a href="https://forms.gle/sdKb75scXAag7gzt9" target="_blank" rel="noopener noreferrer" className="btn-ghost" style={{ fontSize: '0.85rem' }}>
                       <ExternalLink size={15} /> Open Registration Form
                     </a>
                   </div>

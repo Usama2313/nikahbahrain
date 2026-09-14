@@ -86,7 +86,7 @@ export default function CreateProfileModal({ isOpen, onClose }) {
 
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
             <a
-              href="https://docs.google.com/forms/d/e/1FAIpQLSe8p6bnqIMv7sPlDrYdREZHkpmuVb5c5pWrSVWqr70NhvvRCQ/viewform"
+              href="https://forms.gle/sdKb75scXAag7gzt9"
               target="_blank"
               rel="noopener noreferrer"
               className="btn-gold"
@@ -120,7 +120,7 @@ export default function CreateProfileModal({ isOpen, onClose }) {
         <div style={{ flex: 1, position: 'relative', background: '#ffffff', overflow: 'hidden' }}>
           <iframe
             title="Qabul Hai Matrimonial Application Form"
-            src="https://docs.google.com/forms/d/e/1FAIpQLSe8p6bnqIMv7sPlDrYdREZHkpmuVb5c5pWrSVWqr70NhvvRCQ/viewform?embedded=true"
+            src="https://forms.gle/sdKb75scXAag7gzt9?embedded=true"
             style={{
               width: '100%',
               height: '100%',
@@ -153,7 +153,7 @@ export default function CreateProfileModal({ isOpen, onClose }) {
               </span>
             </div>
             <a
-              href="https://docs.google.com/forms/d/e/1FAIpQLSe8p6bnqIMv7sPlDrYdREZHkpmuVb5c5pWrSVWqr70NhvvRCQ/viewform"
+              href="https://forms.gle/sdKb75scXAag7gzt9"
               target="_blank"
               rel="noopener noreferrer"
               className="btn-gold"

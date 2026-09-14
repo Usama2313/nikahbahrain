@@ -281,7 +281,7 @@ export default function ContactFooter({ onOpenCreateProfile }) {
             </button>
             <span>•</span>
             <a 
-              href="https://docs.google.com/forms/d/e/1FAIpQLSe8p6bnqIMv7sPlDrYdREZHkpmuVb5c5pWrSVWqr70NhvvRCQ/viewform" 
+              href="https://forms.gle/sdKb75scXAag7gzt9" 
               target="_blank" 
               rel="noopener noreferrer"
               style={{ color: 'var(--text-muted)', textDecoration: 'none' }}
