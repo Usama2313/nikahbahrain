@@ -353,7 +353,7 @@ export default function AdminPanel({ onBackToPortal }) {
 
           <form onSubmit={handleLogin} style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: '14px' }}>
             <div>
-              <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 700, color: 'var(--gold-light)', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+              <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 700, color: '#1e293b', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
                 Admin Username
               </label>
               <input
@@ -363,11 +363,11 @@ export default function AdminPanel({ onBackToPortal }) {
                 onChange={e => setUsernameInput(e.target.value)}
                 placeholder="admin"
                 required
-                style={{ width: '100%', padding: '11px 14px', borderRadius: 'var(--radius-md)', background: 'rgba(3, 8, 18, 0.9)', border: '1px solid var(--gold-border)', color: '#ffffff', fontSize: '0.9rem', outline: 'none' }}
+                style={{ width: '100%', padding: '11px 14px', borderRadius: 'var(--radius-md)', background: '#f8fafc', border: '1.5px solid rgba(196, 155, 31, 0.35)', color: '#0f172a', fontSize: '0.9rem', outline: 'none' }}
               />
             </div>
             <div>
-              <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 700, color: 'var(--gold-light)', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+              <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 700, color: '#1e293b', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
                 Admin Password
               </label>
               <div style={{ position: 'relative' }}>
@@ -378,16 +378,16 @@ export default function AdminPanel({ onBackToPortal }) {
                   onChange={e => setPasswordInput(e.target.value)}
                   placeholder="Enter admin password"
                   required
-                  style={{ width: '100%', padding: '11px 40px 11px 14px', borderRadius: 'var(--radius-md)', background: 'rgba(3, 8, 18, 0.9)', border: '1px solid var(--gold-border)', color: '#ffffff', fontSize: '0.9rem', outline: 'none' }}
+                  style={{ width: '100%', padding: '11px 40px 11px 14px', borderRadius: 'var(--radius-md)', background: '#f8fafc', border: '1.5px solid rgba(196, 155, 31, 0.35)', color: '#0f172a', fontSize: '0.9rem', outline: 'none' }}
                 />
                 <button type="button" onClick={() => setShowPassword(!showPassword)}
-                  style={{ position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', fontSize: '0.75rem', padding: '4px' }}>
+                  style={{ position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', color: '#64748b', cursor: 'pointer', fontSize: '0.75rem', padding: '4px' }}>
                   {showPassword ? 'Hide' : 'Show'}
                 </button>
               </div>
             </div>
             {loginError && (
-              <div style={{ background: 'rgba(239,68,68,0.15)', border: '1px solid rgba(239,68,68,0.4)', color: '#fca5a5', padding: '8px 12px', borderRadius: 'var(--radius-sm)', fontSize: '0.8rem', textAlign: 'center' }}>
+              <div style={{ background: '#fef2f2', border: '1px solid #fca5a5', color: '#b91c1c', padding: '8px 12px', borderRadius: 'var(--radius-sm)', fontSize: '0.8rem', textAlign: 'center' }}>
                 {loginError}
               </div>
             )}
@@ -397,12 +397,12 @@ export default function AdminPanel({ onBackToPortal }) {
             </button>
           </form>
 
-          <div style={{ width: '100%', background: 'rgba(212,175,55,0.08)', border: '1px dashed rgba(212,175,55,0.35)', borderRadius: 'var(--radius-md)', padding: '12px 14px', fontSize: '0.78rem', color: 'var(--text-muted)', display: 'flex', flexDirection: 'column', gap: '4px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--gold-light)', fontWeight: 700 }}>
+          <div style={{ width: '100%', background: '#fefce8', border: '1px dashed rgba(196, 155, 31, 0.45)', borderRadius: 'var(--radius-md)', padding: '12px 14px', fontSize: '0.78rem', color: '#334155', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--text-gold)', fontWeight: 700 }}>
               <ShieldCheck size={14} /> Official Admin Credentials
             </div>
-            <div><strong>Username:</strong> <code style={{ color: '#fff', background: 'rgba(0,0,0,0.3)', padding: '2px 6px', borderRadius: '4px' }}>admin</code></div>
-            <div><strong>Password:</strong> <code style={{ color: '#fff', background: 'rgba(0,0,0,0.3)', padding: '2px 6px', borderRadius: '4px' }}>NikahBahrain@2026</code></div>
+            <div><strong>Username:</strong> <code style={{ color: '#0f172a', background: 'rgba(0,0,0,0.06)', padding: '2px 6px', borderRadius: '4px' }}>admin</code></div>
+            <div><strong>Password:</strong> <code style={{ color: '#0f172a', background: 'rgba(0,0,0,0.06)', padding: '2px 6px', borderRadius: '4px' }}>NikahBahrain@2026</code></div>
           </div>
         </div>
       </animated.div>
@@ -495,18 +495,19 @@ export default function AdminPanel({ onBackToPortal }) {
             width: sidebarOpen ? '260px' : '0px',
             minWidth: sidebarOpen ? '260px' : '0px',
             overflow: 'hidden',
-            background: 'rgba(4, 9, 22, 0.99)',
-            borderRight: '1px solid rgba(212,175,55,0.2)',
+            background: '#ffffff',
+            borderRight: '1px solid #e2e8f0',
             transition: 'width 0.3s ease, min-width 0.3s ease',
             display: 'flex',
             flexDirection: 'column',
             flexShrink: 0,
+            boxShadow: '2px 0 10px rgba(0,0,0,0.03)'
           }}
         >
           <div style={{ padding: '16px 0', overflowY: 'auto', flex: 1 }}>
             {/* Sidebar header */}
-            <div style={{ padding: '0 16px 16px', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
-              <div style={{ fontSize: '0.68rem', color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '1.5px', fontWeight: 700 }}>Navigation</div>
+            <div style={{ padding: '0 16px 14px', borderBottom: '1px solid #f1f5f9' }}>
+              <div style={{ fontSize: '0.68rem', color: '#64748b', textTransform: 'uppercase', letterSpacing: '1.2px', fontWeight: 800 }}>Navigation</div>
             </div>
 
             {/* Nav items */}
@@ -532,22 +533,22 @@ export default function AdminPanel({ onBackToPortal }) {
                       alignItems: 'center',
                       gap: '10px',
                       padding: '10px 16px',
-                      background: isActive ? `${item.color}18` : 'transparent',
+                      background: isActive ? `${item.color}15` : 'transparent',
                       border: 'none',
                       borderLeft: isActive ? `3px solid ${item.color}` : '3px solid transparent',
-                      color: isActive ? '#fff' : 'var(--text-muted)',
+                      color: isActive ? item.color : '#334155',
                       cursor: 'pointer',
                       textAlign: 'left',
                       fontSize: '0.875rem',
-                      fontWeight: isActive ? 700 : 500,
+                      fontWeight: isActive ? 800 : 500,
                       transition: 'all 0.2s ease',
                       justifyContent: 'space-between',
                     }}
-                    onMouseEnter={e => { if (!isActive) e.currentTarget.style.background = 'rgba(255,255,255,0.04)'; e.currentTarget.style.color = '#fff'; }}
-                    onMouseLeave={e => { if (!isActive) e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = isActive ? '#fff' : 'var(--text-muted)'; }}
+                    onMouseEnter={e => { if (!isActive) { e.currentTarget.style.background = '#f8fafc'; e.currentTarget.style.color = '#0f172a'; } }}
+                    onMouseLeave={e => { if (!isActive) { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = '#334155'; } }}
                   >
                     <span style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                      <Icon size={16} color={isActive ? item.color : 'currentColor'} />
+                      <Icon size={16} color={isActive ? item.color : '#64748b'} />
                       <span style={{ whiteSpace: 'nowrap' }}>{item.label}</span>
                     </span>
                     {item.children && (
@@ -557,7 +558,7 @@ export default function AdminPanel({ onBackToPortal }) {
 
                   {/* Children submenu */}
                   {item.children && isGroupExpanded && (
-                    <div style={{ background: 'rgba(0,0,0,0.2)', borderLeft: `2px solid ${item.color}30`, marginLeft: '16px' }}>
+                    <div style={{ background: '#f8fafc', borderLeft: `2px solid ${item.color}40`, marginLeft: '16px' }}>
                       {item.children.map(child => {
                         const isChildActive = activeSection === child.id;
                         const count = child.filter ? profiles.filter(child.filter).length : profiles.length;
@@ -573,7 +574,7 @@ export default function AdminPanel({ onBackToPortal }) {
                               padding: '8px 14px',
                               background: isChildActive ? `${item.color}20` : 'transparent',
                               border: 'none',
-                              color: isChildActive ? '#fff' : 'var(--text-muted)',
+                              color: isChildActive ? item.color : '#475569',
                               cursor: 'pointer',
                               textAlign: 'left',
                               fontSize: '0.82rem',
@@ -582,7 +583,7 @@ export default function AdminPanel({ onBackToPortal }) {
                             }}
                           >
                             <span>{child.label}</span>
-                            <span style={{ background: isChildActive ? item.color : 'rgba(255,255,255,0.1)', color: isChildActive ? '#000' : 'var(--text-dim)', borderRadius: '9999px', padding: '1px 7px', fontSize: '0.7rem', fontWeight: 700 }}>{count}</span>
+                            <span style={{ background: isChildActive ? item.color : '#e2e8f0', color: isChildActive ? '#fff' : '#475569', borderRadius: '9999px', padding: '1px 7px', fontSize: '0.7rem', fontWeight: 700 }}>{count}</span>
                           </button>
                         );
                       })}
@@ -594,12 +595,12 @@ export default function AdminPanel({ onBackToPortal }) {
 
             {/* Sidebar footer stats */}
             {stats && (
-              <div style={{ margin: '16px', padding: '12px', background: 'rgba(212,175,55,0.06)', border: '1px solid rgba(212,175,55,0.15)', borderRadius: 'var(--radius-md)' }}>
-                <div style={{ fontSize: '0.68rem', color: 'var(--gold-light)', textTransform: 'uppercase', letterSpacing: '1px', fontWeight: 700, marginBottom: '8px' }}>Quick Stats</div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', fontSize: '0.78rem', color: 'var(--text-muted)' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between' }}><span>Total Profiles</span><span style={{ color: '#fff', fontWeight: 700 }}>{profiles.length}</span></div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between' }}><span>🇵🇰 Pakistani</span><span style={{ color: '#fff', fontWeight: 700 }}>{stats.pakistani}</span></div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between' }}><span>🇮🇳 Indian</span><span style={{ color: '#fff', fontWeight: 700 }}>{stats.indian}</span></div>
+              <div style={{ margin: '16px', padding: '12px', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 'var(--radius-md)' }}>
+                <div style={{ fontSize: '0.68rem', color: 'var(--text-gold)', textTransform: 'uppercase', letterSpacing: '1px', fontWeight: 800, marginBottom: '8px' }}>Quick Stats</div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', fontSize: '0.78rem', color: '#475569' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between' }}><span>Total Profiles</span><span style={{ color: '#0f172a', fontWeight: 700 }}>{profiles.length}</span></div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between' }}><span>🇵🇰 Pakistani</span><span style={{ color: '#0f172a', fontWeight: 700 }}>{stats.pakistani}</span></div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between' }}><span>🇮🇳 Indian</span><span style={{ color: '#0f172a', fontWeight: 700 }}>{stats.indian}</span></div>
                 </div>
               </div>
             )}
@@ -673,7 +674,7 @@ export default function AdminPanel({ onBackToPortal }) {
 
                 {/* Search bar */}
                 <div style={{ position: 'relative', maxWidth: '480px', width: '100%' }}>
-                  <Search size={15} style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-dim)', pointerEvents: 'none' }} />
+                  <Search size={15} style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)', color: 'var(--gold-primary)', pointerEvents: 'none' }} />
                   <input
                     type="text"
                     value={searchQuery}
@@ -683,20 +684,20 @@ export default function AdminPanel({ onBackToPortal }) {
                       width: '100%',
                       padding: '10px 14px 10px 40px',
                       borderRadius: 'var(--radius-full)',
-                      background: 'rgba(8, 18, 40, 0.95)',
-                      border: '1px solid rgba(212,175,55,0.3)',
-                      color: '#ffffff',
+                      background: '#f8fafc',
+                      border: '1.5px solid rgba(196, 155, 31, 0.35)',
+                      color: '#0f172a',
                       fontSize: '0.875rem',
                       outline: 'none',
                       transition: 'border-color 0.2s',
                     }}
                     onFocus={e => e.target.style.borderColor = 'var(--gold-primary)'}
-                    onBlur={e => e.target.style.borderColor = 'rgba(212,175,55,0.3)'}
+                    onBlur={e => e.target.style.borderColor = 'rgba(196, 155, 31, 0.35)'}
                   />
                   {searchQuery && (
                     <button
                       onClick={() => setSearchQuery('')}
-                      style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', color: 'var(--text-dim)', cursor: 'pointer', padding: '2px' }}
+                      style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', color: '#64748b', cursor: 'pointer', padding: '2px' }}
                     >
                       <X size={14} />
                     </button>
@@ -704,25 +705,25 @@ export default function AdminPanel({ onBackToPortal }) {
                 </div>
 
                 {/* Table */}
-                <div className="admin-table-wrapper" style={{ borderRadius: 'var(--radius-md)', border: '1px solid rgba(212,175,55,0.2)', overflow: 'hidden' }}>
-                  <div style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
+                <div className="admin-table-wrapper" style={{ borderRadius: 'var(--radius-md)', border: '1px solid #e2e8f0', overflow: 'hidden', background: '#ffffff', boxShadow: '0 2px 10px rgba(0,0,0,0.03)' }}>
+                  <div style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch', width: '100%' }}>
                     <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.84rem', minWidth: '700px' }}>
                       <thead>
-                        <tr style={{ background: 'rgba(212,175,55,0.08)', borderBottom: '1px solid rgba(212,175,55,0.2)' }}>
-                          <th style={{ padding: '12px 14px', color: 'var(--gold-light)', fontWeight: 700, fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.5px', whiteSpace: 'nowrap' }}>ID</th>
-                          <th style={{ padding: '12px 14px', color: 'var(--gold-light)', fontWeight: 700, fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Photo & Name</th>
-                          <th style={{ padding: '12px 14px', color: 'var(--gold-light)', fontWeight: 700, fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.5px', whiteSpace: 'nowrap' }}>Gender / Age</th>
-                          <th style={{ padding: '12px 14px', color: 'var(--gold-light)', fontWeight: 700, fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Category</th>
-                          <th style={{ padding: '12px 14px', color: 'var(--gold-light)', fontWeight: 700, fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Nationality</th>
-                          <th style={{ padding: '12px 14px', color: 'var(--gold-light)', fontWeight: 700, fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Profession</th>
-                          <th style={{ padding: '12px 14px', color: 'var(--gold-light)', fontWeight: 700, fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Status</th>
-                          <th style={{ padding: '12px 14px', color: 'var(--gold-light)', fontWeight: 700, fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.5px', textAlign: 'right' }}>Actions</th>
+                        <tr style={{ background: '#f8fafc', borderBottom: '2px solid rgba(196, 155, 31, 0.3)' }}>
+                          <th style={{ padding: '12px 14px', color: 'var(--text-gold)', fontWeight: 800, fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.5px', whiteSpace: 'nowrap' }}>ID</th>
+                          <th style={{ padding: '12px 14px', color: 'var(--text-gold)', fontWeight: 800, fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Candidate Name</th>
+                          <th style={{ padding: '12px 14px', color: 'var(--text-gold)', fontWeight: 800, fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.5px', whiteSpace: 'nowrap' }}>Gender / Age</th>
+                          <th style={{ padding: '12px 14px', color: 'var(--text-gold)', fontWeight: 800, fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Category</th>
+                          <th style={{ padding: '12px 14px', color: 'var(--text-gold)', fontWeight: 800, fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Nationality</th>
+                          <th style={{ padding: '12px 14px', color: 'var(--text-gold)', fontWeight: 800, fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Profession</th>
+                          <th style={{ padding: '12px 14px', color: 'var(--text-gold)', fontWeight: 800, fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Status</th>
+                          <th style={{ padding: '12px 14px', color: 'var(--text-gold)', fontWeight: 800, fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.5px', textAlign: 'right' }}>Actions</th>
                         </tr>
                       </thead>
                       <tbody>
                         {paginatedProfiles.length === 0 ? (
                           <tr>
-                            <td colSpan={8} style={{ padding: '48px 20px', textAlign: 'center', color: 'var(--text-muted)' }}>
+                            <td colSpan={8} style={{ padding: '48px 20px', textAlign: 'center', color: '#64748b' }}>
                               {searchQuery ? `No results for "${searchQuery}"` : 'No records in this category.'}
                             </td>
                           </tr>
@@ -731,46 +732,45 @@ export default function AdminPanel({ onBackToPortal }) {
                             <tr
                               key={p.id}
                               style={{
-                                borderBottom: '1px solid rgba(255,255,255,0.05)',
-                                background: i % 2 === 0 ? 'rgba(255,255,255,0.015)' : 'transparent',
+                                borderBottom: '1px solid #f1f5f9',
+                                background: i % 2 === 0 ? '#ffffff' : '#fafafa',
                                 transition: 'background 0.15s ease',
                               }}
-                              onMouseEnter={e => e.currentTarget.style.background = 'rgba(212,175,55,0.06)'}
-                              onMouseLeave={e => e.currentTarget.style.background = i % 2 === 0 ? 'rgba(255,255,255,0.015)' : 'transparent'}
+                              onMouseEnter={e => e.currentTarget.style.background = 'rgba(196, 155, 31, 0.08)'}
+                              onMouseLeave={e => e.currentTarget.style.background = i % 2 === 0 ? '#ffffff' : '#fafafa'}
                             >
-                              <td style={{ padding: '11px 14px', fontWeight: 700, color: 'var(--gold-light)', fontSize: '0.8rem', whiteSpace: 'nowrap' }}>{p.id}</td>
+                              <td style={{ padding: '11px 14px', fontWeight: 800, color: 'var(--text-gold)', fontSize: '0.8rem', whiteSpace: 'nowrap' }}>{p.id}</td>
                               <td style={{ padding: '11px 14px' }}>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                                  {/* Image removed */}
                                   <div>
-                                    <div style={{ fontWeight: 600, color: '#fff', fontSize: '0.875rem', whiteSpace: 'nowrap' }}>{p.name}</div>
-                                    <div style={{ fontSize: '0.7rem', color: 'var(--text-dim)' }}>{p.sect}</div>
+                                    <div style={{ fontWeight: 700, color: '#0f172a', fontSize: '0.875rem', whiteSpace: 'nowrap' }}>{p.name}</div>
+                                    <div style={{ fontSize: '0.7rem', color: '#64748b' }}>{p.sect}</div>
                                   </div>
                                 </div>
                               </td>
                               <td style={{ padding: '11px 14px', whiteSpace: 'nowrap' }}>
-                                <span style={{ color: p.gender === 'male' ? '#93c5fd' : '#f9a8d4', fontWeight: 700, textTransform: 'capitalize', fontSize: '0.82rem' }}>{p.gender}</span>
-                                <span style={{ color: 'var(--text-dim)' }}> • {p.age}y</span>
+                                <span style={{ color: p.gender === 'male' ? '#1d4ed8' : '#be185d', fontWeight: 800, textTransform: 'capitalize', fontSize: '0.82rem' }}>{p.gender}</span>
+                                <span style={{ color: '#64748b' }}> • {p.age}y</span>
                               </td>
                               <td style={{ padding: '11px 14px' }}>
-                                <span style={{ background: 'rgba(212,175,55,0.12)', border: '1px solid rgba(212,175,55,0.25)', color: 'var(--gold-light)', padding: '3px 9px', borderRadius: 'var(--radius-full)', fontSize: '0.72rem', fontWeight: 700, whiteSpace: 'nowrap' }}>
+                                <span style={{ background: '#fefce8', border: '1px solid rgba(196, 155, 31, 0.35)', color: 'var(--text-gold)', padding: '3px 9px', borderRadius: 'var(--radius-full)', fontSize: '0.72rem', fontWeight: 800, whiteSpace: 'nowrap' }}>
                                   {p.maritalStatus || p.category || '—'}
                                 </span>
                               </td>
-                              <td style={{ padding: '11px 14px', fontWeight: 600, fontSize: '0.82rem', whiteSpace: 'nowrap' }}>
+                              <td style={{ padding: '11px 14px', fontWeight: 600, fontSize: '0.82rem', whiteSpace: 'nowrap', color: '#334155' }}>
                                 {p.nationality === 'Pakistani' ? '🇵🇰 Pakistani' : p.nationality === 'Indian' ? '🇮🇳 Indian' : '🇧🇭 Bahraini'}
                               </td>
                               <td style={{ padding: '11px 14px' }}>
-                                <div style={{ maxWidth: '180px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontSize: '0.82rem' }}>{p.profession}</div>
-                                <div style={{ fontSize: '0.7rem', color: 'var(--text-dim)' }}>{p.location}</div>
+                                <div style={{ maxWidth: '180px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontSize: '0.82rem', color: '#1e293b' }}>{p.profession}</div>
+                                <div style={{ fontSize: '0.7rem', color: '#64748b' }}>{p.location}</div>
                               </td>
                               <td style={{ padding: '11px 14px' }}>
                                 <button
                                   onClick={() => handleToggleVerified(p)}
                                   style={{
-                                    background: p.verified ? 'rgba(16,185,129,0.15)' : 'rgba(239,68,68,0.15)',
-                                    border: `1px solid ${p.verified ? '#10b981' : '#ef4444'}`,
-                                    color: p.verified ? '#6ee7b7' : '#fca5a5',
+                                    background: p.verified ? '#ecfdf5' : '#fef2f2',
+                                    border: `1px solid ${p.verified ? '#a7f3d0' : '#fecaca'}`,
+                                    color: p.verified ? '#065f46' : '#991b1b',
                                     padding: '3px 9px',
                                     borderRadius: 'var(--radius-full)',
                                     fontSize: '0.7rem',
@@ -928,9 +928,9 @@ function CategorySection({ title, accent, children }) {
     <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
         <div style={{ width: '4px', height: '20px', background: accent, borderRadius: '2px', flexShrink: 0 }} />
-        <h3 style={{ fontSize: '1rem', fontWeight: 700, color: '#fff', letterSpacing: '0.3px' }}>{title}</h3>
+        <h3 style={{ fontSize: '1rem', fontWeight: 800, color: '#0f172a', letterSpacing: '0.3px' }}>{title}</h3>
       </div>
-      <div style={{ padding: '18px', background: 'rgba(8, 18, 40, 0.8)', border: `1px solid ${accent}20`, borderRadius: 'var(--radius-md)', borderLeft: `3px solid ${accent}` }}>
+      <div style={{ padding: '18px', background: '#f8fafc', border: `1px solid ${accent}40`, borderRadius: 'var(--radius-md)', borderLeft: `4px solid ${accent}`, boxShadow: '0 2px 8px rgba(0,0,0,0.03)' }}>
         {children}
       </div>
     </div>
@@ -948,8 +948,8 @@ function StatCard({ label, count, subtext, icon: Icon, accent }) {
     <animated.div
       style={{
         ...cardSpring,
-        background: 'rgba(6, 14, 32, 0.9)',
-        border: `1px solid ${accent}28`,
+        background: '#ffffff',
+        border: `1px solid ${accent}35`,
         borderTop: `3px solid ${accent}`,
         borderRadius: 'var(--radius-md)',
         padding: '18px 16px',
@@ -958,25 +958,26 @@ function StatCard({ label, count, subtext, icon: Icon, accent }) {
         gap: '6px',
         position: 'relative',
         overflow: 'hidden',
+        boxShadow: '0 2px 10px rgba(0,0,0,0.04)'
       }}
     >
-      <div style={{ position: 'absolute', top: 0, right: 0, width: '70px', height: '70px', background: `radial-gradient(circle, ${accent}18 0%, transparent 70%)`, pointerEvents: 'none' }} />
+      <div style={{ position: 'absolute', top: 0, right: 0, width: '70px', height: '70px', background: `radial-gradient(circle, ${accent}15 0%, transparent 70%)`, pointerEvents: 'none' }} />
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.5px' }}>{label}</span>
+        <span style={{ fontSize: '0.75rem', color: '#64748b', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.5px' }}>{label}</span>
         <Icon size={18} color={accent} />
       </div>
-      <div className="font-cinzel" style={{ fontSize: '2.2rem', fontWeight: 800, color: '#ffffff', lineHeight: 1 }}>{count}</div>
-      <div style={{ fontSize: '0.72rem', color: accent, opacity: 0.8 }}>{subtext}</div>
+      <div className="font-cinzel" style={{ fontSize: '2.2rem', fontWeight: 800, color: '#0f172a', lineHeight: 1 }}>{count}</div>
+      <div style={{ fontSize: '0.72rem', color: accent, fontWeight: 600 }}>{subtext}</div>
     </animated.div>
   );
 }
 
 function ContactCard({ title, phone, waLink }) {
   return (
-    <div style={{ background: 'rgba(6, 14, 32, 0.9)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 'var(--radius-md)', padding: '16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', flexWrap: 'wrap' }}>
+    <div style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: 'var(--radius-md)', padding: '16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', flexWrap: 'wrap', boxShadow: '0 2px 8px rgba(0,0,0,0.03)' }}>
       <div>
-        <div style={{ fontSize: '0.72rem', color: 'var(--gold-light)', textTransform: 'uppercase', letterSpacing: '1px', fontWeight: 700 }}>{title}</div>
-        <div style={{ fontSize: '1.1rem', fontWeight: 700, color: '#ffffff', marginTop: '4px' }}>{phone}</div>
+        <div style={{ fontSize: '0.72rem', color: 'var(--text-gold)', textTransform: 'uppercase', letterSpacing: '1px', fontWeight: 800 }}>{title}</div>
+        <div style={{ fontSize: '1.15rem', fontWeight: 800, color: '#0f172a', marginTop: '4px' }}>{phone}</div>
       </div>
       <a href={waLink} target="_blank" rel="noopener noreferrer" className="btn-whatsapp" style={{ padding: '8px 14px', fontSize: '0.8rem' }}>
         <MessageCircle size={14} /> WhatsApp

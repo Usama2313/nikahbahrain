@@ -73,14 +73,15 @@ export default function Pagination({
         display: 'flex',
         flexDirection: 'column',
         alignItems: 'center',
-        gap: '16px',
-        margin: '40px 0 20px 0',
-        padding: '20px',
-        background: 'rgba(10, 25, 20, 0.4)',
+        gap: '14px',
+        margin: '36px 0 20px 0',
+        padding: '18px 20px',
+        background: '#ffffff',
         borderRadius: '16px',
-        border: '1px solid rgba(35, 93, 70, 0.3)',
-        backdropFilter: 'blur(10px)',
-        WebkitBackdropFilter: 'blur(10px)'
+        border: '1.5px solid var(--gold-border)',
+        boxShadow: '0 4px 16px rgba(0, 0, 0, 0.05)',
+        width: '100%',
+        maxWidth: '100%'
       }}
     >
       {/* Upper row: Page navigation buttons */}
@@ -106,7 +107,7 @@ export default function Pagination({
             borderRadius: '9999px',
             border: '1.5px solid #235d46',
             background: 'transparent',
-            color: currentPage === 1 ? 'rgba(255,255,255,0.25)' : '#e2e8f0',
+            color: currentPage === 1 ? '#cbd5e1' : '#1e5641',
             cursor: currentPage === 1 ? 'not-allowed' : 'pointer',
             opacity: currentPage === 1 ? 0.4 : 1,
             transition: 'all 0.2s ease'
@@ -128,10 +129,10 @@ export default function Pagination({
             borderRadius: '9999px',
             border: '1.5px solid #235d46',
             background: 'transparent',
-            color: currentPage === 1 ? 'rgba(255,255,255,0.25)' : '#e2e8f0',
+            color: currentPage === 1 ? '#cbd5e1' : '#1e5641',
             cursor: currentPage === 1 ? 'not-allowed' : 'pointer',
             fontSize: '0.84rem',
-            fontWeight: 600,
+            fontWeight: 700,
             opacity: currentPage === 1 ? 0.4 : 1,
             transition: 'all 0.2s ease'
           }}
@@ -141,14 +142,14 @@ export default function Pagination({
         </button>
 
         {/* Numbered Page Buttons */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap', justifyContent: 'center' }}>
           {pages.map((p, idx) => {
             if (p === '...') {
               return (
                 <span
                   key={`ellipsis-${idx}`}
                   style={{
-                    color: 'rgba(255,255,255,0.5)',
+                    color: '#94a3b8',
                     padding: '0 4px',
                     fontSize: '0.9rem',
                     userSelect: 'none'
@@ -184,10 +185,10 @@ export default function Pagination({
             borderRadius: '9999px',
             border: '1.5px solid #235d46',
             background: 'transparent',
-            color: currentPage === totalPages ? 'rgba(255,255,255,0.25)' : '#e2e8f0',
+            color: currentPage === totalPages ? '#cbd5e1' : '#1e5641',
             cursor: currentPage === totalPages ? 'not-allowed' : 'pointer',
             fontSize: '0.84rem',
-            fontWeight: 600,
+            fontWeight: 700,
             opacity: currentPage === totalPages ? 0.4 : 1,
             transition: 'all 0.2s ease'
           }}
@@ -209,7 +210,7 @@ export default function Pagination({
             borderRadius: '9999px',
             border: '1.5px solid #235d46',
             background: 'transparent',
-            color: currentPage === totalPages ? 'rgba(255,255,255,0.25)' : '#e2e8f0',
+            color: currentPage === totalPages ? '#cbd5e1' : '#1e5641',
             cursor: currentPage === totalPages ? 'not-allowed' : 'pointer',
             opacity: currentPage === totalPages ? 0.4 : 1,
             transition: 'all 0.2s ease'
@@ -229,30 +230,32 @@ export default function Pagination({
           width: '100%',
           maxWidth: '540px',
           fontSize: '0.82rem',
-          color: 'var(--text-muted)',
+          color: '#475569',
           paddingTop: '8px',
-          borderTop: '1px solid rgba(255,255,255,0.06)'
+          borderTop: '1px solid #e2e8f0',
+          flexWrap: 'wrap',
+          gap: '8px'
         }}
       >
         <div>
-          Showing <strong style={{ color: '#fae182' }}>{startIndex}</strong> to <strong style={{ color: '#fae182' }}>{endIndex}</strong> of <strong style={{ color: '#fae182' }}>{totalItems}</strong> Proposals
+          Showing <strong style={{ color: 'var(--text-gold)' }}>{startIndex}</strong> to <strong style={{ color: 'var(--text-gold)' }}>{endIndex}</strong> of <strong style={{ color: 'var(--text-gold)' }}>{totalItems}</strong> Proposals
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
           <span>Per page:</span>
           {[12, 24, 48].map((size) => (
             <button
               key={size}
               onClick={() => onItemsPerPageChange && onItemsPerPageChange(size)}
               style={{
-                background: itemsPerPage === size ? '#235d46' : 'rgba(255,255,255,0.05)',
-                color: itemsPerPage === size ? '#ffffff' : 'var(--text-muted)',
-                border: `1px solid ${itemsPerPage === size ? '#235d46' : 'rgba(255,255,255,0.1)'}`,
+                background: itemsPerPage === size ? '#235d46' : '#f1f5f9',
+                color: itemsPerPage === size ? '#ffffff' : '#334155',
+                border: `1.5px solid ${itemsPerPage === size ? '#235d46' : '#cbd5e1'}`,
                 borderRadius: '6px',
-                padding: '2px 8px',
+                padding: '3px 9px',
                 fontSize: '0.78rem',
                 cursor: 'pointer',
-                fontWeight: itemsPerPage === size ? 700 : 500,
+                fontWeight: itemsPerPage === size ? 800 : 600,
                 transition: 'all 0.2s ease'
               }}
             >

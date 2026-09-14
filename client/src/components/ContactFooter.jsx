@@ -27,8 +27,8 @@ export default function ContactFooter({ onOpenCreateProfile }) {
       id="contact-section"
       style={{
         marginTop: '60px',
-        background: 'linear-gradient(180deg, rgba(6, 14, 26, 0.7) 0%, #030813 100%)',
-        borderTop: '1px solid var(--gold-border)',
+        background: '#f8fafc',
+        borderTop: '1.5px solid var(--gold-border)',
         position: 'relative',
         zIndex: 10
       }}
@@ -37,42 +37,31 @@ export default function ContactFooter({ onOpenCreateProfile }) {
         style={{
           maxWidth: '1440px',
           margin: '0 auto',
-          padding: '60px 20px 30px 20px',
+          padding: '50px 20px 30px 20px',
           display: 'flex',
           flexDirection: 'column',
-          gap: '40px'
+          gap: '36px'
         }}
       >
         {/* Top Contact Highlight Section */}
         <div
           className="glass-panel"
           style={{
-            padding: '36px 30px',
+            padding: '32px 24px',
             position: 'relative',
-            overflow: 'hidden'
+            overflow: 'hidden',
+            background: '#ffffff',
+            border: '1.5px solid var(--gold-border)'
           }}
         >
-          <div 
-            style={{
-              position: 'absolute',
-              top: '-50px',
-              right: '-50px',
-              width: '200px',
-              height: '200px',
-              background: 'radial-gradient(circle, rgba(212,175,55,0.15) 0%, transparent 70%)',
-              borderRadius: '50%',
-              pointerEvents: 'none'
-            }}
-          />
-
-          <div style={{ textAlign: 'center', maxWidth: '720px', margin: '0 auto 30px auto' }}>
-            <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', marginBottom: '8px' }} className="gold-badge">
+          <div style={{ textAlign: 'center', maxWidth: '720px', margin: '0 auto 28px auto' }}>
+            <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', marginBottom: '8px', background: '#fefce8', color: 'var(--text-gold)' }} className="gold-badge">
               <Sparkles size={13} /> Official Confidential Family Support
             </div>
-            <h2 className="font-cinzel gold-text-gradient" style={{ fontSize: '2rem', fontWeight: 800 }}>
+            <h2 className="font-cinzel" style={{ fontSize: '1.85rem', fontWeight: 800, color: '#0f172a' }}>
               GET IN TOUCH WITH QABUL HAI
             </h2>
-            <p style={{ color: 'var(--text-muted)', fontSize: '0.92rem', marginTop: '6px' }}>
+            <p style={{ color: '#475569', fontSize: '0.9rem', marginTop: '6px' }}>
               Connect with our dedicated family coordinators for personal profile inquiries, proposal sharing, and family background verifications.
             </p>
           </div>
@@ -83,38 +72,39 @@ export default function ContactFooter({ onOpenCreateProfile }) {
             style={{
               display: 'grid',
               gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
-              gap: '20px'
+              gap: '16px'
             }}
           >
             {/* Male Coordinator */}
             <animated.div
               style={{
                 ...floatSpring,
-                background: 'rgba(9, 21, 38, 0.9)',
-                border: '1px solid rgba(59, 130, 246, 0.3)',
+                background: '#ffffff',
+                border: '1.5px solid #bfdbfe',
                 borderRadius: 'var(--radius-lg)',
-                padding: '24px',
+                padding: '22px',
                 display: 'flex',
                 flexDirection: 'column',
                 justifyContent: 'space-between',
-                gap: '16px'
+                gap: '16px',
+                boxShadow: '0 4px 16px rgba(59, 130, 246, 0.08)'
               }}
             >
               <div>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
-                  <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#93c5fd', textTransform: 'uppercase', letterSpacing: '1px' }}>
+                  <span style={{ fontSize: '0.74rem', fontWeight: 800, color: '#1d4ed8', textTransform: 'uppercase', letterSpacing: '1px' }}>
                     Male Family Coordinator
                   </span>
-                  <span style={{ background: 'rgba(59, 130, 246, 0.2)', padding: '2px 8px', borderRadius: 'var(--radius-full)', fontSize: '0.72rem', color: '#93c5fd' }}>
+                  <span style={{ background: '#eff6ff', border: '1px solid #bfdbfe', padding: '2px 8px', borderRadius: 'var(--radius-full)', fontSize: '0.72rem', color: '#1d4ed8', fontWeight: 700 }}>
                     Brothers / Grooms
                   </span>
                 </div>
 
-                <div style={{ fontSize: '1.45rem', fontWeight: 800, color: '#ffffff', letterSpacing: '0.5px' }}>
+                <div style={{ fontSize: '1.45rem', fontWeight: 800, color: '#0f172a', letterSpacing: '0.5px' }}>
                   +973 3718 8557
                 </div>
 
-                <p style={{ fontSize: '0.8rem', color: 'var(--text-dim)', marginTop: '4px' }}>
+                <p style={{ fontSize: '0.82rem', color: '#64748b', marginTop: '4px' }}>
                   Direct line for grooms, fathers, and brother family representatives.
                 </p>
               </div>
@@ -145,31 +135,32 @@ export default function ContactFooter({ onOpenCreateProfile }) {
             <animated.div
               style={{
                 ...floatSpring,
-                background: 'rgba(9, 21, 38, 0.9)',
-                border: '1px solid rgba(236, 72, 153, 0.3)',
+                background: '#ffffff',
+                border: '1.5px solid #fbcfe8',
                 borderRadius: 'var(--radius-lg)',
-                padding: '24px',
+                padding: '22px',
                 display: 'flex',
                 flexDirection: 'column',
                 justifyContent: 'space-between',
-                gap: '16px'
+                gap: '16px',
+                boxShadow: '0 4px 16px rgba(236, 72, 153, 0.08)'
               }}
             >
               <div>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
-                  <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#f472b6', textTransform: 'uppercase', letterSpacing: '1px' }}>
+                  <span style={{ fontSize: '0.74rem', fontWeight: 800, color: '#be185d', textTransform: 'uppercase', letterSpacing: '1px' }}>
                     Female Family Coordinator
                   </span>
-                  <span style={{ background: 'rgba(236, 72, 153, 0.2)', padding: '2px 8px', borderRadius: 'var(--radius-full)', fontSize: '0.72rem', color: '#f472b6' }}>
+                  <span style={{ background: '#fdf2f8', border: '1px solid #fbcfe8', padding: '2px 8px', borderRadius: 'var(--radius-full)', fontSize: '0.72rem', color: '#be185d', fontWeight: 700 }}>
                     Sisters / Brides
                   </span>
                 </div>
 
-                <div style={{ fontSize: '1.45rem', fontWeight: 800, color: '#ffffff', letterSpacing: '0.5px' }}>
+                <div style={{ fontSize: '1.45rem', fontWeight: 800, color: '#0f172a', letterSpacing: '0.5px' }}>
                   +973 3456 0078
                 </div>
 
-                <p style={{ fontSize: '0.8rem', color: 'var(--text-dim)', marginTop: '4px' }}>
+                <p style={{ fontSize: '0.82rem', color: '#64748b', marginTop: '4px' }}>
                   Dedicated female coordinator providing total privacy for sisters & mothers.
                 </p>
               </div>
@@ -200,31 +191,32 @@ export default function ContactFooter({ onOpenCreateProfile }) {
             <animated.div
               style={{
                 ...floatSpring,
-                background: 'rgba(9, 21, 38, 0.9)',
-                border: '1px solid rgba(212, 175, 55, 0.3)',
+                background: '#ffffff',
+                border: '1.5px solid rgba(196, 155, 31, 0.35)',
                 borderRadius: 'var(--radius-lg)',
-                padding: '24px',
+                padding: '22px',
                 display: 'flex',
                 flexDirection: 'column',
                 justifyContent: 'space-between',
-                gap: '16px'
+                gap: '16px',
+                boxShadow: '0 4px 16px rgba(196, 155, 31, 0.08)'
               }}
             >
               <div>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
-                  <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--gold-light)', textTransform: 'uppercase', letterSpacing: '1px' }}>
+                  <span style={{ fontSize: '0.74rem', fontWeight: 800, color: 'var(--text-gold)', textTransform: 'uppercase', letterSpacing: '1px' }}>
                     Official Instagram Feed
                   </span>
-                  <span className="gold-badge" style={{ fontSize: '0.7rem', padding: '2px 8px' }}>
+                  <span className="gold-badge" style={{ fontSize: '0.7rem', padding: '2px 8px', background: '#fefce8' }}>
                     @Nikah_Bahrain
                   </span>
                 </div>
 
-                <div style={{ fontSize: '1.45rem', fontWeight: 800, color: '#ffffff', letterSpacing: '0.5px' }}>
+                <div style={{ fontSize: '1.45rem', fontWeight: 800, color: '#0f172a', letterSpacing: '0.5px' }}>
                   @Nikah_Bahrain
                 </div>
 
-                <p style={{ fontSize: '0.8rem', color: 'var(--text-dim)', marginTop: '4px' }}>
+                <p style={{ fontSize: '0.82rem', color: '#64748b', marginTop: '4px' }}>
                   Daily verified candidate cards, stories, and matrimonial success announcements.
                 </p>
               </div>

@@ -89,15 +89,15 @@ Please share requirements & family verification steps.`;
   const genderConfig = profile.gender === 'male' 
     ? { 
         gradient: 'linear-gradient(135deg, #3b82f6, #1d4ed8)',
-        headerBg: 'linear-gradient(135deg, #0c2340 0%, #1e3a5f 50%, #0c2340 100%)',
+        headerBg: 'linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%)',
         label: 'GROOM',
-        accentColor: '#60a5fa'
+        accentColor: '#1d4ed8'
       }
     : {
         gradient: 'linear-gradient(135deg, #ec4899, #be185d)',
-        headerBg: 'linear-gradient(135deg, #2d1033 0%, #4a1942 50%, #2d1033 100%)',
+        headerBg: 'linear-gradient(135deg, #fdf2f8 0%, #fce7f3 100%)',
         label: 'BRIDE',
-        accentColor: '#f472b6'
+        accentColor: '#be185d'
       };
 
   const detailRows = [
@@ -113,34 +113,36 @@ Please share requirements & family verification steps.`;
 
   return (
     <animated.div
+      className="modal-overlay"
       style={{
         ...backdropSpring,
         position: 'fixed',
         inset: 0,
         zIndex: 500,
-        backgroundColor: 'rgba(3, 8, 16, 0.88)',
-        backdropFilter: 'blur(14px)',
-        WebkitBackdropFilter: 'blur(14px)',
+        backgroundColor: 'rgba(15, 23, 42, 0.75)',
+        backdropFilter: 'blur(8px)',
+        WebkitBackdropFilter: 'blur(8px)',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        padding: '20px',
+        padding: '16px',
         overflowY: 'auto'
       }}
       onClick={onClose}
     >
       <animated.div
+        className="modal-content"
         onClick={(e) => e.stopPropagation()}
         style={{
           ...modalSpring,
           width: '100%',
-          maxWidth: '700px',
+          maxWidth: '680px',
           maxHeight: '90vh',
           overflowY: 'auto',
           borderRadius: 'var(--radius-lg)',
-          background: 'linear-gradient(145deg, #091930 0%, #061122 100%)',
-          border: '1px solid var(--gold-border)',
-          boxShadow: '0 25px 60px -15px rgba(0, 0, 0, 0.85), 0 0 40px rgba(212, 175, 55, 0.2)',
+          background: '#ffffff',
+          border: '1.5px solid var(--gold-border)',
+          boxShadow: '0 20px 50px -10px rgba(0, 0, 0, 0.25), 0 0 25px rgba(196, 155, 31, 0.15)',
           position: 'relative'
         }}
       >
@@ -149,75 +151,65 @@ Please share requirements & family verification steps.`;
           onClick={onClose}
           style={{
             position: 'absolute',
-            top: '16px',
-            right: '16px',
-            background: 'rgba(0,0,0,0.6)',
-            border: '1px solid rgba(255,255,255,0.2)',
+            top: '14px',
+            right: '14px',
+            background: '#f1f5f9',
+            border: '1px solid rgba(0,0,0,0.12)',
             borderRadius: '50%',
-            width: '36px',
-            height: '36px',
+            width: '34px',
+            height: '34px',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
             cursor: 'pointer',
-            color: '#ffffff',
+            color: '#334155',
             zIndex: 10
           }}
+          title="Close modal"
         >
           <X size={18} />
         </button>
 
-        {/* Header Section with Large Avatar */}
+        {/* Header Section with Avatar */}
         <div 
+          className="modal-header"
           style={{ 
-            padding: '36px 30px 24px 30px',
+            padding: '30px 24px 20px 24px',
             background: genderConfig.headerBg,
-            borderBottom: '1px solid rgba(212, 175, 55, 0.2)',
+            borderBottom: '1px solid var(--gold-border)',
             textAlign: 'center',
             position: 'relative',
             overflow: 'hidden'
           }}
         >
-          {/* Decorative radial glow */}
-          <div style={{
-            position: 'absolute',
-            top: '50%',
-            left: '50%',
-            transform: 'translate(-50%, -50%)',
-            width: '300px',
-            height: '300px',
-            background: `radial-gradient(circle, ${profile.gender === 'male' ? 'rgba(59, 130, 246, 0.12)' : 'rgba(236, 72, 153, 0.12)'} 0%, transparent 70%)`,
-            pointerEvents: 'none'
-          }} />
-
           {/* Avatar */}
           <animated.div
             style={{
               ...avatarSpring,
-              width: '90px',
-              height: '90px',
+              width: '80px',
+              height: '80px',
               borderRadius: '50%',
               background: genderConfig.gradient,
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              margin: '0 auto 16px auto',
-              border: '3px solid rgba(255,255,255,0.2)',
-              boxShadow: `0 0 30px ${profile.gender === 'male' ? 'rgba(59, 130, 246, 0.4)' : 'rgba(236, 72, 153, 0.4)'}`,
+              margin: '0 auto 12px auto',
+              border: '3px solid #ffffff',
+              boxShadow: `0 6px 20px ${profile.gender === 'male' ? 'rgba(59, 130, 246, 0.35)' : 'rgba(236, 72, 153, 0.35)'}`,
               position: 'relative'
             }}
           >
-            <User size={42} color="#ffffff" />
+            <User size={38} color="#ffffff" />
           </animated.div>
 
           <h2 
-            className="font-cinzel gold-text-gradient"
-            style={{ fontSize: '1.8rem', fontWeight: 800, marginBottom: '8px' }}
+            className="font-cinzel"
+            style={{ fontSize: '1.6rem', fontWeight: 800, color: '#0f172a', marginBottom: '6px' }}
           >
             {profile.name}
           </h2>
 
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '12px', color: 'var(--text-muted)', fontSize: '0.92rem' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px', color: '#475569', fontSize: '0.88rem', flexWrap: 'wrap' }}>
             <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
               <Calendar size={14} /> {profile.age} Years
             </span>
@@ -227,23 +219,21 @@ Please share requirements & family verification steps.`;
             </span>
             <span>•</span>
             <span style={{ 
-              background: genderConfig.gradient,
-              WebkitBackgroundClip: 'text',
-              WebkitTextFillColor: 'transparent',
-              fontWeight: 700
+              color: genderConfig.accentColor,
+              fontWeight: 800
             }}>
               {genderConfig.label}
             </span>
           </div>
 
           {/* ID & Verified Badges */}
-          <div style={{ display: 'flex', justifyContent: 'center', gap: '8px', marginTop: '14px' }}>
-            <span className="gold-badge">
+          <div style={{ display: 'flex', justifyContent: 'center', gap: '8px', marginTop: '12px', flexWrap: 'wrap' }}>
+            <span className="gold-badge" style={{ background: '#fefce8', color: 'var(--text-gold)' }}>
               <ShieldCheck size={13} /> {profile.id}
             </span>
             <span 
               style={{
-                background: 'rgba(16, 185, 129, 0.9)',
+                background: '#10b981',
                 color: '#ffffff',
                 fontSize: '0.72rem',
                 fontWeight: 700,
@@ -260,17 +250,17 @@ Please share requirements & family verification steps.`;
         </div>
 
         {/* Detail Sections */}
-        <div style={{ padding: '24px 30px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
+        <div style={{ padding: '20px 24px', display: 'flex', flexDirection: 'column', gap: '18px' }}>
 
           {/* Nationality & Marital Status Labels */}
           <animated.div style={sectionTrail[0]}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
               <span
                 style={{
-                  background: profile.nationality === 'Pakistani' ? 'rgba(16, 185, 129, 0.2)' : profile.nationality === 'Indian' ? 'rgba(249, 115, 22, 0.2)' : 'rgba(239, 68, 68, 0.2)',
+                  background: profile.nationality === 'Pakistani' ? '#ecfdf5' : profile.nationality === 'Indian' ? '#fff7ed' : '#fef2f2',
                   border: '1px solid var(--gold-border)',
-                  color: 'var(--gold-light)',
-                  fontSize: '0.82rem',
+                  color: profile.nationality === 'Pakistani' ? '#065f46' : profile.nationality === 'Indian' ? '#9a3412' : '#991b1b',
+                  fontSize: '0.8rem',
                   fontWeight: 700,
                   padding: '5px 12px',
                   borderRadius: 'var(--radius-full)',
@@ -285,10 +275,10 @@ Please share requirements & family verification steps.`;
 
               <span 
                 style={{
-                  background: 'rgba(212, 175, 55, 0.15)',
-                  border: '1px solid rgba(212, 175, 55, 0.3)',
-                  color: 'var(--gold-light)',
-                  fontSize: '0.82rem',
+                  background: '#fefce8',
+                  border: '1px solid rgba(196, 155, 31, 0.4)',
+                  color: 'var(--text-gold)',
+                  fontSize: '0.8rem',
                   fontWeight: 700,
                   padding: '5px 12px',
                   borderRadius: 'var(--radius-full)',
@@ -310,13 +300,13 @@ Please share requirements & family verification steps.`;
                   display: 'inline-flex',
                   alignItems: 'center',
                   gap: '5px',
-                  color: 'var(--gold-light)',
+                  color: 'var(--text-gold)',
                   fontSize: '0.78rem',
                   textDecoration: 'none',
-                  background: 'rgba(212, 175, 55, 0.1)',
+                  background: '#fefce8',
                   padding: '5px 12px',
                   borderRadius: 'var(--radius-full)',
-                  border: '1px solid rgba(212, 175, 55, 0.2)'
+                  border: '1px solid rgba(196, 155, 31, 0.3)'
                 }}
               >
                 <Instagram size={13} />
@@ -328,65 +318,66 @@ Please share requirements & family verification steps.`;
           {/* Info Grid */}
           <animated.div style={sectionTrail[1]}>
             <div 
+              className="modal-detail-grid"
               style={{ 
                 display: 'grid', 
-                gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))',
+                gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))',
                 gap: '10px',
-                background: 'rgba(255,255,255,0.02)',
+                background: '#f8fafc',
                 padding: '16px',
                 borderRadius: 'var(--radius-md)',
-                border: '1px solid rgba(255,255,255,0.06)'
+                border: '1px solid #e2e8f0'
               }}
             >
               {detailRows.map((row, idx) => {
                 const Icon = row.icon;
                 return row.value ? (
-                  <div key={idx} style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '0.88rem', color: '#e2e8f0' }}>
+                  <div key={idx} style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.88rem', color: '#1e293b' }}>
                     <Icon size={16} color="var(--gold-primary)" style={{ flexShrink: 0 }} />
-                    <span><strong style={{ color: 'var(--gold-light)' }}>{row.label}:</strong> {row.value}</span>
+                    <span><strong style={{ color: 'var(--text-gold)' }}>{row.label}:</strong> {row.value}</span>
                   </div>
                 ) : null;
               })}
             </div>
           </animated.div>
 
-          {/* Dedicated Family & Siblings Section (Instagram Flyer Exact Labels) */}
+          {/* Dedicated Family & Siblings Section */}
           <animated.div style={sectionTrail[2]}>
             <h4 
               className="font-cinzel"
-              style={{ fontSize: '1rem', color: 'var(--gold-light)', marginBottom: '10px', display: 'flex', alignItems: 'center', gap: '6px' }}
+              style={{ fontSize: '0.98rem', color: 'var(--text-gold)', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '6px' }}
             >
               <Users size={16} color="var(--gold-primary)" />
-              Family & Sibling Information (Original Flyer Details)
+              Family & Sibling Information
             </h4>
             <div
               style={{
                 display: 'flex',
                 flexDirection: 'column',
                 gap: '8px',
-                background: 'rgba(212, 175, 55, 0.04)',
-                padding: '16px',
+                background: '#fffdf5',
+                padding: '14px 16px',
                 borderRadius: 'var(--radius-md)',
-                border: '1px solid rgba(212, 175, 55, 0.15)'
+                border: '1px solid rgba(196, 155, 31, 0.25)'
               }}
             >
               {/* Siblings Labeled Row */}
-              <div style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', fontSize: '0.88rem' }}>
-                <span style={{ color: 'var(--gold-light)', fontWeight: 700, minWidth: '130px', flexShrink: 0 }}>
+              <div style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', fontSize: '0.88rem', flexWrap: 'wrap' }}>
+                <span style={{ color: 'var(--text-gold)', fontWeight: 700, minWidth: '110px', flexShrink: 0 }}>
                   • Siblings:
                 </span>
-                <span style={{ color: '#ffffff', fontWeight: 600 }}>
+                <span style={{ color: '#0f172a', fontWeight: 600 }}>
                   {profile.siblings || 'Available upon family request'}
                 </span>
               </div>
 
               {/* Father Labeled Row */}
               {profile.father && (
-                <div style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', fontSize: '0.88rem' }}>
-                  <span style={{ color: 'var(--gold-light)', fontWeight: 700, minWidth: '130px', flexShrink: 0 }}>
+                <div style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', fontSize: '0.88rem', flexWrap: 'wrap' }}>
+                  <span style={{ color: 'var(--text-gold)', fontWeight: 700, minWidth: '110px', flexShrink: 0 }}>
                     • Father:
                   </span>
-                  <span style={{ color: '#e2e8f0' }}>
+                  <span style={{ color: '#334155' }}>
                     {profile.father}
                   </span>
                 </div>
@@ -394,11 +385,11 @@ Please share requirements & family verification steps.`;
 
               {/* Mother Labeled Row */}
               {profile.mother && (
-                <div style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', fontSize: '0.88rem' }}>
-                  <span style={{ color: 'var(--gold-light)', fontWeight: 700, minWidth: '130px', flexShrink: 0 }}>
+                <div style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', fontSize: '0.88rem', flexWrap: 'wrap' }}>
+                  <span style={{ color: 'var(--text-gold)', fontWeight: 700, minWidth: '110px', flexShrink: 0 }}>
                     • Mother:
                   </span>
-                  <span style={{ color: '#e2e8f0' }}>
+                  <span style={{ color: '#334155' }}>
                     {profile.mother}
                   </span>
                 </div>
@@ -406,11 +397,11 @@ Please share requirements & family verification steps.`;
 
               {/* Family Background Row */}
               {profile.family && (
-                <div style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', fontSize: '0.88rem' }}>
-                  <span style={{ color: 'var(--gold-light)', fontWeight: 700, minWidth: '130px', flexShrink: 0 }}>
+                <div style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', fontSize: '0.88rem', flexWrap: 'wrap' }}>
+                  <span style={{ color: 'var(--text-gold)', fontWeight: 700, minWidth: '110px', flexShrink: 0 }}>
                     • Family:
                   </span>
-                  <span style={{ color: '#cbd5e1' }}>
+                  <span style={{ color: '#475569' }}>
                     {profile.family}
                   </span>
                 </div>
@@ -422,12 +413,12 @@ Please share requirements & family verification steps.`;
           <animated.div style={sectionTrail[3]}>
             <h4 
               className="font-cinzel"
-              style={{ fontSize: '1rem', color: 'var(--gold-light)', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '6px' }}
+              style={{ fontSize: '0.98rem', color: 'var(--text-gold)', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '6px' }}
             >
               <FileText size={16} color="var(--gold-primary)" />
               Candidate Profile & Short Bio
             </h4>
-            <p style={{ color: '#e2e8f0', fontSize: '0.9rem', lineHeight: '1.7', background: 'rgba(255,255,255,0.03)', padding: '14px 16px', borderRadius: 'var(--radius-md)', border: '1px solid rgba(255,255,255,0.06)' }}>
+            <p style={{ color: '#1e293b', fontSize: '0.88rem', lineHeight: '1.6', background: '#f8fafc', padding: '12px 16px', borderRadius: 'var(--radius-md)', border: '1px solid #e2e8f0' }}>
               {profile.about}
             </p>
           </animated.div>
@@ -436,12 +427,12 @@ Please share requirements & family verification steps.`;
           <animated.div style={sectionTrail[4]}>
             <h4 
               className="font-cinzel"
-              style={{ fontSize: '1rem', color: 'var(--gold-light)', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '6px' }}
+              style={{ fontSize: '0.98rem', color: 'var(--text-gold)', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '6px' }}
             >
               <Sparkles size={16} color="var(--gold-primary)" />
               Partner Requirements & Expectations
             </h4>
-            <p style={{ color: '#e2e8f0', fontSize: '0.9rem', lineHeight: '1.7', background: 'rgba(212, 175, 55, 0.05)', padding: '14px 16px', borderRadius: 'var(--radius-md)', border: '1px solid rgba(212, 175, 55, 0.15)' }}>
+            <p style={{ color: '#1e293b', fontSize: '0.88rem', lineHeight: '1.6', background: '#fffdf5', padding: '12px 16px', borderRadius: 'var(--radius-md)', border: '1px solid rgba(196, 155, 31, 0.25)' }}>
               {profile.requirements}
             </p>
           </animated.div>
@@ -453,10 +444,10 @@ Please share requirements & family verification steps.`;
               display: 'flex', 
               alignItems: 'center', 
               justifyContent: 'space-between', 
-              gap: '12px', 
+              gap: '10px', 
               flexWrap: 'wrap',
-              borderTop: '1px solid rgba(255,255,255,0.08)',
-              paddingTop: '18px'
+              borderTop: '1px solid #e2e8f0',
+              paddingTop: '16px'
             }}
           >
             {/* Direct WhatsApp to Male +97337188557 */}
@@ -464,9 +455,9 @@ Please share requirements & family verification steps.`;
               onClick={handleWhatsAppChat}
               className="btn-whatsapp"
               style={{
-                flex: '1 1 260px',
-                padding: '13px 24px',
-                fontSize: '0.95rem'
+                flex: '1 1 240px',
+                padding: '12px 20px',
+                fontSize: '0.92rem'
               }}
             >
               <MessageCircle size={18} />
@@ -478,7 +469,7 @@ Please share requirements & family verification steps.`;
               onClick={() => onToggleFavorite(profile.id)}
               className="btn-ghost"
               style={{
-                padding: '13px 20px',
+                padding: '12px 18px',
                 borderColor: isFavorite ? '#ef4444' : undefined,
                 color: isFavorite ? '#ef4444' : undefined
               }}

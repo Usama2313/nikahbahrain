@@ -124,13 +124,14 @@ export default function SplashIntro({ onEnter, isVisible = true }) {
         position: 'fixed',
         inset: 0,
         zIndex: 9999,
-        background: 'radial-gradient(circle at 50% 30%, #0d213e 0%, #061122 55%, #030812 100%)',
+        background: 'radial-gradient(circle at 50% 25%, #ffffff 0%, #fbfbfc 50%, #f1f5f9 100%)',
         display: 'flex',
         flexDirection: 'column',
         alignItems: 'center',
         justifyContent: 'center',
-        padding: '24px',
-        overflow: 'hidden',
+        padding: '20px 16px',
+        overflowY: 'auto',
+        overflowX: 'hidden',
         touchAction: 'none',
         cursor: 'grab'
       }}
@@ -147,24 +148,24 @@ export default function SplashIntro({ onEnter, isVisible = true }) {
       <div
         style={{
           position: 'absolute',
-          top: '16px',
+          top: '14px',
           left: '50%',
           transform: 'translateX(-50%)',
           display: 'flex',
           flexDirection: 'column',
           alignItems: 'center',
-          gap: '6px',
-          opacity: 0.6,
+          gap: '5px',
+          opacity: 0.8,
           pointerEvents: 'none'
         }}
       >
         <div style={{
-          width: '40px',
+          width: '36px',
           height: '4px',
           borderRadius: '2px',
-          background: 'rgba(250, 225, 130, 0.5)'
+          background: 'var(--gold-primary)'
         }} />
-        <span style={{ fontSize: '0.7rem', color: 'var(--gold-light)', letterSpacing: '2px', textTransform: 'uppercase' }}>
+        <span style={{ fontSize: '0.68rem', color: 'var(--text-gold)', letterSpacing: '1.5px', textTransform: 'uppercase', fontWeight: 700 }}>
           Swipe up or click to enter
         </span>
       </div>
@@ -173,14 +174,14 @@ export default function SplashIntro({ onEnter, isVisible = true }) {
       <div
         style={{
           position: 'absolute',
-          top: '20%',
+          top: '25%',
           left: '50%',
           transform: 'translate(-50%, -50%)',
-          width: '550px',
-          height: '550px',
-          background: 'radial-gradient(circle, rgba(212, 175, 55, 0.18) 0%, rgba(27, 75, 138, 0.12) 40%, transparent 70%)',
+          width: 'min(450px, 90vw)',
+          height: 'min(450px, 90vw)',
+          background: 'radial-gradient(circle, rgba(196, 155, 31, 0.12) 0%, rgba(35, 93, 70, 0.05) 50%, transparent 70%)',
           borderRadius: '50%',
-          filter: 'blur(50px)',
+          filter: 'blur(40px)',
           pointerEvents: 'none'
         }}
       />
@@ -190,33 +191,40 @@ export default function SplashIntro({ onEnter, isVisible = true }) {
         style={{
           ...textSpring,
           textAlign: 'center',
-          marginBottom: '16px',
+          marginBottom: '12px',
           display: 'flex',
           flexDirection: 'column',
-          alignItems: 'center'
+          alignItems: 'center',
+          width: '100%',
+          maxWidth: '560px',
+          padding: '0 8px'
         }}
       >
         <p
           className="font-arabic"
           style={{
-            fontSize: 'clamp(1.2rem, 4vw, 1.85rem)',
-            color: 'var(--gold-light)',
-            letterSpacing: '1px',
-            textShadow: '0 0 18px rgba(212, 175, 55, 0.5)'
+            fontSize: 'clamp(1.25rem, 5vw, 1.85rem)',
+            color: 'var(--gold-primary)',
+            letterSpacing: '0.5px',
+            lineHeight: 1.4,
+            wordBreak: 'break-word',
+            width: '100%'
           }}
         >
           بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ
         </p>
         <span
           style={{
-            fontSize: 'clamp(0.6rem, 1.8vw, 0.75rem)',
-            letterSpacing: '2px',
+            fontSize: 'clamp(0.65rem, 2.2vw, 0.78rem)',
+            letterSpacing: '1px',
             textTransform: 'uppercase',
-            color: 'var(--gold-light)',
-            opacity: 0.85,
-            marginTop: '4px',
+            color: 'var(--text-gold)',
+            marginTop: '3px',
             fontWeight: 700,
-            textAlign: 'center'
+            textAlign: 'center',
+            wordBreak: 'break-word',
+            width: '100%',
+            lineHeight: 1.3
           }}
         >
           In the Name of Allah, the Most Gracious, the Most Merciful
@@ -231,19 +239,20 @@ export default function SplashIntro({ onEnter, isVisible = true }) {
           display: 'flex',
           flexDirection: 'column',
           alignItems: 'center',
-          cursor: 'pointer'
+          cursor: 'pointer',
+          margin: '4px 0'
         }}
         onClick={handleSlideEnter}
       >
         <div
           style={{
             position: 'relative',
-            width: 'clamp(140px, 30vw, 220px)',
-            height: 'clamp(140px, 30vw, 220px)',
+            width: 'clamp(110px, 26vw, 170px)',
+            height: 'clamp(110px, 26vw, 170px)',
             borderRadius: '50%',
-            padding: '6px',
-            background: 'linear-gradient(135deg, #fae182 0%, #d4af37 40%, #b8860b 80%, #fae182 100%)',
-            boxShadow: '0 0 45px rgba(212, 175, 55, 0.5), inset 0 0 20px rgba(0,0,0,0.5)',
+            padding: '4px',
+            background: 'linear-gradient(135deg, #fae182 0%, #c49b1f 45%, #a07810 85%, #fae182 100%)',
+            boxShadow: '0 8px 30px rgba(196, 155, 31, 0.35)',
             animation: 'pulseGlow 4s infinite ease-in-out'
           }}
         >
@@ -266,20 +275,20 @@ export default function SplashIntro({ onEnter, isVisible = true }) {
         style={{
           ...textSpring,
           textAlign: 'center',
-          maxWidth: '680px',
+          maxWidth: '600px',
           width: '100%',
-          marginTop: '22px',
+          marginTop: '12px',
           display: 'flex',
           flexDirection: 'column',
           alignItems: 'center',
-          gap: '10px',
+          gap: '8px',
           padding: '0 12px'
         }}
       >
         <h1
           className="font-cinzel gold-text-gradient"
           style={{
-            fontSize: 'clamp(1.6rem, 5vw, 2.4rem)',
+            fontSize: 'clamp(1.5rem, 6vw, 2.2rem)',
             fontWeight: 800,
             letterSpacing: '1px',
             lineHeight: 1.2
@@ -288,29 +297,30 @@ export default function SplashIntro({ onEnter, isVisible = true }) {
           QABUL HAI
         </h1>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap', justifyContent: 'center' }}>
-          <span className="gold-badge">
-            <ShieldCheck size={14} /> 100% Verified Matrimonial Services
+        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap', justifyContent: 'center' }}>
+          <span className="gold-badge" style={{ fontSize: '0.72rem', padding: '3px 10px' }}>
+            <ShieldCheck size={13} /> 100% Verified Matrimonial Services
           </span>
-          <span className="gold-badge" style={{ background: 'rgba(59, 130, 246, 0.2)', borderColor: 'rgba(59, 130, 246, 0.4)', color: '#93c5fd' }}>
-            <Heart size={13} fill="#93c5fd" /> Bahrain • GCC • Expats
+          <span className="gold-badge" style={{ background: 'rgba(59, 130, 246, 0.12)', borderColor: 'rgba(59, 130, 246, 0.35)', color: '#1d4ed8', fontSize: '0.72rem', padding: '3px 10px' }}>
+            <Heart size={12} fill="#1d4ed8" /> Bahrain • GCC • Expats
           </span>
         </div>
 
         <p
           className="font-arabic"
           style={{
-            fontSize: 'clamp(0.95rem, 2.5vw, 1.25rem)',
-            color: 'var(--gold-light)',
-            marginTop: '6px',
+            fontSize: 'clamp(0.92rem, 3.2vw, 1.2rem)',
+            color: 'var(--text-gold)',
+            marginTop: '4px',
             lineHeight: 1.7,
-            opacity: 0.95
+            wordBreak: 'break-word',
+            width: '100%'
           }}
         >
           وَمِنْ آيَاتِهِ أَنْ خَلَقَ لَكُم مِّنْ أَنفُسِكُمْ أَزْوَاجًا لِّتَسْكُنُوا إِلَيْهَا وَجَعَلَ بَيْنَكُم مَّوَدَّةً وَرَحْمَةً
         </p>
 
-        <p style={{ color: 'var(--text-muted)', fontSize: 'clamp(0.78rem, 2vw, 0.92rem)', maxWidth: '560px', fontStyle: 'italic', lineHeight: 1.6 }}>
+        <p style={{ color: 'var(--text-muted)', fontSize: 'clamp(0.75rem, 2.2vw, 0.88rem)', maxWidth: '520px', fontStyle: 'italic', lineHeight: 1.5, wordBreak: 'break-word' }}>
           "And among His signs is that He created for you mates from among yourselves, that you may dwell in tranquility with them, and He has put love and mercy between your hearts."
         </p>
       </animated.div>
@@ -319,14 +329,14 @@ export default function SplashIntro({ onEnter, isVisible = true }) {
       <animated.div
         style={{
           ...textSpring,
-          marginTop: '24px',
+          marginTop: '16px',
           display: 'flex',
           flexDirection: 'column',
           alignItems: 'center',
-          gap: '12px',
+          gap: '10px',
           width: '100%',
-          maxWidth: '340px',
-          padding: '0 16px'
+          maxWidth: '320px',
+          padding: '0 12px'
         }}
       >
         <animated.button
@@ -334,9 +344,9 @@ export default function SplashIntro({ onEnter, isVisible = true }) {
           className="btn-gold"
           style={{
             ...enterBtnSpring,
-            padding: '14px 40px',
-            fontSize: 'clamp(0.88rem, 2.5vw, 1.05rem)',
-            letterSpacing: '1px',
+            padding: '12px 28px',
+            fontSize: 'clamp(0.82rem, 2.8vw, 0.95rem)',
+            letterSpacing: '0.6px',
             borderRadius: '9999px',
             cursor: 'pointer',
             width: '100%'
@@ -344,9 +354,9 @@ export default function SplashIntro({ onEnter, isVisible = true }) {
           onMouseEnter={() => setBtnHovered(true)}
           onMouseLeave={() => setBtnHovered(false)}
         >
-          <Sparkles size={18} />
+          <Sparkles size={16} />
           <span>ENTER MATRIMONIAL PORTAL</span>
-          <ArrowDown size={18} style={{ transform: 'rotate(-90deg)', transition: 'transform 0.2s ease' }} />
+          <ArrowDown size={16} style={{ transform: 'rotate(-90deg)' }} />
         </animated.button>
 
         {/* Progress Bar */}

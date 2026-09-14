@@ -29,13 +29,13 @@ export default function CreateProfileModal({ isOpen, onClose }) {
         position: 'fixed',
         inset: 0,
         zIndex: 600,
-        backgroundColor: 'rgba(3, 8, 16, 0.88)',
-        backdropFilter: 'blur(12px)',
-        WebkitBackdropFilter: 'blur(12px)',
+        backgroundColor: 'rgba(15, 23, 42, 0.75)',
+        backdropFilter: 'blur(8px)',
+        WebkitBackdropFilter: 'blur(8px)',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        padding: '16px'
+        padding: '10px'
       }}
       onClick={onClose}
     >
@@ -44,13 +44,13 @@ export default function CreateProfileModal({ isOpen, onClose }) {
         style={{
           ...modalSpring,
           width: '100%',
-          maxWidth: '900px',
+          maxWidth: '880px',
           height: '92vh',
-          maxHeight: '900px',
+          maxHeight: '880px',
           borderRadius: 'var(--radius-lg)',
-          background: 'linear-gradient(145deg, #091a32 0%, #061122 100%)',
-          border: '1px solid var(--gold-border)',
-          boxShadow: '0 25px 60px -10px rgba(0, 0, 0, 0.9), 0 0 30px rgba(212, 175, 55, 0.25)',
+          background: '#ffffff',
+          border: '1.5px solid var(--gold-border)',
+          boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
           display: 'flex',
           flexDirection: 'column',
           overflow: 'hidden'
@@ -59,48 +59,50 @@ export default function CreateProfileModal({ isOpen, onClose }) {
         {/* Modal Header */}
         <div
           style={{
-            padding: '16px 24px',
-            borderBottom: '1px solid rgba(212, 175, 55, 0.2)',
+            padding: '14px 18px',
+            borderBottom: '1px solid #e2e8f0',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
-            background: 'rgba(5, 12, 22, 0.8)'
+            background: '#f8fafc',
+            flexWrap: 'wrap',
+            gap: '10px'
           }}
         >
           <div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
               <h3 
-                className="font-cinzel gold-text-gradient"
-                style={{ fontSize: '1.4rem', fontWeight: 800 }}
+                className="font-cinzel"
+                style={{ fontSize: '1.25rem', fontWeight: 800, color: '#0f172a' }}
               >
                 Create Matrimonial Profile
               </h3>
-              <span className="gold-badge">
+              <span className="gold-badge" style={{ background: '#fefce8', color: 'var(--text-gold)' }}>
                 <ShieldCheck size={12} /> Confidential & Halal
               </span>
             </div>
-            <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: '2px' }}>
+            <p style={{ fontSize: '0.78rem', color: '#475569', marginTop: '2px' }}>
               Fill the official Google Form below to list your proposal on Qabul Hai & Instagram
             </p>
           </div>
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             <a
               href="https://forms.gle/sdKb75scXAag7gzt9"
               target="_blank"
               rel="noopener noreferrer"
               className="btn-gold"
-              style={{ fontSize: '0.8rem', padding: '6px 14px' }}
+              style={{ fontSize: '0.78rem', padding: '6px 14px' }}
               title="Open Google Form in full tab"
             >
-              <ExternalLink size={14} />
+              <ExternalLink size={13} />
               <span>Open in Full Tab</span>
             </a>
             <button
               onClick={onClose}
               style={{
-                background: 'rgba(255,255,255,0.08)',
-                border: '1px solid rgba(255,255,255,0.15)',
+                background: '#f1f5f9',
+                border: '1px solid rgba(0,0,0,0.1)',
                 borderRadius: '50%',
                 width: '34px',
                 height: '34px',
@@ -108,8 +110,9 @@ export default function CreateProfileModal({ isOpen, onClose }) {
                 alignItems: 'center',
                 justifyContent: 'center',
                 cursor: 'pointer',
-                color: '#ffffff'
+                color: '#334155'
               }}
+              title="Close form"
             >
               <X size={18} />
             </button>
@@ -117,7 +120,7 @@ export default function CreateProfileModal({ isOpen, onClose }) {
         </div>
 
         {/* Embedded Google Form */}
-        <div style={{ flex: 1, position: 'relative', background: '#ffffff', overflow: 'hidden' }}>
+        <div style={{ flex: 1, position: 'relative', background: '#ffffff', overflow: 'hidden', width: '100%' }}>
           <iframe
             title="Qabul Hai Matrimonial Application Form"
             src="https://forms.gle/sdKb75scXAag7gzt9?embedded=true"
@@ -136,20 +139,23 @@ export default function CreateProfileModal({ isOpen, onClose }) {
               bottom: 0,
               left: 0,
               right: 0,
-              background: 'rgba(6, 14, 26, 0.95)',
+              background: '#ffffff',
               borderTop: '1px solid var(--gold-border)',
-              padding: '10px 20px',
+              padding: '10px 18px',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'space-between',
-              color: '#e2e8f0',
-              fontSize: '0.82rem'
+              color: '#334155',
+              fontSize: '0.8rem',
+              flexWrap: 'wrap',
+              gap: '8px',
+              boxShadow: '0 -4px 12px rgba(0,0,0,0.05)'
             }}
           >
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <CheckCircle2 size={16} color="var(--gold-primary)" />
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <CheckCircle2 size={15} color="var(--gold-primary)" />
               <span>
-                Official Google Form Embed. If your browser restricts embedded forms, click <strong>Open in Full Tab</strong> above.
+                Official Google Form. If your browser restricts embedded forms, click <strong>Open in Full Tab</strong>.
               </span>
             </div>
             <a
@@ -157,9 +163,10 @@ export default function CreateProfileModal({ isOpen, onClose }) {
               target="_blank"
               rel="noopener noreferrer"
               className="btn-gold"
-              style={{ padding: '6px 16px', fontSize: '0.78rem' }}
+              style={{ padding: '5px 14px', fontSize: '0.76rem' }}
             >
-              Open Google Form
+              <ExternalLink size={12} />
+              <span>Open Form</span>
             </a>
           </div>
         </div>

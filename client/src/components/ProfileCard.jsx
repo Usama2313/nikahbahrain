@@ -132,38 +132,38 @@ Please provide more details. JazakAllah Khair!`;
     window.open(url, '_blank');
   };
 
-  // Nationality badge styling
+  // Nationality badge styling - high contrast for white background
   const nationalityBadge = {
-    Pakistani: { flag: '🇵🇰', label: 'Pakistani', bg: 'rgba(16, 185, 129, 0.15)', border: 'rgba(16, 185, 129, 0.4)', text: '#6ee7b7' },
-    Indian: { flag: '🇮🇳', label: 'Indian', bg: 'rgba(249, 115, 22, 0.15)', border: 'rgba(249, 115, 22, 0.4)', text: '#fdba74' },
-    Bahraini: { flag: '🇧🇭', label: 'Bahraini', bg: 'rgba(239, 68, 68, 0.15)', border: 'rgba(239, 68, 68, 0.4)', text: '#fca5a5' }
-  }[profile.nationality] || { flag: '🌍', label: profile.nationality, bg: 'rgba(59, 130, 246, 0.15)', border: 'rgba(59, 130, 246, 0.4)', text: '#93c5fd' };
+    Pakistani: { flag: '🇵🇰', label: 'Pakistani', bg: '#ecfdf5', border: '#a7f3d0', text: '#065f46' },
+    Indian: { flag: '🇮🇳', label: 'Indian', bg: '#fff7ed', border: '#fed7aa', text: '#9a3412' },
+    Bahraini: { flag: '🇧🇭', label: 'Bahraini', bg: '#fef2f2', border: '#fecaca', text: '#991b1b' }
+  }[profile.nationality] || { flag: '🌍', label: profile.nationality, bg: '#eff6ff', border: '#bfdbfe', text: '#1e40af' };
 
-  // Marital status badge styling
+  // Marital status badge styling - high contrast for white background
   const maritalBadge = {
-    'Never Married': { emoji: '💍', bg: 'rgba(212, 175, 55, 0.2)', border: 'rgba(212, 175, 55, 0.55)', text: '#fce588' },
-    'Divorced': { emoji: '🔄', bg: 'rgba(168, 85, 247, 0.2)', border: 'rgba(168, 85, 247, 0.55)', text: '#e9d5ff' },
-    '2nd Marriage': { emoji: '✨', bg: 'rgba(249, 115, 22, 0.22)', border: 'rgba(249, 115, 22, 0.55)', text: '#fed7aa' },
-    'Widowed': { emoji: '🕊️', bg: 'rgba(14, 165, 233, 0.2)', border: 'rgba(14, 165, 233, 0.55)', text: '#bae6fd' }
-  }[profile.maritalStatus] || { emoji: '📋', bg: 'rgba(255, 255, 255, 0.15)', border: 'rgba(255, 255, 255, 0.3)', text: '#ffffff' };
+    'Never Married': { emoji: '💍', bg: '#fefce8', border: '#fef08a', text: '#854d0e' },
+    'Divorced': { emoji: '🔄', bg: '#faf5ff', border: '#e9d5ff', text: '#6b21a8' },
+    '2nd Marriage': { emoji: '✨', bg: '#fff7ed', border: '#ffedd5', text: '#c2410c' },
+    'Widowed': { emoji: '🕊️', bg: '#f0f9ff', border: '#bae6fd', text: '#0369a1' }
+  }[profile.maritalStatus] || { emoji: '📋', bg: '#f1f5f9', border: '#cbd5e1', text: '#334155' };
 
   // Gender gradient and icon
   const genderConfig = profile.gender === 'male' 
     ? { 
-        gradient: 'linear-gradient(135deg, #1e3a5f 0%, #0c2340 100%)',
-        accentBorder: 'rgba(59, 130, 246, 0.5)',
+        gradient: 'linear-gradient(135deg, #1e40af 0%, #1d4ed8 100%)',
+        accentBorder: 'rgba(59, 130, 246, 0.4)',
         iconBg: 'linear-gradient(135deg, #3b82f6, #1d4ed8)',
         label: 'GROOM'
       }
     : {
-        gradient: 'linear-gradient(135deg, #4a1942 0%, #2d1033 100%)',
-        accentBorder: 'rgba(236, 72, 153, 0.5)',
+        gradient: 'linear-gradient(135deg, #db2777 0%, #be185d 100%)',
+        accentBorder: 'rgba(236, 72, 153, 0.4)',
         iconBg: 'linear-gradient(135deg, #ec4899, #be185d)',
         label: 'BRIDE'
       };
 
-  // High-contrast deep navy luxury card surface for maximum text clarity
-  const cardBackground = 'linear-gradient(165deg, rgba(12, 28, 54, 0.98) 0%, rgba(6, 17, 36, 1) 100%)';
+  // Pure clean white card surface with crisp gold border
+  const cardBackground = '#ffffff';
 
   return (
     <animated.div
@@ -177,36 +177,26 @@ Please provide more details. JazakAllah Khair!`;
         ...hoverSpring,
         cursor: 'pointer',
         height: '100%',
+        width: '100%',
+        maxWidth: '100%',
         display: 'flex',
         flexDirection: 'column',
         borderRadius: 'var(--radius-lg)',
         background: cardBackground,
-        border: '1px solid',
+        border: '1.5px solid var(--gold-border)',
+        boxShadow: '0 4px 18px rgba(0, 0, 0, 0.05)',
         overflow: 'hidden',
         position: 'relative',
-        transition: 'background 0.3s ease'
+        transition: 'background 0.3s ease, border-color 0.3s ease'
       }}
     >
-      {/* Animated glow overlay on hover */}
-      <animated.div
-        style={{
-          position: 'absolute',
-          inset: 0,
-          background: genderConfig.gradient,
-          opacity: springProps.glowOpacity.to(o => o * 0.15),
-          pointerEvents: 'none',
-          zIndex: 0,
-          borderRadius: 'var(--radius-lg)'
-        }}
-      />
-
       {/* Top Header Section with ID, Avatar & Badges */}
       <div 
         style={{
-          padding: '18px 18px 14px 18px',
+          padding: '16px 16px 12px 16px',
           position: 'relative',
           zIndex: 1,
-          borderBottom: '1px solid rgba(255,255,255,0.06)'
+          borderBottom: '1px solid #f1f5f9'
         }}
       >
         {/* Top Row: ID + Verified + Heart */}
@@ -215,18 +205,18 @@ Please provide more details. JazakAllah Khair!`;
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
-            marginBottom: '14px'
+            marginBottom: '12px'
           }}
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
             <span 
               style={{
-                background: 'rgba(4, 10, 20, 0.85)',
-                border: '1px solid var(--gold-border)',
-                color: 'var(--gold-light)',
+                background: '#fefce8',
+                border: '1px solid rgba(196, 155, 31, 0.4)',
+                color: 'var(--text-gold)',
                 fontSize: '0.72rem',
-                fontWeight: 700,
-                padding: '3px 8px',
+                fontWeight: 800,
+                padding: '3px 9px',
                 borderRadius: 'var(--radius-full)',
                 letterSpacing: '0.5px'
               }}
@@ -236,7 +226,7 @@ Please provide more details. JazakAllah Khair!`;
             {profile.verified && (
               <span 
                 style={{
-                  background: 'rgba(16, 185, 129, 0.85)',
+                  background: '#10b981',
                   color: '#ffffff',
                   fontSize: '0.7rem',
                   fontWeight: 700,
@@ -257,8 +247,8 @@ Please provide more details. JazakAllah Khair!`;
             onClick={handleFavoriteClick}
             style={{
               ...heartSpring,
-              background: 'rgba(5, 12, 22, 0.85)',
-              border: `1px solid ${isFavorite ? '#ef4444' : 'rgba(255,255,255,0.15)'}`,
+              background: '#f8fafc',
+              border: `1px solid ${isFavorite ? '#ef4444' : 'rgba(0,0,0,0.1)'}`,
               borderRadius: '50%',
               width: '34px',
               height: '34px',
@@ -266,7 +256,7 @@ Please provide more details. JazakAllah Khair!`;
               alignItems: 'center',
               justifyContent: 'center',
               cursor: 'pointer',
-              boxShadow: isFavorite ? '0 0 14px rgba(239, 68, 68, 0.5)' : 'none',
+              boxShadow: isFavorite ? '0 0 10px rgba(239, 68, 68, 0.3)' : 'none',
               outline: 'none'
             }}
             title={isFavorite ? 'Remove from favorites' : 'Add to favorites'}
@@ -280,12 +270,12 @@ Please provide more details. JazakAllah Khair!`;
         </div>
 
         {/* Avatar Circle + Name & Age */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
           <animated.div
             style={{
               ...avatarSpring,
-              width: '56px',
-              height: '56px',
+              width: '52px',
+              height: '52px',
               borderRadius: '50%',
               background: genderConfig.iconBg,
               display: 'flex',
@@ -296,19 +286,19 @@ Please provide more details. JazakAllah Khair!`;
               position: 'relative'
             }}
           >
-            <User size={26} color="#ffffff" />
+            <User size={24} color="#ffffff" />
             <span
               style={{
                 position: 'absolute',
                 bottom: '-4px',
                 right: '-4px',
                 background: genderConfig.iconBg,
-                fontSize: '0.6rem',
+                fontSize: '0.58rem',
                 fontWeight: 800,
                 color: '#fff',
                 padding: '1px 5px',
                 borderRadius: 'var(--radius-full)',
-                border: '1px solid rgba(255,255,255,0.3)',
+                border: '1px solid rgba(255,255,255,0.6)',
                 letterSpacing: '0.5px'
               }}
             >
@@ -320,11 +310,11 @@ Please provide more details. JazakAllah Khair!`;
             <h3 
               className="font-cinzel"
               style={{
-                fontSize: '1.15rem',
-                fontWeight: 700,
-                color: 'var(--gold-light)',
-                letterSpacing: '0.3px',
-                marginBottom: '3px',
+                fontSize: '1.1rem',
+                fontWeight: 800,
+                color: '#0f172a',
+                letterSpacing: '0.2px',
+                marginBottom: '2px',
                 overflow: 'hidden',
                 textOverflow: 'ellipsis',
                 whiteSpace: 'nowrap'
@@ -332,7 +322,7 @@ Please provide more details. JazakAllah Khair!`;
             >
               {profile.name}
             </h3>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.83rem', color: 'var(--text-muted)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.82rem', color: '#64748b' }}>
               <span style={{ display: 'flex', alignItems: 'center', gap: '3px' }}>
                 <Calendar size={12} /> {profile.age} yrs
               </span>
@@ -348,13 +338,13 @@ Please provide more details. JazakAllah Khair!`;
       {/* Badges Row: Nationality + Marital Status */}
       <div
         style={{
-          padding: '10px 18px',
+          padding: '10px 16px',
           display: 'flex',
           alignItems: 'center',
-          gap: '8px',
+          gap: '6px',
           flexWrap: 'wrap',
           zIndex: 1,
-          borderBottom: '1px solid rgba(255,255,255,0.04)'
+          borderBottom: '1px solid #f1f5f9'
         }}
       >
         {/* Nationality Checked Label */}
@@ -365,7 +355,7 @@ Please provide more details. JazakAllah Khair!`;
             color: nationalityBadge.text,
             fontSize: '0.74rem',
             fontWeight: 700,
-            padding: '4px 10px',
+            padding: '3px 9px',
             borderRadius: 'var(--radius-full)',
             display: 'inline-flex',
             alignItems: 'center',
@@ -384,7 +374,7 @@ Please provide more details. JazakAllah Khair!`;
             color: maritalBadge.text,
             fontSize: '0.74rem',
             fontWeight: 700,
-            padding: '4px 10px',
+            padding: '3px 9px',
             borderRadius: 'var(--radius-full)',
             display: 'inline-flex',
             alignItems: 'center',
@@ -399,9 +389,9 @@ Please provide more details. JazakAllah Khair!`;
         {profile.caste && profile.caste !== 'General' && (
           <span
             style={{
-              background: 'rgba(212, 175, 55, 0.1)',
-              border: '1px solid rgba(212, 175, 55, 0.25)',
-              color: 'var(--gold-light)',
+              background: '#f8fafc',
+              border: '1px solid #e2e8f0',
+              color: '#475569',
               fontSize: '0.7rem',
               fontWeight: 600,
               padding: '3px 8px',
@@ -419,9 +409,9 @@ Please provide more details. JazakAllah Khair!`;
         {profile.sect && (
           <span
             style={{
-              background: 'rgba(255,255,255,0.05)',
-              border: '1px solid rgba(255,255,255,0.1)',
-              color: 'var(--text-dim)',
+              background: '#f8fafc',
+              border: '1px solid #e2e8f0',
+              color: '#64748b',
               fontSize: '0.7rem',
               fontWeight: 600,
               padding: '3px 8px',
@@ -439,7 +429,7 @@ Please provide more details. JazakAllah Khair!`;
       {/* Card Content & Info Details with Staggered Animation */}
       <div 
         style={{ 
-          padding: '14px 18px 16px 18px',
+          padding: '14px 16px 16px 16px',
           display: 'flex',
           flexDirection: 'column',
           flex: 1,
@@ -461,10 +451,10 @@ Please provide more details. JazakAllah Khair!`;
                   gap: '8px', 
                   fontSize: '0.86rem', 
                   fontWeight: 500,
-                  color: '#ffffff'
+                  color: '#1e293b'
                 }}
               >
-                <Icon size={14} color={item.color} style={{ flexShrink: 0 }} />
+                <Icon size={14} color="var(--gold-primary)" style={{ flexShrink: 0 }} />
                 <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                   {item.text}
                 </span>
@@ -478,16 +468,16 @@ Please provide more details. JazakAllah Khair!`;
               style={{
                 display: 'flex',
                 alignItems: 'flex-start',
-                gap: '8px',
+                gap: '6px',
                 fontSize: '0.82rem',
-                color: '#ffffff',
-                background: 'rgba(212, 175, 55, 0.08)',
+                color: '#334155',
+                background: '#fefce8',
                 padding: '6px 10px',
                 borderRadius: 'var(--radius-sm)',
-                border: '1px solid rgba(212, 175, 55, 0.25)'
+                border: '1px solid rgba(196, 155, 31, 0.25)'
               }}
             >
-              <strong style={{ color: 'var(--gold-light)', flexShrink: 0 }}>Siblings:</strong>
+              <strong style={{ color: 'var(--text-gold)', flexShrink: 0 }}>Siblings:</strong>
               <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                 {profile.siblings}
               </span>
@@ -497,11 +487,12 @@ Please provide more details. JazakAllah Khair!`;
 
         {/* Action Buttons: Chat on WhatsApp & View Details */}
         <div 
+          className="profile-card-actions"
           style={{ 
             display: 'grid', 
             gridTemplateColumns: '1fr 1fr', 
             gap: '8px', 
-            borderTop: '1px solid rgba(255,255,255,0.06)',
+            borderTop: '1px solid #f1f5f9',
             paddingTop: '12px'
           }}
         >

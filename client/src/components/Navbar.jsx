@@ -69,28 +69,30 @@ export default function Navbar({
   });
 
   return (
-    <header style={{ position: 'sticky', top: 0, zIndex: 100, boxShadow: '0 8px 24px rgba(0, 0, 0, 0.45)' }}>
+    <header style={{ position: 'sticky', top: 0, zIndex: 100, boxShadow: '0 4px 20px rgba(0, 0, 0, 0.12)', width: '100%', maxWidth: '100vw' }}>
       {/* Top micro bar */}
       <div
         style={{
           background: 'linear-gradient(90deg, #133a2b 0%, #1c523c 50%, #133a2b 100%)',
           borderBottom: '1px solid rgba(212, 175, 55, 0.25)',
-          padding: '4px 16px',
+          padding: '4px 12px',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
-          fontSize: '0.78rem',
+          fontSize: '0.75rem',
           flexWrap: 'wrap',
-          gap: '4px'
+          gap: '6px',
+          width: '100%',
+          maxWidth: '100vw'
         }}
       >
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <span className="font-arabic" style={{ color: '#fae182', fontSize: 'clamp(0.78rem, 2vw, 0.96rem)', letterSpacing: '0.5px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', maxWidth: '100%', overflow: 'hidden' }}>
+          <span className="font-arabic" style={{ color: '#fae182', fontSize: 'clamp(0.72rem, 2.2vw, 0.92rem)', letterSpacing: '0.3px', whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden' }}>
             بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ
           </span>
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexShrink: 0 }}>
           <a
             href="https://www.instagram.com/nikah_bahrain/"
             target="_blank"
@@ -98,17 +100,14 @@ export default function Navbar({
             style={{
               display: 'flex',
               alignItems: 'center',
-              gap: '5px',
+              gap: '4px',
               color: '#fae182',
               textDecoration: 'none',
               fontWeight: 600,
-              fontSize: '0.78rem',
-              transition: 'transform 0.2s ease, opacity 0.2s ease'
+              fontSize: '0.74rem'
             }}
-            onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-1px)'; }}
-            onMouseLeave={(e) => { e.currentTarget.style.transform = 'translateY(0)'; }}
           >
-            <Instagram size={13} />
+            <Instagram size={12} />
             <span>@nikah_bahrain</span>
           </a>
           <button
@@ -117,18 +116,15 @@ export default function Navbar({
             style={{
               background: 'transparent',
               border: 'none',
-              color: 'rgba(255,255,255,0.7)',
+              color: 'rgba(255,255,255,0.8)',
               cursor: 'pointer',
               display: 'flex',
               alignItems: 'center',
-              gap: '4px',
-              fontSize: '0.74rem',
-              transition: 'color 0.2s ease, transform 0.2s ease'
+              gap: '3px',
+              fontSize: '0.72rem'
             }}
-            onMouseEnter={(e) => { e.currentTarget.style.color = '#fae182'; e.currentTarget.style.transform = 'scale(1.08)'; }}
-            onMouseLeave={(e) => { e.currentTarget.style.color = 'rgba(255,255,255,0.7)'; e.currentTarget.style.transform = 'scale(1)'; }}
           >
-            <Sparkles size={12} color="#fae182" />
+            <Sparkles size={11} color="#fae182" />
             <span>Intro</span>
           </button>
         </div>
@@ -136,15 +132,18 @@ export default function Navbar({
 
       {/* Main Nav Bar */}
       <div
+        className="navbar-inner"
         style={{
           background: '#1e5641',
           borderBottom: '2px solid rgba(212, 175, 55, 0.4)',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
-          padding: '0 16px',
+          padding: '0 14px',
           minHeight: '56px',
-          position: 'relative'
+          position: 'relative',
+          width: '100%',
+          maxWidth: '100vw'
         }}
       >
         {/* Brand Logo */}
@@ -153,24 +152,23 @@ export default function Navbar({
           style={{
             display: 'flex',
             alignItems: 'center',
-            gap: '10px',
+            gap: '8px',
             cursor: 'pointer',
             userSelect: 'none',
-            padding: '8px 0',
+            padding: '6px 0',
             flexShrink: 0,
-            transition: 'transform 0.2s ease'
+            maxWidth: 'calc(100% - 60px)',
+            overflow: 'hidden'
           }}
-          onMouseEnter={(e) => { e.currentTarget.style.transform = 'scale(1.02)'; }}
-          onMouseLeave={(e) => { e.currentTarget.style.transform = 'scale(1)'; }}
         >
           <div style={{
             position: 'relative',
-            width: '38px',
-            height: '38px',
+            width: '36px',
+            height: '36px',
             borderRadius: '50%',
             padding: '2px',
             background: 'linear-gradient(135deg, #fae182, #d4af37, #b8860b)',
-            boxShadow: '0 0 14px rgba(212, 175, 55, 0.5)',
+            boxShadow: '0 0 10px rgba(212, 175, 55, 0.4)',
             flexShrink: 0
           }}>
             <img
@@ -179,20 +177,23 @@ export default function Navbar({
               style={{ width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover' }}
             />
           </div>
-          <div>
+          <div style={{ overflow: 'hidden' }}>
             <div
-              className="font-cinzel"
+              className="font-cinzel navbar-logo-text"
               style={{
-                fontSize: 'clamp(0.9rem, 3vw, 1.25rem)',
+                fontSize: 'clamp(0.85rem, 3.2vw, 1.15rem)',
                 fontWeight: 800,
                 color: '#ffffff',
-                letterSpacing: '0.8px',
-                lineHeight: 1.1
+                letterSpacing: '0.6px',
+                lineHeight: 1.1,
+                whiteSpace: 'nowrap',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis'
               }}
             >
               QABUL HAI
             </div>
-            <div style={{ fontSize: '0.65rem', color: 'var(--gold-light)', letterSpacing: '0.5px' }}>
+            <div style={{ fontSize: '0.62rem', color: '#fae182', letterSpacing: '0.4px', whiteSpace: 'nowrap' }}>
               Muslim Matrimony • Bahrain
             </div>
           </div>
