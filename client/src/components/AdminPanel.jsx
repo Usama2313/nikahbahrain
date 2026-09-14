@@ -1,64 +1,130 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useSpring, animated, config } from '@react-spring/web';
-import { 
-  Users, 
-  UserCheck, 
-  UserX, 
-  ShieldCheck, 
-  Trash2, 
-  CheckCircle, 
-  PlusCircle, 
-  Instagram, 
-  ArrowLeft, 
-  Phone, 
-  MessageCircle, 
-  Sparkles, 
+import {
+  Users,
+  UserCheck,
+  UserX,
+  ShieldCheck,
+  Trash2,
+  CheckCircle,
+  PlusCircle,
+  Instagram,
+  ArrowLeft,
+  Phone,
+  MessageCircle,
+  Sparkles,
   RefreshCw,
   ExternalLink,
   Edit,
-  Lock
+  Lock,
+  Search,
+  Menu,
+  X,
+  ChevronLeft,
+  ChevronRight,
 } from '../icons';
 import confetti from 'canvas-confetti';
 import API_BASE from '../api';
 import logoImg from '../assets/logo.jpg';
 
 // Standard Admin Credentials
-export const ADMIN_CREDENTIALS = {
+const ADMIN_CREDENTIALS = {
   username: 'admin',
   password: 'NikahBahrain@2026',
   altUsername: 'admin@nikahbahrain.com'
 };
 
+// ─── Sidebar navigation items ────────────────────────────────────────────────
+const SIDEBAR_ITEMS = [
+  {
+    id: 'dashboard',
+    label: 'Dashboard',
+    icon: Sparkles,
+    color: '#d4af37',
+    children: null,
+  },
+  {
+    id: 'grooms',
+    label: 'Grooms',
+    icon: Users,
+    color: '#3b82f6',
+    children: [
+      { id: 'grooms-all',          label: 'All Grooms',       filter: p => p.gender === 'male' },
+      { id: 'grooms-never',        label: 'Never Married',    filter: p => p.gender === 'male' && p.maritalStatus === 'Never Married' },
+      { id: 'grooms-divorced',     label: 'Divorced',         filter: p => p.gender === 'male' && p.maritalStatus === 'Divorced' },
+      { id: 'grooms-2nd-marriage', label: '2nd Marriage',     filter: p => p.gender === 'male' && (p.maritalStatus === '2nd Marriage' || (p.category && p.category.toLowerCase().includes('second')) || (p.about && p.about.toLowerCase().includes('2nd marriage'))) },
+      { id: 'grooms-widowed',      label: 'Widowed',          filter: p => p.gender === 'male' && p.maritalStatus === 'Widowed' },
+    ],
+  },
+  {
+    id: 'brides',
+    label: 'Brides',
+    icon: Users,
+    color: '#ec4899',
+    children: [
+      { id: 'brides-all',      label: 'All Brides',    filter: p => p.gender === 'female' },
+      { id: 'brides-never',    label: 'Never Married', filter: p => p.gender === 'female' && p.maritalStatus === 'Never Married' },
+      { id: 'brides-divorced', label: 'Divorced',      filter: p => p.gender === 'female' && p.maritalStatus === 'Divorced' },
+      { id: 'brides-widowed',  label: 'Widowed',       filter: p => p.gender === 'female' && p.maritalStatus === 'Widowed' },
+    ],
+  },
+  {
+    id: 'all',
+    label: 'All Candidates',
+    icon: UserCheck,
+    color: '#10b981',
+    children: null,
+  },
+  {
+    id: 'contacts',
+    label: 'Contacts & Links',
+    icon: Phone,
+    color: '#a855f7',
+    children: null,
+  },
+];
+
+// ─── Items per page for admin table ──────────────────────────────────────────
+const ADMIN_PAGE_SIZE = 10;
+
 export default function AdminPanel({ onBackToPortal }) {
-  // Authentication State (persisted in sessionStorage)
-  const [isAuthenticated, setIsAuthenticated] = useState(() => {
-    return sessionStorage.getItem('nikah_admin_authenticated') === 'true';
-  });
+  // Auth
+  const [isAuthenticated, setIsAuthenticated] = useState(() =>
+    sessionStorage.getItem('nikah_admin_authenticated') === 'true'
+  );
   const [usernameInput, setUsernameInput] = useState('admin');
   const [passwordInput, setPasswordInput] = useState('');
   const [loginError, setLoginError] = useState('');
   const [showPassword, setShowPassword] = useState(false);
 
+  // Data
   const [stats, setStats] = useState(null);
   const [profiles, setProfiles] = useState([]);
   const [loading, setLoading] = useState(true);
   const [syncingInstagram, setSyncingInstagram] = useState(false);
   const [notification, setNotification] = useState(null);
 
-  // Spring animation for admin container entrance
+  // Sidebar
+  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [activeSection, setActiveSection] = useState('dashboard');
+  const [expandedGroup, setExpandedGroup] = useState(null);
+
+  // Table controls
+  const [searchQuery, setSearchQuery] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
+
+  // Spring animation
   const adminSpring = useSpring({
     from: { opacity: 0, transform: 'translateY(15px)' },
     to: { opacity: 1, transform: 'translateY(0px)' },
-    config: config.gentle
+    config: config.gentle,
   });
 
   const handleLogin = (e) => {
     e?.preventDefault();
     setLoginError('');
-
     const cleanUser = usernameInput.trim().toLowerCase();
     const cleanPass = passwordInput.trim();
-
     if (
       (cleanUser === ADMIN_CREDENTIALS.username || cleanUser === ADMIN_CREDENTIALS.altUsername) &&
       cleanPass === ADMIN_CREDENTIALS.password
@@ -67,7 +133,7 @@ export default function AdminPanel({ onBackToPortal }) {
       setIsAuthenticated(true);
       confetti({ particleCount: 50, spread: 60, origin: { y: 0.5 } });
     } else {
-      setLoginError('Invalid username or password. Please use the official admin credentials.');
+      setLoginError('Invalid username or password.');
     }
   };
 
@@ -82,11 +148,10 @@ export default function AdminPanel({ onBackToPortal }) {
       setLoading(true);
       const [statsRes, profilesRes] = await Promise.all([
         fetch(`${API_BASE}/stats`),
-        fetch(`${API_BASE}/profiles`)
+        fetch(`${API_BASE}/profiles`),
       ]);
       const statsData = await statsRes.json();
       const profilesData = await profilesRes.json();
-
       if (statsData.success) setStats(statsData.stats);
       if (profilesData.success) setProfiles(profilesData.profiles);
     } catch (err) {
@@ -97,26 +162,21 @@ export default function AdminPanel({ onBackToPortal }) {
   };
 
   useEffect(() => {
-    if (isAuthenticated) {
-      fetchData();
-    }
+    if (isAuthenticated) fetchData();
   }, [isAuthenticated]);
 
-  const handleDeleteProfile = async (id) => {
-    if (!window.confirm(`Are you sure you want to remove profile ${id}?`)) return;
+  // Reset page when section or search changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [activeSection, searchQuery]);
 
+  const handleDeleteProfile = async (id) => {
+    if (!window.confirm(`Remove profile ${id}?`)) return;
     try {
-      const res = await fetch(`${API_BASE}/profiles/${id}`, {
-        method: 'DELETE'
-      });
+      const res = await fetch(`${API_BASE}/profiles/${id}`, { method: 'DELETE' });
       const data = await res.json();
-      if (data.success) {
-        showNotification(`Profile ${id} removed successfully.`);
-        fetchData();
-      }
-    } catch (err) {
-      console.error(err);
-    }
+      if (data.success) { showNotification(`Profile ${id} removed.`); fetchData(); }
+    } catch (err) { console.error(err); }
   };
 
   const handleToggleVerified = async (profile) => {
@@ -124,36 +184,28 @@ export default function AdminPanel({ onBackToPortal }) {
       const res = await fetch(`${API_BASE}/profiles/${profile.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ verified: !profile.verified })
+        body: JSON.stringify({ verified: !profile.verified }),
       });
       const data = await res.json();
-      if (data.success) {
-        showNotification(`Updated verification status for ${profile.name}`);
-        fetchData();
-      }
-    } catch (err) {
-      console.error(err);
-    }
+      if (data.success) { showNotification(`Updated ${profile.name}`); fetchData(); }
+    } catch (err) { console.error(err); }
   };
 
   const handleSyncToInstagram = async () => {
     setSyncingInstagram(true);
     try {
-      showNotification('Connecting to @nikah_bahrain Instagram feed & extracting post cards...');
-      const res = await fetch(`${API_BASE}/sync-instagram`, {
-        method: 'POST'
-      });
+      showNotification('Connecting to @nikah_bahrain Instagram feed…');
+      const res = await fetch(`${API_BASE}/sync-instagram`, { method: 'POST' });
       const data = await res.json();
       if (data.success) {
-        showNotification(data.message || 'Successfully synced with @nikah_bahrain feed!');
+        showNotification(data.message || 'Synced with @nikah_bahrain!');
         confetti({ particleCount: 70, spread: 70, origin: { y: 0.4 } });
         await fetchData();
       } else {
         showNotification(data.message || 'Instagram sync failed.');
       }
     } catch (err) {
-      console.error('Sync error:', err);
-      showNotification('Error connecting to Instagram scraper agent.');
+      showNotification('Error connecting to Instagram scraper.');
     } finally {
       setSyncingInstagram(false);
     }
@@ -164,7 +216,58 @@ export default function AdminPanel({ onBackToPortal }) {
     setTimeout(() => setNotification(null), 4000);
   };
 
-  // If not authenticated, render Luxury Admin Login Gate
+  // ─── Get active filter function ──────────────────────────────────────────
+  const activeFilter = useMemo(() => {
+    for (const item of SIDEBAR_ITEMS) {
+      if (item.children) {
+        const child = item.children.find(c => c.id === activeSection);
+        if (child) return child.filter;
+      }
+    }
+    if (activeSection === 'grooms') return p => p.gender === 'male';
+    if (activeSection === 'brides') return p => p.gender === 'female';
+    return null; // all
+  }, [activeSection]);
+
+  // ─── Filtered + searched profiles for the table ──────────────────────────
+  const tableProfiles = useMemo(() => {
+    let result = profiles;
+    if (activeFilter) result = result.filter(activeFilter);
+    if (searchQuery.trim()) {
+      const q = searchQuery.toLowerCase();
+      result = result.filter(
+        p =>
+          p.name.toLowerCase().includes(q) ||
+          p.id.toLowerCase().includes(q) ||
+          (p.profession && p.profession.toLowerCase().includes(q)) ||
+          (p.location && p.location.toLowerCase().includes(q)) ||
+          (p.nationality && p.nationality.toLowerCase().includes(q)) ||
+          (p.maritalStatus && p.maritalStatus.toLowerCase().includes(q))
+      );
+    }
+    return result;
+  }, [profiles, activeFilter, searchQuery]);
+
+  // ─── Pagination ──────────────────────────────────────────────────────────
+  const totalPages = Math.max(1, Math.ceil(tableProfiles.length / ADMIN_PAGE_SIZE));
+  const paginatedProfiles = useMemo(() => {
+    const start = (currentPage - 1) * ADMIN_PAGE_SIZE;
+    return tableProfiles.slice(start, start + ADMIN_PAGE_SIZE);
+  }, [tableProfiles, currentPage]);
+
+  // ─── Section label for table heading ─────────────────────────────────────
+  const sectionLabel = useMemo(() => {
+    for (const item of SIDEBAR_ITEMS) {
+      if (item.id === activeSection) return item.label;
+      if (item.children) {
+        const child = item.children.find(c => c.id === activeSection);
+        if (child) return `${item.label} — ${child.label}`;
+      }
+    }
+    return 'All Candidates';
+  }, [activeSection]);
+
+  // ─── Login gate ──────────────────────────────────────────────────────────
   if (!isAuthenticated) {
     return (
       <animated.div
@@ -174,7 +277,7 @@ export default function AdminPanel({ onBackToPortal }) {
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          padding: '40px 20px'
+          padding: '40px 20px',
         }}
       >
         <div
@@ -187,109 +290,51 @@ export default function AdminPanel({ onBackToPortal }) {
             flexDirection: 'column',
             alignItems: 'center',
             gap: '20px',
-            position: 'relative'
+            position: 'relative',
+            background: 'rgba(4, 12, 28, 0.96)',
           }}
         >
-          {/* Back button */}
           <button
             onClick={onBackToPortal}
             className="btn-ghost"
-            style={{
-              position: 'absolute',
-              top: '18px',
-              left: '18px',
-              padding: '6px 12px',
-              fontSize: '0.78rem'
-            }}
+            style={{ position: 'absolute', top: '18px', left: '18px', padding: '6px 12px', fontSize: '0.78rem' }}
           >
             <ArrowLeft size={13} />
             <span>Portal</span>
           </button>
 
-          {/* Logo & Header */}
           <div
             style={{
-              width: '64px',
-              height: '64px',
-              borderRadius: '50%',
-              padding: '3px',
+              width: '64px', height: '64px', borderRadius: '50%', padding: '3px',
               background: 'linear-gradient(135deg, #fae182, #d4af37, #b8860b)',
-              boxShadow: '0 0 20px rgba(212, 175, 55, 0.45)',
-              marginTop: '10px'
+              boxShadow: '0 0 20px rgba(212,175,55,0.45)', marginTop: '10px',
             }}
           >
-            <img
-              src={logoImg}
-              alt="Qabul Hai"
-              style={{ width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover' }}
-            />
+            <img src={logoImg} alt="Qabul Hai" style={{ width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover' }} />
           </div>
 
           <div style={{ textAlign: 'center' }}>
-            <h2 className="font-cinzel gold-text-gradient" style={{ fontSize: '1.5rem', fontWeight: 800 }}>
-              ADMINISTRATIVE ACCESS
-            </h2>
-            <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: '4px' }}>
-              Qabul Hai Official Management Portal
-            </p>
+            <h2 className="font-cinzel gold-text-gradient" style={{ fontSize: '1.5rem', fontWeight: 800 }}>ADMINISTRATIVE ACCESS</h2>
+            <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: '4px' }}>Qabul Hai Official Management Portal</p>
           </div>
 
-          {/* Login Form */}
-          <form
-            onSubmit={handleLogin}
-            style={{
-              width: '100%',
-              display: 'flex',
-              flexDirection: 'column',
-              gap: '14px'
-            }}
-          >
+          <form onSubmit={handleLogin} style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: '14px' }}>
             <div>
-              <label
-                style={{
-                  display: 'block',
-                  fontSize: '0.78rem',
-                  fontWeight: 700,
-                  color: 'var(--gold-light)',
-                  marginBottom: '6px',
-                  textTransform: 'uppercase',
-                  letterSpacing: '0.5px'
-                }}
-              >
+              <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 700, color: 'var(--gold-light)', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
                 Admin Username
               </label>
               <input
                 id="admin-username-input"
                 type="text"
                 value={usernameInput}
-                onChange={(e) => setUsernameInput(e.target.value)}
+                onChange={e => setUsernameInput(e.target.value)}
                 placeholder="admin"
                 required
-                style={{
-                  width: '100%',
-                  padding: '11px 14px',
-                  borderRadius: 'var(--radius-md)',
-                  background: 'rgba(5, 12, 22, 0.8)',
-                  border: '1px solid var(--gold-border)',
-                  color: '#ffffff',
-                  fontSize: '0.9rem',
-                  outline: 'none'
-                }}
+                style={{ width: '100%', padding: '11px 14px', borderRadius: 'var(--radius-md)', background: 'rgba(3, 8, 18, 0.9)', border: '1px solid var(--gold-border)', color: '#ffffff', fontSize: '0.9rem', outline: 'none' }}
               />
             </div>
-
             <div>
-              <label
-                style={{
-                  display: 'block',
-                  fontSize: '0.78rem',
-                  fontWeight: 700,
-                  color: 'var(--gold-light)',
-                  marginBottom: '6px',
-                  textTransform: 'uppercase',
-                  letterSpacing: '0.5px'
-                }}
-              >
+              <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 700, color: 'var(--gold-light)', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
                 Admin Password
               </label>
               <div style={{ position: 'relative' }}>
@@ -297,552 +342,565 @@ export default function AdminPanel({ onBackToPortal }) {
                   id="admin-password-input"
                   type={showPassword ? 'text' : 'password'}
                   value={passwordInput}
-                  onChange={(e) => setPasswordInput(e.target.value)}
+                  onChange={e => setPasswordInput(e.target.value)}
                   placeholder="Enter admin password"
                   required
-                  style={{
-                    width: '100%',
-                    padding: '11px 40px 11px 14px',
-                    borderRadius: 'var(--radius-md)',
-                    background: 'rgba(5, 12, 22, 0.8)',
-                    border: '1px solid var(--gold-border)',
-                    color: '#ffffff',
-                    fontSize: '0.9rem',
-                    outline: 'none'
-                  }}
+                  style={{ width: '100%', padding: '11px 40px 11px 14px', borderRadius: 'var(--radius-md)', background: 'rgba(3, 8, 18, 0.9)', border: '1px solid var(--gold-border)', color: '#ffffff', fontSize: '0.9rem', outline: 'none' }}
                 />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  style={{
-                    position: 'absolute',
-                    right: '10px',
-                    top: '50%',
-                    transform: 'translateY(-50%)',
-                    background: 'none',
-                    border: 'none',
-                    color: 'var(--text-muted)',
-                    cursor: 'pointer',
-                    fontSize: '0.75rem',
-                    padding: '4px'
-                  }}
-                >
+                <button type="button" onClick={() => setShowPassword(!showPassword)}
+                  style={{ position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', fontSize: '0.75rem', padding: '4px' }}>
                   {showPassword ? 'Hide' : 'Show'}
                 </button>
               </div>
             </div>
-
             {loginError && (
-              <div
-                style={{
-                  background: 'rgba(239, 68, 68, 0.15)',
-                  border: '1px solid rgba(239, 68, 68, 0.4)',
-                  color: '#fca5a5',
-                  padding: '8px 12px',
-                  borderRadius: 'var(--radius-sm)',
-                  fontSize: '0.8rem',
-                  textAlign: 'center'
-                }}
-              >
+              <div style={{ background: 'rgba(239,68,68,0.15)', border: '1px solid rgba(239,68,68,0.4)', color: '#fca5a5', padding: '8px 12px', borderRadius: 'var(--radius-sm)', fontSize: '0.8rem', textAlign: 'center' }}>
                 {loginError}
               </div>
             )}
-
-            <button
-              id="admin-login-submit-btn"
-              type="submit"
-              className="btn-gold"
-              style={{
-                width: '100%',
-                padding: '12px',
-                fontSize: '0.92rem',
-                marginTop: '6px',
-                letterSpacing: '0.5px'
-              }}
-            >
+            <button id="admin-login-submit-btn" type="submit" className="btn-gold" style={{ width: '100%', padding: '12px', fontSize: '0.92rem', marginTop: '6px', letterSpacing: '0.5px' }}>
               <Lock size={15} />
               <span>Login to Command Center</span>
             </button>
           </form>
 
-          {/* Credentials Info Callout for Admin Convenience */}
-          <div
-            style={{
-              width: '100%',
-              background: 'rgba(212, 175, 55, 0.08)',
-              border: '1px dashed rgba(212, 175, 55, 0.35)',
-              borderRadius: 'var(--radius-md)',
-              padding: '12px 14px',
-              fontSize: '0.78rem',
-              color: 'var(--text-muted)',
-              display: 'flex',
-              flexDirection: 'column',
-              gap: '4px'
-            }}
-          >
+          <div style={{ width: '100%', background: 'rgba(212,175,55,0.08)', border: '1px dashed rgba(212,175,55,0.35)', borderRadius: 'var(--radius-md)', padding: '12px 14px', fontSize: '0.78rem', color: 'var(--text-muted)', display: 'flex', flexDirection: 'column', gap: '4px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--gold-light)', fontWeight: 700 }}>
               <ShieldCheck size={14} /> Official Admin Credentials
             </div>
-            <div><strong>Username:</strong> <code style={{ color: '#ffffff', background: 'rgba(0,0,0,0.3)', padding: '2px 6px', borderRadius: '4px' }}>admin</code></div>
-            <div><strong>Password:</strong> <code style={{ color: '#ffffff', background: 'rgba(0,0,0,0.3)', padding: '2px 6px', borderRadius: '4px' }}>NikahBahrain@2026</code></div>
+            <div><strong>Username:</strong> <code style={{ color: '#fff', background: 'rgba(0,0,0,0.3)', padding: '2px 6px', borderRadius: '4px' }}>admin</code></div>
+            <div><strong>Password:</strong> <code style={{ color: '#fff', background: 'rgba(0,0,0,0.3)', padding: '2px 6px', borderRadius: '4px' }}>NikahBahrain@2026</code></div>
           </div>
         </div>
       </animated.div>
     );
   }
 
+  // ─── Determine which view to render ──────────────────────────────────────
+  const isDashboard = activeSection === 'dashboard';
+  const isContacts = activeSection === 'contacts';
+  const showTable = !isDashboard && !isContacts;
+
+
   return (
-    <animated.div 
-      style={{
-        ...adminSpring,
-        maxWidth: '1440px',
-        margin: '0 auto',
-        padding: '24px 20px',
+    <animated.div style={{ ...adminSpring, minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
+      {/* ── Top header bar ── */}
+      <div style={{
         display: 'flex',
-        flexDirection: 'column',
-        gap: '24px'
-      }}
-    >
-      {/* Top Banner & Navigation */}
-      <div 
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          flexWrap: 'wrap',
-          gap: '16px'
-        }}
-      >
-        <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        padding: '12px 20px',
+        background: 'rgba(4, 10, 24, 0.98)',
+        borderBottom: '1px solid rgba(212,175,55,0.25)',
+        position: 'sticky',
+        top: 0,
+        zIndex: 200,
+        gap: '12px',
+        flexWrap: 'wrap',
+      }}>
+        {/* Left: hamburger + logo + title */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
           <button
-            onClick={onBackToPortal}
+            onClick={() => setSidebarOpen(prev => !prev)}
             className="btn-ghost"
-            style={{ padding: '8px 14px' }}
+            style={{ padding: '8px', flexShrink: 0 }}
+            title="Toggle sidebar"
           >
-            <ArrowLeft size={16} />
-            <span>Back to Portal</span>
+            {sidebarOpen ? <X size={18} /> : <Menu size={18} />}
           </button>
-          <button
-            onClick={handleLogout}
-            className="btn-ghost"
-            style={{ padding: '8px 14px', color: '#fca5a5' }}
-            title="Log out of Admin Panel"
-          >
-            <Lock size={15} />
-            <span>Log Out</span>
-          </button>
+          <img src={logoImg} alt="Logo" style={{ width: '32px', height: '32px', borderRadius: '50%', objectFit: 'cover', border: '1px solid var(--gold-border)' }} />
           <div>
-            <h1 
-              className="font-cinzel gold-text-gradient"
-              style={{ fontSize: '1.8rem', fontWeight: 800 }}
-            >
-              ADMINISTRATIVE COMMAND CENTER
-            </h1>
-            <p style={{ fontSize: '0.82rem', color: 'var(--text-muted)' }}>
-              Manage Matrimonial Categories, Quantities, Instagram Feed Sync & Applicant Forms
-            </p>
+            <h1 className="font-cinzel gold-text-gradient" style={{ fontSize: '1.1rem', fontWeight: 800, lineHeight: 1 }}>ADMIN PANEL</h1>
+            <p style={{ fontSize: '0.7rem', color: 'var(--text-dim)', marginTop: '2px' }}>Qabul Hai Command Center</p>
           </div>
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-          <button
-            onClick={handleSyncToInstagram}
-            disabled={syncingInstagram}
-            className="btn-gold"
-            style={{ fontSize: '0.85rem', padding: '9px 18px' }}
-          >
-            <Instagram size={15} />
-            <span>{syncingInstagram ? 'Syncing...' : 'Sync Instagram Feed'}</span>
+        {/* Right: actions */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+          <button onClick={handleSyncToInstagram} disabled={syncingInstagram} className="btn-gold" style={{ fontSize: '0.8rem', padding: '8px 14px' }}>
+            <Instagram size={14} />
+            <span>{syncingInstagram ? 'Syncing…' : 'Sync Instagram'}</span>
           </button>
-          <button
-            onClick={fetchData}
-            className="btn-ghost"
-            style={{ padding: '9px 12px' }}
-            title="Refresh database"
-          >
+          <button onClick={fetchData} className="btn-ghost" style={{ padding: '8px 10px' }} title="Refresh">
             <RefreshCw size={15} />
+          </button>
+          <button onClick={onBackToPortal} className="btn-ghost" style={{ padding: '8px 12px', fontSize: '0.8rem' }}>
+            <ArrowLeft size={14} />
+            <span>Portal</span>
+          </button>
+          <button onClick={handleLogout} className="btn-ghost" style={{ padding: '8px 12px', color: '#fca5a5', fontSize: '0.8rem' }}>
+            <Lock size={14} />
+            <span>Logout</span>
           </button>
         </div>
       </div>
 
-      {/* Toast Notification */}
+      {/* ── Toast Notification ── */}
       {notification && (
-        <div
-          style={{
-            background: 'rgba(16, 185, 129, 0.2)',
-            border: '1px solid #10b981',
-            color: '#a7f3d0',
-            padding: '10px 18px',
-            borderRadius: 'var(--radius-md)',
-            fontSize: '0.88rem',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '8px'
-          }}
-        >
-          <CheckCircle size={16} color="#10b981" />
+        <div style={{ position: 'fixed', top: '70px', left: '50%', transform: 'translateX(-50%)', zIndex: 999, background: 'rgba(16,185,129,0.95)', border: '1px solid #10b981', color: '#fff', padding: '10px 20px', borderRadius: 'var(--radius-full)', fontSize: '0.88rem', display: 'flex', alignItems: 'center', gap: '8px', boxShadow: '0 4px 20px rgba(0,0,0,0.4)', whiteSpace: 'nowrap', maxWidth: '90vw' }}>
+          <CheckCircle size={16} />
           <span>{notification}</span>
         </div>
       )}
 
-      {/* STATS METRICS DASHBOARD - QUANTITIES REQUESTED BY USER */}
-      {stats && (
-        <div>
-          <h3 
-            className="font-cinzel"
-            style={{ fontSize: '1.1rem', color: 'var(--gold-light)', marginBottom: '14px', letterSpacing: '0.5px' }}
-          >
-            MATRIMONIAL DEMOGRAPHICS & QUANTITIES
-          </h3>
+      {/* ── Body: Sidebar + Main ── */}
+      <div style={{ display: 'flex', flex: 1, position: 'relative', minHeight: 0 }}>
 
-          <div 
-            style={{
-              display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
-              gap: '16px'
-            }}
-          >
-            {/* Grooms (Never Married Men) */}
-            <StatCard 
-              label="All Grooms"
-              count={stats.grooms}
-              subtext="Single / Never Married"
-              icon={Users}
-              accent="#3b82f6"
-            />
+        {/* Mobile overlay */}
+        {sidebarOpen && (
+          <div
+            className="admin-sidebar-overlay"
+            onClick={() => setSidebarOpen(false)}
+            style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', zIndex: 99, display: 'none' }}
+          />
+        )}
 
-            {/* Brides (Never Married Women) */}
-            <StatCard 
-              label="All Brides"
-              count={stats.brides}
-              subtext="Single / Never Married"
-              icon={Users}
-              accent="#ec4899"
-            />
+        {/* ── SIDEBAR ── */}
+        <aside
+          className={`admin-sidebar${sidebarOpen ? ' open' : ''}`}
+          style={{
+            width: sidebarOpen ? '260px' : '0px',
+            minWidth: sidebarOpen ? '260px' : '0px',
+            overflow: 'hidden',
+            background: 'rgba(4, 9, 22, 0.99)',
+            borderRight: '1px solid rgba(212,175,55,0.2)',
+            transition: 'width 0.3s ease, min-width 0.3s ease',
+            display: 'flex',
+            flexDirection: 'column',
+            flexShrink: 0,
+          }}
+        >
+          <div style={{ padding: '16px 0', overflowY: 'auto', flex: 1 }}>
+            {/* Sidebar header */}
+            <div style={{ padding: '0 16px 16px', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+              <div style={{ fontSize: '0.68rem', color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '1.5px', fontWeight: 700 }}>Navigation</div>
+            </div>
 
-            {/* Divorced Grooms (Men) */}
-            <StatCard 
-              label="Divorced Men"
-              count={stats.divorcedGrooms}
-              subtext="Divorced Grooms"
-              icon={UserCheck}
-              accent="#a855f7"
-            />
+            {/* Nav items */}
+            {SIDEBAR_ITEMS.map(item => {
+              const Icon = item.icon;
+              const isActive = activeSection === item.id;
+              const isGroupExpanded = expandedGroup === item.id;
 
-            {/* Divorced Brides (Women) */}
-            <StatCard 
-              label="Divorced Women"
-              count={stats.divorcedBrides}
-              subtext="Divorced Brides"
-              icon={UserCheck}
-              accent="#d946ef"
-            />
-
-            {/* Widowed Grooms (Men) */}
-            <StatCard 
-              label="Widowed Men"
-              count={stats.widowedGrooms}
-              subtext="Widowed Grooms"
-              icon={UserX}
-              accent="#0ea5e9"
-            />
-
-            {/* Widowed Brides (Women) */}
-            <StatCard 
-              label="Widowed Women"
-              count={stats.widowedBrides}
-              subtext="Widowed Brides"
-              icon={UserX}
-              accent="#14b8a6"
-            />
-
-            {/* Pakistani Total */}
-            <StatCard 
-              label="Pakistani Candidates"
-              count={stats.pakistani}
-              subtext="Verified Pakistani Profiles"
-              icon={Sparkles}
-              accent="#10b981"
-            />
-
-            {/* Indian Total */}
-            <StatCard 
-              label="Indian Candidates"
-              count={stats.indian}
-              subtext="Verified Indian Profiles"
-              icon={Sparkles}
-              accent="#f97316"
-            />
-          </div>
-        </div>
-      )}
-
-      {/* APPLICANT FORMS & PROFILES MANAGEMENT TABLE */}
-      <div className="glass-panel" style={{ padding: '20px', overflowX: 'auto' }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
-          <div>
-            <h3 className="font-cinzel" style={{ fontSize: '1.2rem', color: 'var(--gold-light)' }}>
-              Matrimonial Candidate Registry
-            </h3>
-            <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
-              Review candidates, verify credentials, update categories, and sync with Instagram @nikah_bahrain
-            </p>
-          </div>
-          <span className="gold-badge">
-            Total {profiles.length} Active Records
-          </span>
-        </div>
-
-        <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.84rem' }}>
-          <thead>
-            <tr style={{ borderBottom: '1px solid var(--gold-border)', color: 'var(--gold-light)' }}>
-              <th style={{ padding: '12px 10px' }}>Candidate ID</th>
-              <th style={{ padding: '12px 10px' }}>Photo & Name</th>
-              <th style={{ padding: '12px 10px' }}>Gender & Age</th>
-              <th style={{ padding: '12px 10px' }}>Category Tab</th>
-              <th style={{ padding: '12px 10px' }}>Nationality</th>
-              <th style={{ padding: '12px 10px' }}>Profession & Location</th>
-              <th style={{ padding: '12px 10px' }}>Status</th>
-              <th style={{ padding: '12px 10px', textAlign: 'right' }}>Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {profiles.map((p) => (
-              <tr 
-                key={p.id}
-                style={{ 
-                  borderBottom: '1px solid rgba(255,255,255,0.05)',
-                  transition: 'background 0.2s ease'
-                }}
-                onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(212, 175, 55, 0.05)'}
-                onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
-              >
-                <td style={{ padding: '12px 10px', fontWeight: 700, color: 'var(--gold-light)' }}>
-                  {p.id}
-                </td>
-                <td style={{ padding: '12px 10px' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                    <img 
-                      src={p.image} 
-                      alt="" 
-                      style={{ width: '36px', height: '36px', borderRadius: '50%', objectFit: 'cover', border: '1px solid var(--gold-border)' }} 
-                    />
-                    <div>
-                      <div style={{ fontWeight: 600, color: '#ffffff' }}>{p.name}</div>
-                      <div style={{ fontSize: '0.72rem', color: 'var(--text-dim)' }}>{p.sect}</div>
-                    </div>
-                  </div>
-                </td>
-                <td style={{ padding: '12px 10px' }}>
-                  <span style={{ textTransform: 'capitalize', color: p.gender === 'male' ? '#93c5fd' : '#f9a8d4', fontWeight: 600 }}>
-                    {p.gender}
-                  </span> • {p.age} yrs
-                </td>
-                <td style={{ padding: '12px 10px' }}>
-                  <span 
-                    style={{
-                      background: 'rgba(255,255,255,0.06)',
-                      padding: '3px 8px',
-                      borderRadius: 'var(--radius-full)',
-                      border: '1px solid rgba(255,255,255,0.1)',
-                      fontSize: '0.75rem',
-                      fontWeight: 600
-                    }}
-                  >
-                    {p.category}
-                  </span>
-                </td>
-                <td style={{ padding: '12px 10px' }}>
-                  <span style={{ fontWeight: 600 }}>
-                    {p.nationality === 'Pakistani' ? '🇵🇰 Pakistani' : p.nationality === 'Indian' ? '🇮🇳 Indian' : '🇧🇭 Bahraini'}
-                  </span>
-                </td>
-                <td style={{ padding: '12px 10px' }}>
-                  <div style={{ maxWidth: '200px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                    {p.profession}
-                  </div>
-                  <div style={{ fontSize: '0.72rem', color: 'var(--text-dim)' }}>
-                    {p.location}
-                  </div>
-                </td>
-                <td style={{ padding: '12px 10px' }}>
+              return (
+                <div key={item.id}>
                   <button
-                    onClick={() => handleToggleVerified(p)}
-                    style={{
-                      background: p.verified ? 'rgba(16, 185, 129, 0.2)' : 'rgba(239, 68, 68, 0.2)',
-                      border: `1px solid ${p.verified ? '#10b981' : '#ef4444'}`,
-                      color: p.verified ? '#6ee7b7' : '#fca5a5',
-                      padding: '4px 10px',
-                      borderRadius: 'var(--radius-full)',
-                      fontSize: '0.72rem',
-                      fontWeight: 700,
-                      cursor: 'pointer',
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: '4px'
+                    onClick={() => {
+                      if (item.children) {
+                        setExpandedGroup(isGroupExpanded ? null : item.id);
+                      } else {
+                        setActiveSection(item.id);
+                        setSearchQuery('');
+                      }
                     }}
+                    style={{
+                      width: '100%',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '10px',
+                      padding: '10px 16px',
+                      background: isActive ? `${item.color}18` : 'transparent',
+                      border: 'none',
+                      borderLeft: isActive ? `3px solid ${item.color}` : '3px solid transparent',
+                      color: isActive ? '#fff' : 'var(--text-muted)',
+                      cursor: 'pointer',
+                      textAlign: 'left',
+                      fontSize: '0.875rem',
+                      fontWeight: isActive ? 700 : 500,
+                      transition: 'all 0.2s ease',
+                      justifyContent: 'space-between',
+                    }}
+                    onMouseEnter={e => { if (!isActive) e.currentTarget.style.background = 'rgba(255,255,255,0.04)'; e.currentTarget.style.color = '#fff'; }}
+                    onMouseLeave={e => { if (!isActive) e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = isActive ? '#fff' : 'var(--text-muted)'; }}
                   >
-                    <ShieldCheck size={12} />
-                    <span>{p.verified ? 'Verified' : 'Pending'}</span>
+                    <span style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                      <Icon size={16} color={isActive ? item.color : 'currentColor'} />
+                      <span style={{ whiteSpace: 'nowrap' }}>{item.label}</span>
+                    </span>
+                    {item.children && (
+                      <span style={{ fontSize: '0.7rem', opacity: 0.6 }}>{isGroupExpanded ? '▲' : '▼'}</span>
+                    )}
                   </button>
-                </td>
-                <td style={{ padding: '12px 10px', textAlign: 'right' }}>
-                  <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
-                    <a
-                      href={`https://wa.me/97337188557?text=${encodeURIComponent(`Admin check on candidate: ${p.id} - ${p.name}`)}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="btn-ghost"
-                      style={{ padding: '6px 10px', fontSize: '0.75rem' }}
-                      title="Direct WhatsApp"
-                    >
-                      <MessageCircle size={13} color="#25D366" />
-                    </a>
-                    <button
-                      onClick={() => handleDeleteProfile(p.id)}
-                      className="btn-ghost"
-                      style={{ padding: '6px 10px', color: '#ef4444' }}
-                      title="Delete profile"
-                    >
-                      <Trash2 size={13} />
+
+                  {/* Children submenu */}
+                  {item.children && isGroupExpanded && (
+                    <div style={{ background: 'rgba(0,0,0,0.2)', borderLeft: `2px solid ${item.color}30`, marginLeft: '16px' }}>
+                      {item.children.map(child => {
+                        const isChildActive = activeSection === child.id;
+                        const count = child.filter ? profiles.filter(child.filter).length : profiles.length;
+                        return (
+                          <button
+                            key={child.id}
+                            onClick={() => { setActiveSection(child.id); setSearchQuery(''); }}
+                            style={{
+                              width: '100%',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'space-between',
+                              padding: '8px 14px',
+                              background: isChildActive ? `${item.color}20` : 'transparent',
+                              border: 'none',
+                              color: isChildActive ? '#fff' : 'var(--text-muted)',
+                              cursor: 'pointer',
+                              textAlign: 'left',
+                              fontSize: '0.82rem',
+                              fontWeight: isChildActive ? 700 : 400,
+                              transition: 'all 0.15s ease',
+                            }}
+                          >
+                            <span>{child.label}</span>
+                            <span style={{ background: isChildActive ? item.color : 'rgba(255,255,255,0.1)', color: isChildActive ? '#000' : 'var(--text-dim)', borderRadius: '9999px', padding: '1px 7px', fontSize: '0.7rem', fontWeight: 700 }}>{count}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+
+            {/* Sidebar footer stats */}
+            {stats && (
+              <div style={{ margin: '16px', padding: '12px', background: 'rgba(212,175,55,0.06)', border: '1px solid rgba(212,175,55,0.15)', borderRadius: 'var(--radius-md)' }}>
+                <div style={{ fontSize: '0.68rem', color: 'var(--gold-light)', textTransform: 'uppercase', letterSpacing: '1px', fontWeight: 700, marginBottom: '8px' }}>Quick Stats</div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', fontSize: '0.78rem', color: 'var(--text-muted)' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between' }}><span>Total Profiles</span><span style={{ color: '#fff', fontWeight: 700 }}>{profiles.length}</span></div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between' }}><span>🇵🇰 Pakistani</span><span style={{ color: '#fff', fontWeight: 700 }}>{stats.pakistani}</span></div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between' }}><span>🇮🇳 Indian</span><span style={{ color: '#fff', fontWeight: 700 }}>{stats.indian}</span></div>
+                </div>
+              </div>
+            )}
+          </div>
+        </aside>
+
+        {/* ── MAIN CONTENT ── */}
+        <main style={{ flex: 1, overflowX: 'hidden', overflowY: 'auto', background: 'rgba(5, 11, 26, 0.97)', minWidth: 0 }}>
+          <div style={{ padding: '24px 20px', maxWidth: '1200px', margin: '0 auto' }}>
+
+            {/* ════ DASHBOARD VIEW ════ */}
+            {isDashboard && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '28px' }}>
+                <div>
+                  <h2 className="font-cinzel gold-text-gradient" style={{ fontSize: '1.5rem', fontWeight: 800, marginBottom: '4px' }}>Dashboard Overview</h2>
+                  <p style={{ fontSize: '0.82rem', color: 'var(--text-muted)' }}>Matrimonial demographics, quantities & live registry stats</p>
+                </div>
+
+                {/* ── Grooms section ── */}
+                <CategorySection title="Grooms" accent="#3b82f6">
+                  <div className="admin-stats-grid">
+                    <StatCard label="All Grooms" count={stats?.grooms ?? '—'} subtext="Single / Never Married" icon={Users} accent="#3b82f6" />
+                    <StatCard label="Divorced Grooms" count={stats?.divorcedGrooms ?? '—'} subtext="Seeking 2nd Chance" icon={UserCheck} accent="#a855f7" />
+                    <StatCard label="2nd Marriage Grooms" count={profiles.filter(p => p.gender === 'male' && (p.maritalStatus === '2nd Marriage' || (p.category && p.category.toLowerCase().includes('second')))).length} subtext="Open to 2nd Marriage" icon={UserCheck} accent="#f97316" />
+                    <StatCard label="Widowed Grooms" count={stats?.widowedGrooms ?? '—'} subtext="Widowed Men" icon={UserX} accent="#0ea5e9" />
+                  </div>
+                </CategorySection>
+
+                {/* ── Brides section ── */}
+                <CategorySection title="Brides" accent="#ec4899">
+                  <div className="admin-stats-grid">
+                    <StatCard label="All Brides" count={stats?.brides ?? '—'} subtext="Single / Never Married" icon={Users} accent="#ec4899" />
+                    <StatCard label="Divorced Brides" count={stats?.divorcedBrides ?? '—'} subtext="Seeking 2nd Chance" icon={UserCheck} accent="#d946ef" />
+                    <StatCard label="Widowed Brides" count={stats?.widowedBrides ?? '—'} subtext="Widowed Women" icon={UserX} accent="#14b8a6" />
+                  </div>
+                </CategorySection>
+
+                {/* ── Nationality section ── */}
+                <CategorySection title="Nationality Breakdown" accent="#10b981">
+                  <div className="admin-stats-grid">
+                    <StatCard label="🇵🇰 Pakistani" count={stats?.pakistani ?? '—'} subtext="Pakistani Candidates" icon={Sparkles} accent="#10b981" />
+                    <StatCard label="🇮🇳 Indian" count={stats?.indian ?? '—'} subtext="Indian Candidates" icon={Sparkles} accent="#f97316" />
+                  </div>
+                </CategorySection>
+
+                {/* ── Quick actions ── */}
+                <CategorySection title="Quick Actions" accent="#d4af37">
+                  <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
+                    <button onClick={() => setActiveSection('all')} className="btn-gold" style={{ fontSize: '0.85rem' }}>
+                      <Users size={15} /> View All Candidates
+                    </button>
+                    <button onClick={handleSyncToInstagram} disabled={syncingInstagram} className="btn-ghost" style={{ fontSize: '0.85rem' }}>
+                      <Instagram size={15} /> {syncingInstagram ? 'Syncing…' : 'Sync Instagram Feed'}
                     </button>
                   </div>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+                </CategorySection>
+              </div>
+            )}
 
-      {/* BOTTOM CONTACT & INSTAGRAM LINKS AS REQUESTED BY USER */}
-      <div 
-        className="glass-panel"
-        style={{
-          padding: '24px',
-          display: 'flex',
-          flexDirection: 'column',
-          gap: '16px',
-          border: '1px solid var(--gold-border)'
-        }}
-      >
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px' }}>
-          <div>
-            <h4 className="font-cinzel gold-text-gradient" style={{ fontSize: '1.2rem', fontWeight: 700 }}>
-              Official Matrimonial Contact & Verification Channels
-            </h4>
-            <p style={{ fontSize: '0.82rem', color: 'var(--text-muted)' }}>
-              Direct hotline lines for male and female family coordinators
-            </p>
+            {/* ════ TABLE VIEW (Grooms / Brides / All) ════ */}
+            {showTable && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                {/* Table header */}
+                <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px' }}>
+                  <div>
+                    <h2 className="font-cinzel" style={{ fontSize: '1.3rem', color: 'var(--gold-light)', fontWeight: 800 }}>{sectionLabel}</h2>
+                    <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginTop: '2px' }}>{tableProfiles.length} record{tableProfiles.length !== 1 ? 's' : ''} found</p>
+                  </div>
+                  <span className="gold-badge">{tableProfiles.length} Active Records</span>
+                </div>
+
+                {/* Search bar */}
+                <div style={{ position: 'relative', maxWidth: '480px', width: '100%' }}>
+                  <Search size={15} style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-dim)', pointerEvents: 'none' }} />
+                  <input
+                    type="text"
+                    value={searchQuery}
+                    onChange={e => setSearchQuery(e.target.value)}
+                    placeholder="Search by name, ID, profession, location…"
+                    style={{
+                      width: '100%',
+                      padding: '10px 14px 10px 40px',
+                      borderRadius: 'var(--radius-full)',
+                      background: 'rgba(8, 18, 40, 0.95)',
+                      border: '1px solid rgba(212,175,55,0.3)',
+                      color: '#ffffff',
+                      fontSize: '0.875rem',
+                      outline: 'none',
+                      transition: 'border-color 0.2s',
+                    }}
+                    onFocus={e => e.target.style.borderColor = 'var(--gold-primary)'}
+                    onBlur={e => e.target.style.borderColor = 'rgba(212,175,55,0.3)'}
+                  />
+                  {searchQuery && (
+                    <button
+                      onClick={() => setSearchQuery('')}
+                      style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', color: 'var(--text-dim)', cursor: 'pointer', padding: '2px' }}
+                    >
+                      <X size={14} />
+                    </button>
+                  )}
+                </div>
+
+                {/* Table */}
+                <div className="admin-table-wrapper" style={{ borderRadius: 'var(--radius-md)', border: '1px solid rgba(212,175,55,0.2)', overflow: 'hidden' }}>
+                  <div style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
+                    <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.84rem', minWidth: '700px' }}>
+                      <thead>
+                        <tr style={{ background: 'rgba(212,175,55,0.08)', borderBottom: '1px solid rgba(212,175,55,0.2)' }}>
+                          <th style={{ padding: '12px 14px', color: 'var(--gold-light)', fontWeight: 700, fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.5px', whiteSpace: 'nowrap' }}>ID</th>
+                          <th style={{ padding: '12px 14px', color: 'var(--gold-light)', fontWeight: 700, fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Photo & Name</th>
+                          <th style={{ padding: '12px 14px', color: 'var(--gold-light)', fontWeight: 700, fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.5px', whiteSpace: 'nowrap' }}>Gender / Age</th>
+                          <th style={{ padding: '12px 14px', color: 'var(--gold-light)', fontWeight: 700, fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Category</th>
+                          <th style={{ padding: '12px 14px', color: 'var(--gold-light)', fontWeight: 700, fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Nationality</th>
+                          <th style={{ padding: '12px 14px', color: 'var(--gold-light)', fontWeight: 700, fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Profession</th>
+                          <th style={{ padding: '12px 14px', color: 'var(--gold-light)', fontWeight: 700, fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Status</th>
+                          <th style={{ padding: '12px 14px', color: 'var(--gold-light)', fontWeight: 700, fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.5px', textAlign: 'right' }}>Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {paginatedProfiles.length === 0 ? (
+                          <tr>
+                            <td colSpan={8} style={{ padding: '48px 20px', textAlign: 'center', color: 'var(--text-muted)' }}>
+                              {searchQuery ? `No results for "${searchQuery}"` : 'No records in this category.'}
+                            </td>
+                          </tr>
+                        ) : (
+                          paginatedProfiles.map((p, i) => (
+                            <tr
+                              key={p.id}
+                              style={{
+                                borderBottom: '1px solid rgba(255,255,255,0.05)',
+                                background: i % 2 === 0 ? 'rgba(255,255,255,0.015)' : 'transparent',
+                                transition: 'background 0.15s ease',
+                              }}
+                              onMouseEnter={e => e.currentTarget.style.background = 'rgba(212,175,55,0.06)'}
+                              onMouseLeave={e => e.currentTarget.style.background = i % 2 === 0 ? 'rgba(255,255,255,0.015)' : 'transparent'}
+                            >
+                              <td style={{ padding: '11px 14px', fontWeight: 700, color: 'var(--gold-light)', fontSize: '0.8rem', whiteSpace: 'nowrap' }}>{p.id}</td>
+                              <td style={{ padding: '11px 14px' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                  <img src={p.image} alt="" style={{ width: '34px', height: '34px', borderRadius: '50%', objectFit: 'cover', border: '1px solid var(--gold-border)', flexShrink: 0 }} />
+                                  <div>
+                                    <div style={{ fontWeight: 600, color: '#fff', fontSize: '0.875rem', whiteSpace: 'nowrap' }}>{p.name}</div>
+                                    <div style={{ fontSize: '0.7rem', color: 'var(--text-dim)' }}>{p.sect}</div>
+                                  </div>
+                                </div>
+                              </td>
+                              <td style={{ padding: '11px 14px', whiteSpace: 'nowrap' }}>
+                                <span style={{ color: p.gender === 'male' ? '#93c5fd' : '#f9a8d4', fontWeight: 700, textTransform: 'capitalize', fontSize: '0.82rem' }}>{p.gender}</span>
+                                <span style={{ color: 'var(--text-dim)' }}> • {p.age}y</span>
+                              </td>
+                              <td style={{ padding: '11px 14px' }}>
+                                <span style={{ background: 'rgba(212,175,55,0.12)', border: '1px solid rgba(212,175,55,0.25)', color: 'var(--gold-light)', padding: '3px 9px', borderRadius: 'var(--radius-full)', fontSize: '0.72rem', fontWeight: 700, whiteSpace: 'nowrap' }}>
+                                  {p.maritalStatus || p.category || '—'}
+                                </span>
+                              </td>
+                              <td style={{ padding: '11px 14px', fontWeight: 600, fontSize: '0.82rem', whiteSpace: 'nowrap' }}>
+                                {p.nationality === 'Pakistani' ? '🇵🇰 Pakistani' : p.nationality === 'Indian' ? '🇮🇳 Indian' : '🇧🇭 Bahraini'}
+                              </td>
+                              <td style={{ padding: '11px 14px' }}>
+                                <div style={{ maxWidth: '180px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontSize: '0.82rem' }}>{p.profession}</div>
+                                <div style={{ fontSize: '0.7rem', color: 'var(--text-dim)' }}>{p.location}</div>
+                              </td>
+                              <td style={{ padding: '11px 14px' }}>
+                                <button
+                                  onClick={() => handleToggleVerified(p)}
+                                  style={{
+                                    background: p.verified ? 'rgba(16,185,129,0.15)' : 'rgba(239,68,68,0.15)',
+                                    border: `1px solid ${p.verified ? '#10b981' : '#ef4444'}`,
+                                    color: p.verified ? '#6ee7b7' : '#fca5a5',
+                                    padding: '3px 9px',
+                                    borderRadius: 'var(--radius-full)',
+                                    fontSize: '0.7rem',
+                                    fontWeight: 700,
+                                    cursor: 'pointer',
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    gap: '4px',
+                                    whiteSpace: 'nowrap',
+                                  }}
+                                >
+                                  <ShieldCheck size={11} />
+                                  {p.verified ? 'Verified' : 'Pending'}
+                                </button>
+                              </td>
+                              <td style={{ padding: '11px 14px', textAlign: 'right' }}>
+                                <div style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                                  <a
+                                    href={`https://wa.me/97337188557?text=${encodeURIComponent(`Admin check: ${p.id} — ${p.name}`)}`}
+                                    target="_blank" rel="noopener noreferrer"
+                                    className="btn-ghost"
+                                    style={{ padding: '5px 9px', fontSize: '0.72rem' }}
+                                    title="WhatsApp"
+                                  >
+                                    <MessageCircle size={13} color="#25D366" />
+                                  </a>
+                                  <button onClick={() => handleDeleteProfile(p.id)} className="btn-ghost" style={{ padding: '5px 9px', color: '#ef4444' }} title="Delete">
+                                    <Trash2 size={13} />
+                                  </button>
+                                </div>
+                              </td>
+                            </tr>
+                          ))
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+
+                {/* ── Pagination ── */}
+                {totalPages > 1 && (
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px', padding: '4px 0' }}>
+                    <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+                      Showing {Math.min((currentPage - 1) * ADMIN_PAGE_SIZE + 1, tableProfiles.length)}–{Math.min(currentPage * ADMIN_PAGE_SIZE, tableProfiles.length)} of {tableProfiles.length}
+                    </span>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+                      <button
+                        onClick={() => setCurrentPage(1)}
+                        disabled={currentPage === 1}
+                        className="btn-ghost"
+                        style={{ padding: '6px 10px', fontSize: '0.8rem', opacity: currentPage === 1 ? 0.4 : 1 }}
+                      >
+                        «
+                      </button>
+                      <button
+                        onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                        disabled={currentPage === 1}
+                        className="btn-ghost"
+                        style={{ padding: '6px 10px', fontSize: '0.8rem', opacity: currentPage === 1 ? 0.4 : 1 }}
+                      >
+                        <ChevronLeft size={14} />
+                      </button>
+                      {/* Page numbers */}
+                      {Array.from({ length: totalPages }, (_, i) => i + 1)
+                        .filter(n => n === 1 || n === totalPages || Math.abs(n - currentPage) <= 2)
+                        .reduce((acc, n, idx, arr) => {
+                          if (idx > 0 && n - arr[idx - 1] > 1) acc.push('...');
+                          acc.push(n);
+                          return acc;
+                        }, [])
+                        .map((item, idx) =>
+                          item === '...' ? (
+                            <span key={`ellipsis-${idx}`} style={{ color: 'var(--text-dim)', padding: '0 2px', fontSize: '0.8rem' }}>…</span>
+                          ) : (
+                            <button
+                              key={item}
+                              onClick={() => setCurrentPage(item)}
+                              className={item === currentPage ? 'btn-gold' : 'btn-ghost'}
+                              style={{ padding: '6px 11px', fontSize: '0.8rem', minWidth: '36px' }}
+                            >
+                              {item}
+                            </button>
+                          )
+                        )}
+                      <button
+                        onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                        disabled={currentPage === totalPages}
+                        className="btn-ghost"
+                        style={{ padding: '6px 10px', fontSize: '0.8rem', opacity: currentPage === totalPages ? 0.4 : 1 }}
+                      >
+                        <ChevronRight size={14} />
+                      </button>
+                      <button
+                        onClick={() => setCurrentPage(totalPages)}
+                        disabled={currentPage === totalPages}
+                        className="btn-ghost"
+                        style={{ padding: '6px 10px', fontSize: '0.8rem', opacity: currentPage === totalPages ? 0.4 : 1 }}
+                      >
+                        »
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* ════ CONTACTS VIEW ════ */}
+            {isContacts && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+                <div>
+                  <h2 className="font-cinzel gold-text-gradient" style={{ fontSize: '1.5rem', fontWeight: 800, marginBottom: '4px' }}>Contacts & Official Links</h2>
+                  <p style={{ fontSize: '0.82rem', color: 'var(--text-muted)' }}>Direct hotlines for family coordinators and official channels</p>
+                </div>
+
+                <CategorySection title="Coordinator Hotlines" accent="#d4af37">
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '16px' }}>
+                    <ContactCard title="Male Family Coordinator" phone="+973 3718 8557" waLink="https://wa.me/97337188557" />
+                    <ContactCard title="Female Family Coordinator" phone="+973 3456 0078" waLink="https://wa.me/97334560078" />
+                  </div>
+                </CategorySection>
+
+                <CategorySection title="Instagram Feed" accent="#e1306c">
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
+                    <a href="https://www.instagram.com/nikah_bahrain/" target="_blank" rel="noopener noreferrer" className="btn-gold" style={{ fontSize: '0.85rem' }}>
+                      <Instagram size={15} />
+                      <span>Open @nikah_bahrain</span>
+                    </a>
+                    <button onClick={handleSyncToInstagram} disabled={syncingInstagram} className="btn-ghost" style={{ fontSize: '0.85rem' }}>
+                      <RefreshCw size={15} /> {syncingInstagram ? 'Syncing…' : 'Sync Feed Now'}
+                    </button>
+                  </div>
+                </CategorySection>
+
+                <CategorySection title="Candidate Registration Form" accent="#3b82f6">
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
+                    <a href="https://docs.google.com/forms/d/e/1FAIpQLSe8p6bnqIMv7sPlDrYdREZHkpmuVb5c5pWrSVWqr70NhvvRCQ/viewform" target="_blank" rel="noopener noreferrer" className="btn-ghost" style={{ fontSize: '0.85rem' }}>
+                      <ExternalLink size={15} /> Open Registration Form
+                    </a>
+                  </div>
+                </CategorySection>
+              </div>
+            )}
+
           </div>
-
-          <a
-            href="https://www.instagram.com/nikah_bahrain/"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="btn-gold"
-            style={{ fontSize: '0.85rem' }}
-          >
-            <Instagram size={15} />
-            <span>Open @nikah_bahrain Instagram</span>
-          </a>
-        </div>
-
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '16px' }}>
-          {/* Male Coordinator */}
-          <div 
-            style={{
-              background: 'rgba(255,255,255,0.03)',
-              border: '1px solid rgba(255,255,255,0.08)',
-              borderRadius: 'var(--radius-md)',
-              padding: '16px',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between'
-            }}
-          >
-            <div>
-              <div style={{ fontSize: '0.75rem', color: 'var(--gold-light)', textTransform: 'uppercase', letterSpacing: '1px', fontWeight: 700 }}>
-                Male Family Coordinator
-              </div>
-              <div style={{ fontSize: '1.1rem', fontWeight: 700, color: '#ffffff', marginTop: '2px' }}>
-                +973 3718 8557
-              </div>
-            </div>
-            <a
-              href="https://wa.me/97337188557"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="btn-whatsapp"
-              style={{ padding: '8px 14px', fontSize: '0.8rem' }}
-            >
-              <MessageCircle size={14} /> WhatsApp
-            </a>
-          </div>
-
-          {/* Female Coordinator */}
-          <div 
-            style={{
-              background: 'rgba(255,255,255,0.03)',
-              border: '1px solid rgba(255,255,255,0.08)',
-              borderRadius: 'var(--radius-md)',
-              padding: '16px',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between'
-            }}
-          >
-            <div>
-              <div style={{ fontSize: '0.75rem', color: 'var(--gold-light)', textTransform: 'uppercase', letterSpacing: '1px', fontWeight: 700 }}>
-                Female Family Coordinator
-              </div>
-              <div style={{ fontSize: '1.1rem', fontWeight: 700, color: '#ffffff', marginTop: '2px' }}>
-                +973 3456 0078
-              </div>
-            </div>
-            <a
-              href="https://wa.me/97334560078"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="btn-whatsapp"
-              style={{ padding: '8px 14px', fontSize: '0.8rem' }}
-            >
-              <MessageCircle size={14} /> WhatsApp
-            </a>
-          </div>
-
-          {/* Official Google Form Link */}
-          <div 
-            style={{
-              background: 'rgba(255,255,255,0.03)',
-              border: '1px solid rgba(255,255,255,0.08)',
-              borderRadius: 'var(--radius-md)',
-              padding: '16px',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between'
-            }}
-          >
-            <div>
-              <div style={{ fontSize: '0.75rem', color: 'var(--gold-light)', textTransform: 'uppercase', letterSpacing: '1px', fontWeight: 700 }}>
-                Official Candidate Form
-              </div>
-              <div style={{ fontSize: '0.85rem', fontWeight: 600, color: '#ffffff', marginTop: '2px', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '240px' }}>
-                Candidate Registration Form
-              </div>
-            </div>
-            <a
-              href="https://docs.google.com/forms/d/e/1FAIpQLSe8p6bnqIMv7sPlDrYdREZHkpmuVb5c5pWrSVWqr70NhvvRCQ/viewform"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="btn-ghost"
-              style={{ padding: '8px 14px', fontSize: '0.8rem' }}
-            >
-              <ExternalLink size={14} /> Link
-            </a>
-          </div>
-        </div>
+        </main>
       </div>
     </animated.div>
+  );
+}
+
+// ─── Helper components ────────────────────────────────────────────────────────
+
+function CategorySection({ title, accent, children }) {
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+        <div style={{ width: '4px', height: '20px', background: accent, borderRadius: '2px', flexShrink: 0 }} />
+        <h3 style={{ fontSize: '1rem', fontWeight: 700, color: '#fff', letterSpacing: '0.3px' }}>{title}</h3>
+      </div>
+      <div style={{ padding: '18px', background: 'rgba(8, 18, 40, 0.8)', border: `1px solid ${accent}20`, borderRadius: 'var(--radius-md)', borderLeft: `3px solid ${accent}` }}>
+        {children}
+      </div>
+    </div>
   );
 }
 
@@ -850,53 +908,46 @@ function StatCard({ label, count, subtext, icon: Icon, accent }) {
   const cardSpring = useSpring({
     from: { opacity: 0, transform: 'scale(0.95)' },
     to: { opacity: 1, transform: 'scale(1)' },
-    config: { tension: 300, friction: 20 }
+    config: { tension: 300, friction: 20 },
   });
 
   return (
     <animated.div
       style={{
         ...cardSpring,
-        background: 'rgba(11, 24, 44, 0.75)',
-        border: '1px solid var(--gold-border)',
+        background: 'rgba(6, 14, 32, 0.9)',
+        border: `1px solid ${accent}28`,
+        borderTop: `3px solid ${accent}`,
         borderRadius: 'var(--radius-md)',
         padding: '18px 16px',
         display: 'flex',
         flexDirection: 'column',
         gap: '6px',
         position: 'relative',
-        overflow: 'hidden'
+        overflow: 'hidden',
       }}
     >
-      <div 
-        style={{
-          position: 'absolute',
-          top: 0,
-          right: 0,
-          width: '60px',
-          height: '60px',
-          background: `radial-gradient(circle, ${accent}22 0%, transparent 70%)`,
-          pointerEvents: 'none'
-        }}
-      />
-
+      <div style={{ position: 'absolute', top: 0, right: 0, width: '70px', height: '70px', background: `radial-gradient(circle, ${accent}18 0%, transparent 70%)`, pointerEvents: 'none' }} />
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase' }}>
-          {label}
-        </span>
+        <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.5px' }}>{label}</span>
         <Icon size={18} color={accent} />
       </div>
-
-      <div 
-        className="font-cinzel"
-        style={{ fontSize: '2rem', fontWeight: 800, color: '#ffffff', lineHeight: 1.1 }}
-      >
-        {count}
-      </div>
-
-      <div style={{ fontSize: '0.72rem', color: 'var(--text-dim)' }}>
-        {subtext}
-      </div>
+      <div className="font-cinzel" style={{ fontSize: '2.2rem', fontWeight: 800, color: '#ffffff', lineHeight: 1 }}>{count}</div>
+      <div style={{ fontSize: '0.72rem', color: accent, opacity: 0.8 }}>{subtext}</div>
     </animated.div>
+  );
+}
+
+function ContactCard({ title, phone, waLink }) {
+  return (
+    <div style={{ background: 'rgba(6, 14, 32, 0.9)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 'var(--radius-md)', padding: '16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', flexWrap: 'wrap' }}>
+      <div>
+        <div style={{ fontSize: '0.72rem', color: 'var(--gold-light)', textTransform: 'uppercase', letterSpacing: '1px', fontWeight: 700 }}>{title}</div>
+        <div style={{ fontSize: '1.1rem', fontWeight: 700, color: '#ffffff', marginTop: '4px' }}>{phone}</div>
+      </div>
+      <a href={waLink} target="_blank" rel="noopener noreferrer" className="btn-whatsapp" style={{ padding: '8px 14px', fontSize: '0.8rem' }}>
+        <MessageCircle size={14} /> WhatsApp
+      </a>
+    </div>
   );
 }

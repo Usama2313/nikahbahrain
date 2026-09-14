@@ -566,14 +566,116 @@ button:active, .btn-gold:active, .btn-whatsapp:active, .btn-ghost:active, a[role
   }
 }
 
-/* Admin panel responsive */
+/* ============================================================
+   ADMIN PANEL — Sidebar Layout & Full Responsiveness
+   ============================================================ */
+
+/* Admin stats grid */
+.admin-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 14px;
+}
+
+@media (max-width: 640px) {
+  .admin-stats-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+  }
+}
+
+@media (max-width: 380px) {
+  .admin-stats-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Admin sidebar overlay — only visible on mobile */
+.admin-sidebar-overlay {
+  display: none;
+}
+
+@media (max-width: 768px) {
+  .admin-sidebar-overlay {
+    display: block !important;
+  }
+
+  .admin-sidebar {
+    position: fixed !important;
+    top: 57px !important;
+    left: 0 !important;
+    height: calc(100vh - 57px) !important;
+    z-index: 150 !important;
+    width: 260px !important;
+    min-width: 260px !important;
+    transform: translateX(-100%) !important;
+    transition: transform 0.3s ease !important;
+    box-shadow: 4px 0 20px rgba(0,0,0,0.6);
+  }
+
+  .admin-sidebar.open {
+    transform: translateX(0) !important;
+    width: 260px !important;
+    min-width: 260px !important;
+  }
+}
+
+/* Admin table wrapper */
+.admin-table-wrapper {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* ============================================================
+   GLOBAL RESPONSIVENESS IMPROVEMENTS
+   ============================================================ */
+
+/* Navbar responsiveness */
 @media (max-width: 768px) {
   .admin-grid {
     grid-template-columns: 1fr !important;
   }
+}
 
-  .admin-table-wrapper {
-    overflow-x: auto !important;
-    -webkit-overflow-scrolling: touch !important;
+/* Ensure no horizontal overflow on any screen */
+@media (max-width: 480px) {
+  body {
+    overflow-x: hidden;
   }
+
+  .glass-panel {
+    padding: 16px 14px;
+  }
+
+  /* Better readability on small screens */
+  h1, h2, h3 {
+    word-break: break-word;
+  }
+}
+
+/* ============================================================
+   ENHANCED READABILITY — Higher contrast backgrounds
+   ============================================================ */
+
+/* Make glass panels more readable */
+.glass-panel {
+  background: rgba(8, 17, 38, 0.92) !important;
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+}
+
+/* Table row readability */
+table tbody tr {
+  transition: background 0.15s ease;
+}
+
+table thead th {
+  background: rgba(212, 175, 55, 0.08);
+}
+
+/* Input focus readability */
+input:focus, textarea:focus, select:focus {
+  border-color: var(--gold-primary) !important;
+  box-shadow: 0 0 0 2px rgba(212, 175, 55, 0.15) !important;
+  outline: none !important;
 }

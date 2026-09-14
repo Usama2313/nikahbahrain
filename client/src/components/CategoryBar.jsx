@@ -15,13 +15,16 @@ export default function CategoryBar({
   activeTab = 'groom',
   counts = {}
 }) {
-  // Determine the label for the widowed category based on current tab
+  // Determine the label for the widowed/late category based on current tab
   const getCategoryLabel = (catId) => {
     if (catId === 'late-wife') {
       if (activeTab === 'bride') return 'LATE HUSBAND';
-      return 'LATE WIFE';
+      return 'LATE WIFE / WIDOWED';
     }
-    return catId === 'all' ? 'ALL' : catId.replace('-', ' ').toUpperCase();
+    if (catId === '2nd-marriage') return '2ND MARRIAGE';
+    if (catId === 'never-married') return 'NEVER MARRIED';
+    if (catId === 'divorced') return 'DIVORCED';
+    return 'ALL';
   };
 
   return (
@@ -33,11 +36,16 @@ export default function CategoryBar({
       }}
     >
       <div
+        className="category-pills-row"
         style={{
           display: 'flex',
           alignItems: 'center',
-          gap: '12px',
-          flexWrap: 'wrap'
+          gap: '10px',
+          overflowX: 'auto',
+          WebkitOverflowScrolling: 'touch',
+          paddingBottom: '6px',
+          scrollbarWidth: 'none',
+          msOverflowStyle: 'none',
         }}
       >
         {CATEGORIES.map((cat) => {
@@ -66,30 +74,31 @@ function CategoryPill({ label, isSelected, count, onClick }) {
 
   // World-Class Spring animation for Category Pills
   const spring = useSpring({
-    transform: pressed 
-      ? 'scale(0.95) translateY(1px)' 
-      : hovered 
-      ? 'scale(1.04) translateY(-2px)' 
-      : isSelected 
-      ? 'scale(1.02) translateY(0px)' 
+    transform: pressed
+      ? 'scale(0.95) translateY(1px)'
+      : hovered
+      ? 'scale(1.04) translateY(-2px)'
+      : isSelected
+      ? 'scale(1.02) translateY(0px)'
       : 'scale(1) translateY(0px)',
-    backgroundColor: isSelected 
-      ? '#235d46' 
-      : hovered 
-      ? '#ecfdf5' 
+    backgroundColor: isSelected
+      ? '#235d46'
+      : hovered
+      ? '#ecfdf5'
       : 'rgba(255, 255, 255, 0.96)',
     borderColor: isSelected ? '#1b4332' : hovered ? '#1e5641' : '#235d46',
     color: isSelected ? '#ffffff' : '#1e5641',
-    boxShadow: isSelected 
-      ? '0 6px 18px rgba(35, 93, 70, 0.4), 0 0 10px rgba(35, 93, 70, 0.2)' 
-      : hovered 
-      ? '0 4px 14px rgba(35, 93, 70, 0.2)' 
+    boxShadow: isSelected
+      ? '0 6px 18px rgba(35, 93, 70, 0.4), 0 0 10px rgba(35, 93, 70, 0.2)'
+      : hovered
+      ? '0 4px 14px rgba(35, 93, 70, 0.2)'
       : '0 2px 6px rgba(0, 0, 0, 0.08)',
     config: { tension: 400, friction: 22 }
   });
 
   return (
     <animated.button
+      className="category-pill"
       onClick={onClick}
       style={{
         ...spring,
@@ -105,6 +114,7 @@ function CategoryPill({ label, isSelected, count, onClick }) {
         alignItems: 'center',
         gap: '8px',
         whiteSpace: 'nowrap',
+        flexShrink: 0,
         outline: 'none',
         overflow: 'hidden'
       }}
