@@ -13,7 +13,6 @@ export const NATIONALITIES = [
   { id: 'all', label: 'All' },
   { id: 'Pakistani', label: '🇵🇰 Pakistani' },
   { id: 'Indian', label: '🇮🇳 Indian' },
-  { id: 'Bahraini', label: '🇧🇭 Bahraini' },
 ];
 
 export default function CategoryBar({
