@@ -341,14 +341,9 @@ app.put(['/api/profiles/:id', '/profiles/:id'], (req, res) => {
 // 5. DELETE /api/profiles/:id (Admin delete)
 app.delete(['/api/profiles/:id', '/profiles/:id'], (req, res) => {
   let profiles = getProfiles();
-  const exists = profiles.some((p) => p.id === req.params.id);
-  if (!exists) {
-    return res.status(404).json({ success: false, message: 'Profile not found' });
-  }
-
   profiles = profiles.filter((p) => p.id !== req.params.id);
   saveProfiles(profiles);
-  res.json({ success: true, message: 'Profile deleted successfully' });
+  res.json({ success: true, message: `Profile ${req.params.id} deleted successfully`, count: profiles.length });
 });
 
 // 6. GET /api/stats (Admin Dashboard Analytics)

@@ -182,8 +182,24 @@ export default function AdminPanel({ onBackToPortal, onProfilesChange }) {
     setIsFormOpen(true);
   };
 
+  const addDeletedProfileToStorage = (profileId) => {
+    try {
+      const existing = JSON.parse(localStorage.getItem('nikah_deleted_profiles') || '[]');
+      if (!existing.includes(profileId)) {
+        existing.push(profileId);
+        localStorage.setItem('nikah_deleted_profiles', JSON.stringify(existing));
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
   const saveCustomProfileToStorage = (profileObj) => {
     try {
+      const deleted = JSON.parse(localStorage.getItem('nikah_deleted_profiles') || '[]');
+      const updatedDeleted = deleted.filter(id => id !== profileObj.id);
+      localStorage.setItem('nikah_deleted_profiles', JSON.stringify(updatedDeleted));
+
       const existing = JSON.parse(localStorage.getItem('nikah_custom_profiles') || '[]');
       const filtered = existing.filter(p => p.id !== profileObj.id);
       filtered.unshift(profileObj);
@@ -195,6 +211,7 @@ export default function AdminPanel({ onBackToPortal, onProfilesChange }) {
 
   const removeCustomProfileFromStorage = (profileId) => {
     try {
+      addDeletedProfileToStorage(profileId);
       const existing = JSON.parse(localStorage.getItem('nikah_custom_profiles') || '[]');
       const filtered = existing.filter(p => p.id !== profileId);
       localStorage.setItem('nikah_custom_profiles', JSON.stringify(filtered));
@@ -348,20 +365,24 @@ export default function AdminPanel({ onBackToPortal, onProfilesChange }) {
 
   const getMergedProfiles = (baseList) => {
     try {
+      const deletedIds = new Set(JSON.parse(localStorage.getItem('nikah_deleted_profiles') || '[]'));
       const custom = JSON.parse(localStorage.getItem('nikah_custom_profiles') || '[]');
-      if (!Array.isArray(custom) || custom.length === 0) return baseList;
       const map = new Map();
-      for (const c of custom) {
-        if (c && c.id) map.set(c.id, c);
+      if (Array.isArray(custom)) {
+        for (const c of custom) {
+          if (c && c.id && !deletedIds.has(c.id)) {
+            map.set(c.id, c);
+          }
+        }
       }
-      for (const b of baseList) {
-        if (b && b.id) {
+      for (const b of (baseList || [])) {
+        if (b && b.id && !deletedIds.has(b.id)) {
           if (!map.has(b.id)) map.set(b.id, b);
         }
       }
       return Array.from(map.values());
     } catch (e) {
-      return baseList;
+      return baseList || [];
     }
   };
 

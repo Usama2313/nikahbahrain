@@ -92,23 +92,27 @@ export default function App() {
     };
   }, []);
 
-  // Helper to merge admin custom created/edited profiles
+  // Helper to merge admin custom created/edited profiles and filter deleted ones
   const getMergedProfiles = (baseList) => {
     try {
+      const deletedIds = new Set(JSON.parse(localStorage.getItem('nikah_deleted_profiles') || '[]'));
       const custom = JSON.parse(localStorage.getItem('nikah_custom_profiles') || '[]');
-      if (!Array.isArray(custom) || custom.length === 0) return baseList;
       const map = new Map();
-      for (const c of custom) {
-        if (c && c.id) map.set(c.id, c);
+      if (Array.isArray(custom)) {
+        for (const c of custom) {
+          if (c && c.id && !deletedIds.has(c.id)) {
+            map.set(c.id, c);
+          }
+        }
       }
-      for (const b of baseList) {
-        if (b && b.id) {
+      for (const b of (baseList || [])) {
+        if (b && b.id && !deletedIds.has(b.id)) {
           if (!map.has(b.id)) map.set(b.id, b);
         }
       }
       return Array.from(map.values());
     } catch (e) {
-      return baseList;
+      return baseList || [];
     }
   };
 
