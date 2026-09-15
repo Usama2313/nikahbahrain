@@ -37,6 +37,13 @@ export function parseProfileFromAltText(post) {
   const idMatch = text.match(/NPF\s*[-_#]?\s*(\d+)/i) || (post.shortcode ? [null, post.shortcode] : null);
   const rawId = idMatch ? `NPF-${idMatch[1]}` : (post.id || `NB-${Date.now().toString().slice(-4)}`);
 
+  // 2. Extract name if present (common pattern: "Name - ..." or first line)
+  let extractedName = '';
+  const nameMatch = text.match(/^[A-Z][a-z]+\s+[A-Z][a-z]+(?:\s+[A-Z][a-z]+)*/);
+  if (nameMatch) {
+    extractedName = nameMatch[0].trim();
+  }
+
   // 2. Gender & Category
   const isBride = /\b(BRIDE|Female)\b/i.test(text.slice(0, 200)) || /Gender\s*:\s*Female/i.test(text);
   const gender = isBride ? 'female' : 'male';
@@ -125,7 +132,6 @@ export function parseProfileFromAltText(post) {
       }
     }
   }
-
   // 10. Education
   let education = gender === 'female' ? 'Bachelor / Graduate' : 'Graduate';
   const rawEdu = extractFieldFromText(text, 'Education|Qualification');
@@ -194,7 +200,7 @@ export function parseProfileFromAltText(post) {
     requirements = `Seeking a righteous, well-mannered practicing ${nationality} partner with noble family background settled in Bahrain or GCC.`;
   }
 
-  const nameTitle = `${rawId} (${gender === 'female' ? 'Bride' : 'Groom'})`;
+  const nameTitle = extractedName ? `${extractedName} (${gender === 'female' ? 'Bride' : 'Groom'})` : `${rawId} (${gender === 'female' ? 'Bride' : 'Groom'})`;
 
   return {
     id: rawId,

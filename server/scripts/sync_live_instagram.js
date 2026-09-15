@@ -12,7 +12,7 @@ import { parseProfileFromAltText } from './parse_profile.js';
 export { parseProfileFromAltText };
 
 
-export async function syncLiveInstagramPosts(targetCount = 50) {
+export async function syncLiveInstagramPosts(targetCount = 1000) {
   if (!fs.existsSync(CHROME_PATH)) {
     throw new Error('Local Chrome browser binary not found in this cloud environment. Run live sync on your local machine using "npm run sync-ig" and push the updated profiles.');
   }
@@ -62,7 +62,7 @@ export async function syncLiveInstagramPosts(targetCount = 50) {
     const postsMap = new Map();
     let noNewCount = 0;
     let scrollAttempts = 0;
-    const maxScrolls = 25;
+    const maxScrolls = 200;
 
     while (postsMap.size < targetCount && scrollAttempts < maxScrolls && noNewCount < 5) {
       const currentPosts = await page.evaluate(() => {
@@ -157,7 +157,7 @@ export async function syncLiveInstagramPosts(targetCount = 50) {
 }
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
-  syncLiveInstagramPosts(30).then((res) => {
+  syncLiveInstagramPosts(300).then((res) => {
     console.log('Sync result summary:', {
       freshlyFetched: res.freshlyFetched,
       totalProfiles: res.totalProfiles,

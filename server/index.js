@@ -29,25 +29,6 @@ if (!process.env.VERCEL && !fs.existsSync(publicDir)) {
 }
 app.use('/public', express.static(publicDir));
 
-// Admin route to trigger full Instagram sync (requires simple token for demo)
-app.post('/api/sync-instagram', (req, res) => {
-  // In production, protect this route with proper auth
-  const token = req.headers['x-admin-token'];
-  if (!token || token !== process.env.ADMIN_TOKEN) {
-    return res.status(403).json({ success: false, message: 'Forbidden' });
-  }
-  const { exec } = require('child_process');
-  const scriptPath = path.join(__dirname, 'scripts', 'sync_instagram_all.js');
-  exec(`node "${scriptPath}"`, (error, stdout, stderr) => {
-    if (error) {
-      console.error('Sync error:', error);
-      return res.status(500).json({ success: false, message: 'Sync failed', error: error.message });
-    }
-    console.log('Sync output:', stdout);
-    return res.json({ success: true, message: 'Instagram sync completed' });
-  });
-});
-
 // Profiles data file multi-path resolution (works across local and Vercel serverless functions)
 function getDataFilePath() {
   const candidates = [
@@ -78,10 +59,22 @@ function getProfiles() {
   }
 }
 
-// Helper to save profiles
+// Helper to save profiles across server and client bundles
 function saveProfiles(profiles) {
+  const targetFile = getDataFilePath();
   try {
-    fs.writeFileSync(dataFilePath, JSON.stringify(profiles, null, 2), 'utf8');
+    const jsonStr = JSON.stringify(profiles, null, 2);
+    fs.writeFileSync(targetFile, jsonStr, 'utf8');
+
+    // Also sync to client bundle if present
+    const clientPath = path.join(__dirname, '..', 'client', 'src', 'data', 'profiles.json');
+    if (fs.existsSync(clientPath) && clientPath !== targetFile) {
+      try {
+        fs.writeFileSync(clientPath, jsonStr, 'utf8');
+      } catch (e) {
+        console.warn('Could not sync client profiles:', e.message);
+      }
+    }
   } catch (err) {
     console.error('Error saving profiles:', err);
   }

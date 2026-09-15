@@ -47,7 +47,11 @@ export default function Navbar({
   // Close menu when tab is selected
   const handleTabSelect = (tabId) => {
     setMobileMenuOpen(false);
-    onSelectTab(tabId);
+    if (tabId === 'dashboard') {
+      onOpenAdmin();
+    } else {
+      onSelectTab(tabId);
+    }
   };
 
   const createBtnSpring = useSpring({

@@ -105,8 +105,10 @@ export default function AdminPanel({ onBackToPortal }) {
   const [syncingInstagram, setSyncingInstagram] = useState(false);
   const [notification, setNotification] = useState(null);
 
-  // Sidebar
-  const [sidebarOpen, setSidebarOpen] = useState(true);
+  // Sidebar (starts closed on mobile to keep dashboard fully visible)
+  const [sidebarOpen, setSidebarOpen] = useState(() =>
+    typeof window !== 'undefined' ? window.innerWidth > 768 : false
+  );
   const [activeSection, setActiveSection] = useState('dashboard');
   const [expandedGroup, setExpandedGroup] = useState(null);
 
@@ -421,7 +423,7 @@ export default function AdminPanel({ onBackToPortal }) {
 
 
   return (
-    <animated.div style={{ ...adminSpring, minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
+    <animated.div style={{ ...adminSpring, height: '100vh', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
       {/* ── Top header bar ── */}
       <div style={{
         display: 'flex',
@@ -489,7 +491,7 @@ export default function AdminPanel({ onBackToPortal }) {
           <div
             className="admin-sidebar-overlay"
             onClick={() => setSidebarOpen(false)}
-            style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', zIndex: 99, display: 'none' }}
+            style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', zIndex: 299 }}
           />
         )}
 
@@ -506,7 +508,14 @@ export default function AdminPanel({ onBackToPortal }) {
             display: 'flex',
             flexDirection: 'column',
             flexShrink: 0,
-            boxShadow: '2px 0 10px rgba(0,0,0,0.03)'
+            boxShadow: '2px 0 10px rgba(0,0,0,0.03)',
+            ...(typeof window !== 'undefined' && window.innerWidth <= 768 ? {
+              position: 'fixed',
+              top: 0,
+              bottom: 0,
+              left: 0,
+              zIndex: 300
+            } : {})
           }}
         >
           <div style={{ padding: '16px 0', overflowY: 'auto', flex: 1 }}>

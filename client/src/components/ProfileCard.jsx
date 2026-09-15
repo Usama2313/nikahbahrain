@@ -1,179 +1,92 @@
 import React, { useState, useRef } from 'react';
-import { useSpring, useTrail, animated, config } from '@react-spring/web';
-import { 
-  Heart, 
-  MessageCircle, 
-  ShieldCheck, 
-  MapPin, 
-  Briefcase, 
-  GraduationCap, 
-  Calendar, 
-  Instagram, 
-  Eye,
-  CheckCircle2,
-  Sparkles,
+import { useSpring, animated } from '@react-spring/web';
+import {
+  Heart,
+  MessageCircle,
+  ShieldCheck,
+  MapPin,
   User,
-  Ruler,
-  BookOpen
+  ExternalLink
 } from '../icons';
 import confetti from 'canvas-confetti';
 
-export default function ProfileCard({ 
-  profile, 
-  isFavorite = false, 
-  onToggleFavorite, 
-  onViewDetails 
+export default function ProfileCard({
+  profile,
+  isFavorite = false,
+  onToggleFavorite,
+  onViewDetails
 }) {
   const [hovered, setHovered] = useState(false);
-  const [justFavorited, setJustFavorited] = useState(false);
+  const [imgError, setImgError] = useState(false);
   const cardRef = useRef(null);
 
-  // 3D Tilt React-Spring animation with enhanced physics
-  const [springProps, api] = useSpring(() => ({
-    xys: [0, 0, 1],
-    glowOpacity: 0,
-    config: { mass: 1, tension: 350, friction: 26 }
-  }));
-
-  // Heart pop spring physics with bouncy overshoot
-  const heartSpring = useSpring({
-    transform: isFavorite ? 'scale(1.3) rotate(-8deg)' : justFavorited ? 'scale(0.8)' : 'scale(1)',
-    color: isFavorite ? '#ef4444' : '#cbd5e1',
-    config: { tension: 450, friction: 12 }
-  });
-
-  // Hover elevation spring
   const hoverSpring = useSpring({
-    boxShadow: hovered 
-      ? '0 20px 50px -12px rgba(212, 175, 55, 0.35), 0 0 30px rgba(212, 175, 55, 0.15)' 
-      : '0 4px 20px -4px rgba(0, 0, 0, 0.5)',
-    borderColor: hovered ? 'rgba(212, 175, 55, 0.5)' : 'rgba(212, 175, 55, 0.15)',
+    boxShadow: hovered
+      ? '0 20px 50px -12px rgba(212, 175, 55, 0.35), 0 0 30px rgba(212, 175, 55, 0.15)'
+      : '0 4px 20px -4px rgba(0, 0, 0, 0.15)',
+    borderColor: hovered ? 'rgba(212, 175, 55, 0.6)' : 'rgba(212, 175, 55, 0.2)',
     config: { tension: 280, friction: 22 }
   });
 
-  // Gender avatar spring pulse
-  const avatarSpring = useSpring({
-    transform: hovered ? 'scale(1.08)' : 'scale(1)',
-    boxShadow: hovered 
-      ? `0 0 24px ${profile.gender === 'male' ? 'rgba(59, 130, 246, 0.5)' : 'rgba(236, 72, 153, 0.5)'}` 
-      : '0 0 0px transparent',
-    config: { tension: 300, friction: 18 }
+  const imgSpring = useSpring({
+    transform: hovered ? 'scale(1.06)' : 'scale(1)',
+    config: { tension: 260, friction: 22 }
   });
 
-  // Info items stagger on hover
-  const infoItems = [
-    { icon: Briefcase, text: profile.profession, color: 'var(--gold-primary)' },
-    { icon: GraduationCap, text: profile.education, color: 'var(--gold-primary)' },
-    { icon: MapPin, text: profile.location, color: 'var(--gold-primary)' },
-  ];
-
-  const infoTrail = useTrail(infoItems.length, {
-    transform: hovered ? 'translateX(0px)' : 'translateX(-3px)',
-    opacity: 1,
-    config: { tension: 320, friction: 22 }
+  const heartSpring = useSpring({
+    transform: isFavorite ? 'scale(1.3) rotate(-8deg)' : 'scale(1)',
+    config: { tension: 450, friction: 12 }
   });
-
-  const calc = (x, y, rect) => [
-    -(y - rect.top - rect.height / 2) / 20,
-    (x - rect.left - rect.width / 2) / 20,
-    1.03
-  ];
-  const trans = (x, y, s) => `perspective(800px) rotateX(${x}deg) rotateY(${y}deg) scale(${s})`;
-
-  const handleMouseMove = (e) => {
-    if (!cardRef.current) return;
-    const rect = cardRef.current.getBoundingClientRect();
-    api.start({ xys: calc(e.clientX, e.clientY, rect), glowOpacity: 1 });
-  };
-
-  const handleMouseLeave = () => {
-    setHovered(false);
-    api.start({ xys: [0, 0, 1], glowOpacity: 0 });
-  };
 
   const handleFavoriteClick = (e) => {
     e.stopPropagation();
     onToggleFavorite(profile.id);
-
     if (!isFavorite) {
-      setJustFavorited(true);
       confetti({
         particleCount: 25,
         spread: 50,
-        origin: { 
-          x: e.clientX / window.innerWidth, 
-          y: e.clientY / window.innerHeight 
-        },
+        origin: { x: e.clientX / window.innerWidth, y: e.clientY / window.innerHeight },
         colors: ['#ef4444', '#f59e0b', '#d4af37', '#ffffff']
       });
-      setTimeout(() => setJustFavorited(false), 800);
     }
   };
 
-  // WhatsApp click -> Male +97337188557
   const handleWhatsAppChat = (e) => {
     e.stopPropagation();
     const phone = '97337188557';
     const message = `Assalamu Alaikum Qabul Hai Team,
 
 I am interested in this verified proposal:
-• Profile ID: ${profile.id}
-• Candidate: ${profile.name} (${profile.gender === 'male' ? 'Groom' : 'Bride'})
-• Age & Marital Status: ${profile.age} yrs (${profile.maritalStatus})
-• Nationality: ${profile.nationality}
-• Profession: ${profile.profession}
-• Siblings: ${profile.siblings || 'N/A'}
-• Location: ${profile.location}
-• Instagram Ref: ${profile.instagramPostUrl}
+â€¢ Profile ID: ${profile.id}
+â€¢ Candidate: ${profile.name} (${profile.gender === 'male' ? 'Groom' : 'Bride'})
+â€¢ Age & Marital Status: ${profile.age} yrs (${profile.maritalStatus})
+â€¢ Nationality: ${profile.nationality}
+â€¢ Profession: ${profile.profession}
+â€¢ Location: ${profile.location}
+â€¢ Instagram Ref: ${profile.instagramPostUrl}
 
 Please provide more details. JazakAllah Khair!`;
-
-    const url = `https://wa.me/${phone}?text=${encodeURIComponent(message)}`;
-    window.open(url, '_blank');
+    window.open(`https://wa.me/${phone}?text=${encodeURIComponent(message)}`, '_blank');
   };
 
-  // Nationality badge styling - high contrast for white background
-  const nationalityBadge = {
-    Pakistani: { flag: '🇵🇰', label: 'Pakistani', bg: '#ecfdf5', border: '#a7f3d0', text: '#065f46' },
-    Indian: { flag: '🇮🇳', label: 'Indian', bg: '#fff7ed', border: '#fed7aa', text: '#9a3412' },
-    Bahraini: { flag: '🇧🇭', label: 'Bahraini', bg: '#fef2f2', border: '#fecaca', text: '#991b1b' }
-  }[profile.nationality] || { flag: '🌍', label: profile.nationality, bg: '#eff6ff', border: '#bfdbfe', text: '#1e40af' };
+  const handleInstagramClick = (e) => {
+    e.stopPropagation();
+    if (profile.instagramPostUrl) window.open(profile.instagramPostUrl, '_blank');
+  };
 
-  // Marital status badge styling - high contrast for white background
-  const maritalBadge = {
-    'Never Married': { emoji: '💍', bg: '#fefce8', border: '#fef08a', text: '#854d0e' },
-    'Divorced': { emoji: '🔄', bg: '#faf5ff', border: '#e9d5ff', text: '#6b21a8' },
-    '2nd Marriage': { emoji: '✨', bg: '#fff7ed', border: '#ffedd5', text: '#c2410c' },
-    'Widowed': { emoji: '🕊️', bg: '#f0f9ff', border: '#bae6fd', text: '#0369a1' }
-  }[profile.maritalStatus] || { emoji: '📋', bg: '#f1f5f9', border: '#cbd5e1', text: '#334155' };
+  const genderConfig = profile.gender === 'male'
+    ? { badge: 'GROOM', badgeBg: 'linear-gradient(135deg,#1d4ed8,#3b82f6)' }
+    : { badge: 'BRIDE', badgeBg: 'linear-gradient(135deg,#be185d,#ec4899)' };
 
-  // Gender gradient and icon
-  const genderConfig = profile.gender === 'male' 
-    ? { 
-        gradient: 'linear-gradient(135deg, #1e40af 0%, #1d4ed8 100%)',
-        accentBorder: 'rgba(59, 130, 246, 0.4)',
-        iconBg: 'linear-gradient(135deg, #3b82f6, #1d4ed8)',
-        label: 'GROOM'
-      }
-    : {
-        gradient: 'linear-gradient(135deg, #db2777 0%, #be185d 100%)',
-        accentBorder: 'rgba(236, 72, 153, 0.4)',
-        iconBg: 'linear-gradient(135deg, #ec4899, #be185d)',
-        label: 'BRIDE'
-      };
-
-  // Pure clean white card surface with crisp gold border
-  const cardBackground = '#ffffff';
+  const maritalEmoji = { 'Never Married': 'ðŸ’', 'Divorced': 'ðŸ”„', '2nd Marriage': 'âœ¨', 'Widowed': 'ðŸ•Šï¸' }[profile.maritalStatus] || 'ðŸ“‹';
+  const nationalityFlag = { Pakistani: 'ðŸ‡µðŸ‡°', Indian: 'ðŸ‡®ðŸ‡³', Bahraini: 'ðŸ‡§ðŸ‡­', 'Saudi Arabia': 'ðŸ‡¸ðŸ‡¦', Emirati: 'ðŸ‡¦ðŸ‡ª' }[profile.nationality] || 'ðŸŒ';
 
   return (
     <animated.div
       ref={cardRef}
-      onMouseMove={handleMouseMove}
       onMouseEnter={() => setHovered(true)}
-      onMouseLeave={handleMouseLeave}
-      onClick={() => onViewDetails(profile)}
+      onMouseLeave={() => setHovered(false)}
       style={{
-        transform: springProps.xys.to(trans),
         ...hoverSpring,
         cursor: 'pointer',
         height: '100%',
@@ -182,73 +95,124 @@ Please provide more details. JazakAllah Khair!`;
         display: 'flex',
         flexDirection: 'column',
         borderRadius: 'var(--radius-lg)',
-        background: cardBackground,
+        background: '#ffffff',
         border: '1.5px solid var(--gold-border)',
-        boxShadow: '0 4px 18px rgba(0, 0, 0, 0.05)',
         overflow: 'hidden',
         position: 'relative',
-        transition: 'background 0.3s ease, border-color 0.3s ease'
       }}
     >
-      {/* Top Header Section with ID, Avatar & Badges */}
-      <div 
-        style={{
-          padding: '16px 16px 12px 16px',
-          position: 'relative',
-          zIndex: 1,
-          borderBottom: '1px solid #f1f5f9'
-        }}
-      >
-        {/* Top Row: ID + Verified + Heart */}
-        <div 
-          style={{
+      {/* â”€â”€ Image Section â”€â”€ */}
+      <div style={{ position: 'relative', width: '100%', aspectRatio: '1 / 1', overflow: 'hidden', background: '#f1f5f9' }}>
+        {profile.image && !imgError ? (
+          <animated.img
+            src={profile.image}
+            alt={profile.id}
+            onError={() => setImgError(true)}
+            style={{
+              ...imgSpring,
+              width: '100%',
+              height: '100%',
+              objectFit: 'contain',
+              display: 'block',
+              background: '#000'
+            }}
+          />
+        ) : (
+          <div style={{
+            width: '100%',
+            height: '100%',
             display: 'flex',
             alignItems: 'center',
-            justifyContent: 'space-between',
-            marginBottom: '12px'
-          }}
-        >
-          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-            <span 
+            justifyContent: 'center',
+            background: profile.gender === 'male'
+              ? 'linear-gradient(135deg, #dbeafe, #bfdbfe)'
+              : 'linear-gradient(135deg, #fce7f3, #fbcfe8)',
+            flexDirection: 'column',
+            gap: '8px'
+          }}>
+            <User size={48} color={profile.gender === 'male' ? '#3b82f6' : '#ec4899'} />
+            <span style={{ fontSize: '0.75rem', color: '#94a3b8', fontWeight: 600 }}>No Image</span>
+          </div>
+        )}
+
+        {/* Top-left: Profile ID badge */}
+        <div style={{
+          position: 'absolute',
+          top: '10px',
+          left: '10px',
+          background: 'rgba(0,0,0,0.65)',
+          backdropFilter: 'blur(6px)',
+          color: '#ffd700',
+          fontSize: '0.72rem',
+          fontWeight: 800,
+          padding: '3px 10px',
+          borderRadius: '999px',
+          letterSpacing: '0.5px',
+          border: '1px solid rgba(255,215,0,0.3)'
+        }}>
+          {profile.id}
+        </div>
+
+        {/* Top-right: Bride/Groom badge */}
+        <div style={{
+          position: 'absolute',
+          top: '10px',
+          right: '10px',
+          background: genderConfig.badgeBg,
+          color: '#fff',
+          fontSize: '0.68rem',
+          fontWeight: 800,
+          padding: '3px 10px',
+          borderRadius: '999px',
+          letterSpacing: '1px'
+        }}>
+          {genderConfig.badge}
+        </div>
+
+        {/* Bottom overlay gradient with action buttons */}
+        <div style={{
+          position: 'absolute',
+          bottom: 0,
+          left: 0,
+          right: 0,
+          background: 'linear-gradient(to top, rgba(0,0,0,0.65) 0%, transparent 100%)',
+          padding: '28px 12px 10px 12px',
+          display: 'flex',
+          justifyContent: 'flex-end',
+          gap: '8px',
+          alignItems: 'center'
+        }}>
+          {/* Instagram link */}
+          {profile.instagramPostUrl && (
+            <button
+              onClick={handleInstagramClick}
+              title="View on Instagram"
               style={{
-                background: '#fefce8',
-                border: '1px solid rgba(196, 155, 31, 0.4)',
-                color: 'var(--text-gold)',
-                fontSize: '0.72rem',
-                fontWeight: 800,
-                padding: '3px 9px',
-                borderRadius: 'var(--radius-full)',
-                letterSpacing: '0.5px'
+                background: 'rgba(255,255,255,0.15)',
+                backdropFilter: 'blur(6px)',
+                border: '1px solid rgba(255,255,255,0.3)',
+                borderRadius: '50%',
+                width: '34px',
+                height: '34px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                cursor: 'pointer',
+                color: '#fff'
               }}
             >
-              {profile.id}
-            </span>
-            {profile.verified && (
-              <span 
-                style={{
-                  background: '#10b981',
-                  color: '#ffffff',
-                  fontSize: '0.7rem',
-                  fontWeight: 700,
-                  padding: '3px 8px',
-                  borderRadius: 'var(--radius-full)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '3px'
-                }}
-              >
-                <ShieldCheck size={11} /> Verified
-              </span>
-            )}
-          </div>
+              <ExternalLink size={15} />
+            </button>
+          )}
 
-          {/* Heart Favorite Button */}
+          {/* Heart favorite */}
           <animated.button
             onClick={handleFavoriteClick}
             style={{
               ...heartSpring,
-              background: '#f8fafc',
-              border: `1px solid ${isFavorite ? '#ef4444' : 'rgba(0,0,0,0.1)'}`,
+              background: isFavorite ? 'rgba(239,68,68,0.85)' : 'rgba(255,255,255,0.15)',
+              backdropFilter: 'blur(6px)',
+              border: `1px solid ${isFavorite ? 'rgba(239,68,68,0.5)' : 'rgba(255,255,255,0.3)'}`,
               borderRadius: '50%',
               width: '34px',
               height: '34px',
@@ -256,267 +220,135 @@ Please provide more details. JazakAllah Khair!`;
               alignItems: 'center',
               justifyContent: 'center',
               cursor: 'pointer',
-              boxShadow: isFavorite ? '0 0 10px rgba(239, 68, 68, 0.3)' : 'none',
+              color: '#fff',
               outline: 'none'
             }}
-            title={isFavorite ? 'Remove from favorites' : 'Add to favorites'}
+            title={isFavorite ? 'Remove from favorites' : 'Save to favorites'}
           >
-            <Heart
-              size={16}
-              fill={isFavorite ? '#ef4444' : 'none'}
-              strokeWidth={2.2}
-            />
+            <Heart size={15} fill={isFavorite ? '#fff' : 'none'} strokeWidth={2.2} />
           </animated.button>
         </div>
 
-        {/* Avatar Circle + Name & Age */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-          <animated.div
-            style={{
-              ...avatarSpring,
-              width: '52px',
-              height: '52px',
-              borderRadius: '50%',
-              background: genderConfig.iconBg,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              flexShrink: 0,
-              border: `2px solid ${genderConfig.accentBorder}`,
-              position: 'relative'
-            }}
-          >
-            <User size={24} color="#ffffff" />
-            <span
-              style={{
-                position: 'absolute',
-                bottom: '-4px',
-                right: '-4px',
-                background: genderConfig.iconBg,
-                fontSize: '0.58rem',
-                fontWeight: 800,
-                color: '#fff',
-                padding: '1px 5px',
-                borderRadius: 'var(--radius-full)',
-                border: '1px solid rgba(255,255,255,0.6)',
-                letterSpacing: '0.5px'
-              }}
-            >
-              {genderConfig.label}
-            </span>
-          </animated.div>
-
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <h3 
-              className="font-cinzel"
-              style={{
-                fontSize: '1.1rem',
-                fontWeight: 800,
-                color: '#0f172a',
-                letterSpacing: '0.2px',
-                marginBottom: '2px',
-                overflow: 'hidden',
-                textOverflow: 'ellipsis',
-                whiteSpace: 'nowrap'
-              }}
-            >
-              {profile.name}
-            </h3>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.82rem', color: '#64748b' }}>
-              <span style={{ display: 'flex', alignItems: 'center', gap: '3px' }}>
-                <Calendar size={12} /> {profile.age} yrs
-              </span>
-              <span>•</span>
-              <span style={{ display: 'flex', alignItems: 'center', gap: '3px' }}>
-                <Ruler size={12} /> {profile.height}
-              </span>
-            </div>
+        {/* Verified badge */}
+        {profile.verified && (
+          <div style={{
+            position: 'absolute',
+            bottom: '52px',
+            left: '10px',
+            background: '#10b981',
+            color: '#fff',
+            fontSize: '0.65rem',
+            fontWeight: 700,
+            padding: '2px 8px',
+            borderRadius: '999px',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '3px'
+          }}>
+            <ShieldCheck size={10} /> Verified
           </div>
+        )}
+      </div>
+
+      {/* â”€â”€ Info Section below image â”€â”€ */}
+      <div style={{
+        padding: '10px 12px 12px 12px',
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '6px',
+        flex: 1
+      }}>
+        {/* Marital Status + Nationality row */}
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '5px', alignItems: 'center' }}>
+          <span style={{
+            background: '#fef9c3',
+            border: '1px solid #fde68a',
+            color: '#92400e',
+            fontSize: '0.72rem',
+            fontWeight: 700,
+            padding: '2px 8px',
+            borderRadius: '999px',
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '3px'
+          }}>
+            {maritalEmoji} {profile.maritalStatus}
+          </span>
+          <span style={{
+            background: '#f0fdf4',
+            border: '1px solid #bbf7d0',
+            color: '#166534',
+            fontSize: '0.72rem',
+            fontWeight: 700,
+            padding: '2px 8px',
+            borderRadius: '999px'
+          }}>
+            {nationalityFlag} {profile.nationality}
+          </span>
         </div>
-      </div>
 
-      {/* Badges Row: Nationality + Marital Status */}
-      <div
-        style={{
-          padding: '10px 16px',
-          display: 'flex',
-          alignItems: 'center',
-          gap: '6px',
-          flexWrap: 'wrap',
-          zIndex: 1,
-          borderBottom: '1px solid #f1f5f9'
-        }}
-      >
-        {/* Nationality Checked Label */}
-        <span
-          style={{
-            background: nationalityBadge.bg,
-            border: `1px solid ${nationalityBadge.border}`,
-            color: nationalityBadge.text,
-            fontSize: '0.74rem',
-            fontWeight: 700,
-            padding: '3px 9px',
-            borderRadius: 'var(--radius-full)',
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: '4px'
-          }}
-        >
-          <CheckCircle2 size={11} />
-          <span>{nationalityBadge.flag} {nationalityBadge.label}</span>
-        </span>
-
-        {/* Marital Status Checked Label */}
-        <span
-          style={{
-            background: maritalBadge.bg,
-            border: `1px solid ${maritalBadge.border}`,
-            color: maritalBadge.text,
-            fontSize: '0.74rem',
-            fontWeight: 700,
-            padding: '3px 9px',
-            borderRadius: 'var(--radius-full)',
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: '4px'
-          }}
-        >
-          <CheckCircle2 size={11} />
-          <span>{maritalBadge.emoji} {profile.maritalStatus}</span>
-        </span>
-
-        {/* Caste tag */}
-        {profile.caste && profile.caste !== 'General' && (
-          <span
-            style={{
-              background: '#f8fafc',
-              border: '1px solid #e2e8f0',
-              color: '#475569',
-              fontSize: '0.7rem',
-              fontWeight: 600,
-              padding: '3px 8px',
-              borderRadius: 'var(--radius-full)',
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '3px'
-            }}
-          >
-            <User size={10} /> Caste: {profile.caste}
-          </span>
-        )}
-
-        {/* Sect small tag */}
-        {profile.sect && (
-          <span
-            style={{
-              background: '#f8fafc',
-              border: '1px solid #e2e8f0',
-              color: '#64748b',
-              fontSize: '0.7rem',
-              fontWeight: 600,
-              padding: '3px 8px',
-              borderRadius: 'var(--radius-full)',
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '3px'
-            }}
-          >
-            <BookOpen size={10} /> {profile.sect}
-          </span>
-        )}
-      </div>
-
-      {/* Card Content & Info Details with Staggered Animation */}
-      <div 
-        style={{ 
-          padding: '14px 16px 16px 16px',
-          display: 'flex',
-          flexDirection: 'column',
-          flex: 1,
-          justifyContent: 'space-between',
-          zIndex: 1
-        }}
-      >
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '14px' }}>
-          {infoTrail.map((trailStyle, idx) => {
-            const item = infoItems[idx];
-            const Icon = item.icon;
-            return (
-              <animated.div 
-                key={idx} 
-                style={{
-                  ...trailStyle,
-                  display: 'flex', 
-                  alignItems: 'center', 
-                  gap: '8px', 
-                  fontSize: '0.86rem', 
-                  fontWeight: 500,
-                  color: '#1e293b'
-                }}
-              >
-                <Icon size={14} color="var(--gold-primary)" style={{ flexShrink: 0 }} />
-                <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                  {item.text}
-                </span>
-              </animated.div>
-            );
-          })}
-
-          {/* Explicit Siblings Label Row if available */}
-          {profile.siblings && (
-            <div 
-              style={{
-                display: 'flex',
-                alignItems: 'flex-start',
-                gap: '6px',
-                fontSize: '0.82rem',
-                color: '#334155',
-                background: '#fefce8',
-                padding: '6px 10px',
-                borderRadius: 'var(--radius-sm)',
-                border: '1px solid rgba(196, 155, 31, 0.25)'
-              }}
-            >
-              <strong style={{ color: 'var(--text-gold)', flexShrink: 0 }}>Siblings:</strong>
-              <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                {profile.siblings}
-              </span>
-            </div>
+        {/* Location + age row */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.78rem', color: '#475569', flexWrap: 'wrap' }}>
+          {profile.age && (
+            <span style={{ fontWeight: 600, color: '#334155' }}>{profile.age} yrs</span>
+          )}
+          {profile.age && profile.location && <span style={{ color: '#cbd5e1' }}>â€¢</span>}
+          {profile.location && (
+            <span style={{ display: 'flex', alignItems: 'center', gap: '3px' }}>
+              <MapPin size={11} color="#d4af37" /> {profile.location}
+            </span>
           )}
         </div>
 
-        {/* Action Buttons: Chat on WhatsApp & View Details */}
-        <div className="profile-card-actions" style={{ width: '100%', boxSizing: 'border-box' }}>
-          {/* Chat Button -> WhatsApp to Male +97337188557 */}
+        {/* Sect / Caste small tags */}
+        {(profile.sect || (profile.caste && profile.caste !== 'General')) && (
+          <div style={{ display: 'flex', gap: '5px', flexWrap: 'wrap' }}>
+            {profile.sect && (
+              <span style={{ fontSize: '0.68rem', color: '#64748b', background: '#f8fafc', border: '1px solid #e2e8f0', padding: '1px 7px', borderRadius: '999px', fontWeight: 600 }}>
+                {profile.sect}
+              </span>
+            )}
+            {profile.caste && profile.caste !== 'General' && (
+              <span style={{ fontSize: '0.68rem', color: '#64748b', background: '#f8fafc', border: '1px solid #e2e8f0', padding: '1px 7px', borderRadius: '999px', fontWeight: 600 }}>
+                {profile.caste}
+              </span>
+            )}
+          </div>
+        )}
+
+        {/* Actions row */}
+        <div style={{ display: 'flex', gap: '8px', marginTop: '4px' }}>
+          <button
+            onClick={(e) => { e.stopPropagation(); onViewDetails(profile); }}
+            style={{ 
+              flex: 1, 
+              padding: '8px 0', 
+              fontSize: '0.85rem',
+              background: '#f8fafc',
+              border: '1px solid #cbd5e1',
+              color: '#334155',
+              borderRadius: 'var(--radius-md)',
+              cursor: 'pointer',
+              fontWeight: 600,
+              display: 'flex',
+              justifyContent: 'center',
+              alignItems: 'center'
+            }}
+          >
+            Details
+          </button>
           <button
             onClick={handleWhatsAppChat}
             className="btn-whatsapp"
-            title="Chat via WhatsApp with details to Male Coordinator +97337188557"
-            style={{ minWidth: 0, overflow: 'hidden' }}
+            title="Enquire via WhatsApp"
+            style={{ flex: 1, padding: '8px 0', fontSize: '0.85rem', width: 'auto' }}
           >
-            <MessageCircle size={15} style={{ flexShrink: 0 }} />
-            <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>Chat WhatsApp</span>
-          </button>
-
-          {/* View Details Modal */}
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              onViewDetails(profile);
-            }}
-            className="btn-ghost"
-            style={{
-              padding: '8px 14px',
-              fontSize: '0.84rem',
-              flexShrink: 0,
-              whiteSpace: 'nowrap'
-            }}
-          >
-            <Eye size={15} color="var(--gold-primary)" style={{ flexShrink: 0 }} />
-            <span>Details</span>
+            <MessageCircle size={14} style={{ flexShrink: 0 }} />
+            <span>Enquire</span>
           </button>
         </div>
       </div>
     </animated.div>
   );
 }
+
