@@ -297,21 +297,7 @@ export default function SplashIntro({ onEnter, isVisible = true }) {
           Welcome to Qabul Hai
         </h1>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap', justifyContent: 'center' }}>
-          <span className="gold-badge" style={{ fontSize: '0.72rem', padding: '3px 10px', background: 'rgba(212, 175, 55, 0.18)', borderColor: '#fae182', color: '#fae182' }}>
-            <ShieldCheck size={13} /> 100% Verified Matrimonial Services
-          </span>
-          <span className="gold-badge" style={{ background: 'rgba(59, 130, 246, 0.2)', borderColor: 'rgba(59, 130, 246, 0.5)', color: '#93c5fd', fontSize: '0.72rem', padding: '3px 10px' }}>
-            <Heart size={12} fill="#93c5fd" /> Bahrain • GCC • Expats
-          </span>
-        </div>
 
-        
-
-
-        <p style={{ color: '#cbd5e1', fontSize: 'clamp(0.75rem, 2.2vw, 0.88rem)', maxWidth: '520px', fontStyle: 'italic', lineHeight: 1.5, wordBreak: 'break-word' }}>
-          "And among His signs is that He created for you mates from among yourselves, that you may dwell in tranquility with them, and He has put love and mercy between your hearts."
-        </p>
       </animated.div>
 
       {/* Enter Button & Progress */}
