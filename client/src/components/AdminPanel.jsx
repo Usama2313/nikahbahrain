@@ -404,13 +404,8 @@ export default function AdminPanel({ onBackToPortal }) {
             </button>
           </form>
 
-          <div style={{ width: '100%', background: '#fefce8', border: '1px dashed rgba(196, 155, 31, 0.45)', borderRadius: 'var(--radius-md)', padding: '12px 14px', fontSize: '0.78rem', color: '#334155', display: 'flex', flexDirection: 'column', gap: '4px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--text-gold)', fontWeight: 700 }}>
-              <ShieldCheck size={14} /> Official Admin Credentials
-            </div>
-            <div><strong>Username:</strong> <code style={{ color: '#0f172a', background: 'rgba(0,0,0,0.06)', padding: '2px 6px', borderRadius: '4px' }}>admin</code></div>
-            <div><strong>Password:</strong> <code style={{ color: '#0f172a', background: 'rgba(0,0,0,0.06)', padding: '2px 6px', borderRadius: '4px' }}>NikahBahrain@2026</code></div>
-          </div>
+
+
         </div>
       </animated.div>
     );
@@ -814,7 +809,61 @@ export default function AdminPanel({ onBackToPortal }) {
                                   <button onClick={() => handleDeleteProfile(p.id)} className="btn-ghost" style={{ padding: '5px 9px', color: '#ef4444' }} title="Delete">
                                     <Trash2 size={13} />
                                   </button>
+                                  <button
+                                    title="Download Profile"
+                                    className="btn-ghost"
+                                    style={{ padding: '5px 9px', color: '#3b82f6', fontSize: '0.8rem', fontWeight: 700 }}
+                                    onClick={() => {
+                                      const lines = [
+                                        `━━━━━━━━━━━━━━━━━━━━━━━━━━━━`,
+                                        `QABUL HAI — NIKAH BAHRAIN`,
+                                        `━━━━━━━━━━━━━━━━━━━━━━━━━━━━`,
+                                        `Profile ID   : ${p.id}`,
+                                        `Name         : ${p.name}`,
+                                        `Gender       : ${p.gender === 'male' ? 'Male (Groom)' : 'Female (Bride)'}`,
+                                        `Age          : ${p.age} years`,
+                                        `Marital      : ${p.maritalStatus}`,
+                                        `Height       : ${p.height || 'N/A'}`,
+                                        `Nationality  : ${p.nationality}`,
+                                        `Sect         : ${p.sect || 'N/A'}`,
+                                        `Caste        : ${p.caste || 'N/A'}`,
+                                        `Education    : ${p.education || 'N/A'}`,
+                                        `Profession   : ${p.profession || 'N/A'}`,
+                                        `Location     : ${p.location || 'N/A'}`,
+                                        `Residence    : ${p.residence || 'N/A'}`,
+                                        `Languages    : ${p.languages || 'N/A'}`,
+                                        ``,
+                                        `── Family ──────────────────`,
+                                        `Father       : ${p.father || 'N/A'}`,
+                                        `Mother       : ${p.mother || 'N/A'}`,
+                                        `Siblings     : ${p.siblings || 'N/A'}`,
+                                        `Family       : ${p.family || 'N/A'}`,
+                                        ``,
+                                        `── About ───────────────────`,
+                                        p.about || 'N/A',
+                                        ``,
+                                        `── Requirements ────────────`,
+                                        p.requirements || 'N/A',
+                                        ``,
+                                        `Contact      : ${p.contact || '+973 3718 8557'}`,
+                                        `Instagram    : ${p.instagramPostUrl || 'https://www.instagram.com/nikah_bahrain/'}`,
+                                        `Verified     : ${p.verified ? '✓ Yes' : '✗ No'}`,
+                                        `━━━━━━━━━━━━━━━━━━━━━━━━━━━━`,
+                                      ].join('\n');
+                                      const blob = new Blob([lines], { type: 'text/plain' });
+                                      const a = document.createElement('a');
+                                      a.href = URL.createObjectURL(blob);
+                                      a.download = `${p.id}_profile.txt`;
+                                      document.body.appendChild(a);
+                                      a.click();
+                                      document.body.removeChild(a);
+                                      URL.revokeObjectURL(a.href);
+                                    }}
+                                  >
+                                    ⬇
+                                  </button>
                                 </div>
+
                               </td>
                             </tr>
                           ))

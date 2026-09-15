@@ -57,6 +57,9 @@ export default function App() {
   // 5. Search query
   const [searchQuery, setSearchQuery] = useState('');
 
+  // 5b. Nationality filter
+  const [activeNationality, setActiveNationality] = useState('all');
+
   // 6. Pagination State
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(12);
@@ -134,7 +137,7 @@ export default function App() {
   // Reset pagination to page 1 whenever any filter or tab changes
   useEffect(() => {
     setCurrentPage(1);
-  }, [activeTab, activeCategory, searchQuery]);
+  }, [activeTab, activeCategory, searchQuery, activeNationality]);
 
   // Toggle favorite with unique visitor ID
   const handleToggleFavorite = async (profileId) => {
@@ -213,7 +216,12 @@ export default function App() {
       result = result.filter((p) => p.maritalStatus === 'Widowed');
     }
 
-    // 3. Search query
+    // 3. Nationality filter
+    if (activeNationality && activeNationality !== 'all') {
+      result = result.filter((p) => p.nationality && p.nationality.toLowerCase().includes(activeNationality.toLowerCase()));
+    }
+
+    // 4. Search query
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase();
       result = result.filter(
@@ -230,7 +238,7 @@ export default function App() {
     }
 
     return result;
-  }, [profiles, activeTab, activeCategory, searchQuery, favorites]);
+  }, [profiles, activeTab, activeCategory, searchQuery, activeNationality, favorites]);
 
   // Compute pagination
   const totalPages = Math.max(1, Math.ceil(filteredProfiles.length / itemsPerPage));
@@ -325,6 +333,9 @@ export default function App() {
               onSelectCategory={(catId) => setActiveCategory(catId)}
               activeTab={activeTab}
               counts={categoryCounts}
+              activeNationality={activeNationality}
+              onSelectNationality={(nat) => setActiveNationality(nat)}
+              onSelectGender={(gender) => handleTabChange(gender)}
             />
 
             {/* 3B. Total Proposals Display & Clean Search Bar */}

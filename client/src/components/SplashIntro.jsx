@@ -3,7 +3,7 @@ import { useSpring, animated, config } from '@react-spring/web';
 import { Heart, ShieldCheck } from '../icons';
 import logoImg from '../assets/logo.jpg';
 
-const READING_DURATION_MS = 14000; // 14 seconds for comfortable reading
+const READING_DURATION_MS = 2000; // Auto-dismiss after 2 seconds
 
 export default function SplashIntro({ onEnter, isVisible = true }) {
   const [isExiting, setIsExiting] = useState(false);
@@ -20,21 +20,17 @@ export default function SplashIntro({ onEnter, isVisible = true }) {
     if (!isVisible || isExiting) return;
     startTimeRef.current = Date.now() - elapsedRef.current;
     const interval = setInterval(() => {
-      if (!isPaused) {
-        const elapsed = Date.now() - startTimeRef.current;
-        elapsedRef.current = elapsed;
-        const pct = Math.min(100, (elapsed / READING_DURATION_MS) * 100);
-        setProgress(pct);
-        if (elapsed >= READING_DURATION_MS) {
-          clearInterval(interval);
-          setIsExiting(true);
-        }
-      } else {
-        startTimeRef.current = Date.now() - elapsedRef.current;
+      const elapsed = Date.now() - startTimeRef.current;
+      elapsedRef.current = elapsed;
+      const pct = Math.min(100, (elapsed / READING_DURATION_MS) * 100);
+      setProgress(pct);
+      if (elapsed >= READING_DURATION_MS) {
+        clearInterval(interval);
+        setIsExiting(true);
       }
     }, 50);
     return () => clearInterval(interval);
-  }, [isVisible, isExiting, isPaused]);
+  }, [isVisible, isExiting]);
 
   // Logo spring
   const logoSpring = useSpring({
@@ -135,8 +131,6 @@ export default function SplashIntro({ onEnter, isVisible = true }) {
         touchAction: 'none',
         cursor: 'grab'
       }}
-      onMouseEnter={() => setIsPaused(true)}
-      onMouseLeave={() => setIsPaused(false)}
       onTouchStart={handlePointerDown}
       onTouchMove={handlePointerMove}
       onTouchEnd={handlePointerUp}
