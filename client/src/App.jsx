@@ -92,6 +92,26 @@ export default function App() {
     };
   }, []);
 
+  // Helper to merge admin custom created/edited profiles
+  const getMergedProfiles = (baseList) => {
+    try {
+      const custom = JSON.parse(localStorage.getItem('nikah_custom_profiles') || '[]');
+      if (!Array.isArray(custom) || custom.length === 0) return baseList;
+      const map = new Map();
+      for (const c of custom) {
+        if (c && c.id) map.set(c.id, c);
+      }
+      for (const b of baseList) {
+        if (b && b.id) {
+          if (!map.has(b.id)) map.set(b.id, b);
+        }
+      }
+      return Array.from(map.values());
+    } catch (e) {
+      return baseList;
+    }
+  };
+
   // Fetch initial profiles & visitor favorites
   const fetchProfiles = async () => {
     try {
@@ -100,15 +120,15 @@ export default function App() {
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
       if (data.success && Array.isArray(data.profiles) && data.profiles.length > 0) {
-        setProfiles(data.profiles);
+        setProfiles(getMergedProfiles(data.profiles));
+        return;
       }
     } catch (err) {
       console.warn('Live API sync unavailable, displaying bundled verified profile registry:', err.message);
-      // Keep verified fallback profiles active
-      setProfiles((prev) => (prev && prev.length > 0 ? prev : fallbackProfiles));
     } finally {
       setLoading(false);
     }
+    setProfiles(getMergedProfiles(fallbackProfiles));
   };
 
   // Trigger Instagram sync — works on all environments with clean fallback
@@ -395,6 +415,9 @@ export default function App() {
               setIsAdminActive(false);
               window.history.pushState(null, '', '/');
             }} 
+            onProfilesChange={(updatedProfiles) => {
+              setProfiles(updatedProfiles);
+            }}
           />
         ) : (
           /* Matrimonial Feed View */

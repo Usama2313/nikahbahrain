@@ -88,7 +88,7 @@ const SIDEBAR_ITEMS = [
 // ─── Items per page for admin table ──────────────────────────────────────────
 const ADMIN_PAGE_SIZE = 10;
 
-export default function AdminPanel({ onBackToPortal }) {
+export default function AdminPanel({ onBackToPortal, onProfilesChange }) {
   // Auth
   const [isAuthenticated, setIsAuthenticated] = useState(() =>
     sessionStorage.getItem('nikah_admin_authenticated') === 'true'
@@ -182,6 +182,27 @@ export default function AdminPanel({ onBackToPortal }) {
     setIsFormOpen(true);
   };
 
+  const saveCustomProfileToStorage = (profileObj) => {
+    try {
+      const existing = JSON.parse(localStorage.getItem('nikah_custom_profiles') || '[]');
+      const filtered = existing.filter(p => p.id !== profileObj.id);
+      filtered.unshift(profileObj);
+      localStorage.setItem('nikah_custom_profiles', JSON.stringify(filtered));
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  const removeCustomProfileFromStorage = (profileId) => {
+    try {
+      const existing = JSON.parse(localStorage.getItem('nikah_custom_profiles') || '[]');
+      const filtered = existing.filter(p => p.id !== profileId);
+      localStorage.setItem('nikah_custom_profiles', JSON.stringify(filtered));
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
   const handleSaveAdminProfile = async (e) => {
     e.preventDefault();
     setIsSaving(true);
@@ -208,7 +229,12 @@ export default function AdminPanel({ onBackToPortal }) {
           console.warn('API update fallback:', apiErr.message);
         }
 
-        setProfiles((prev) => prev.map((p) => (p.id === editingProfile.id ? updated : p)));
+        saveCustomProfileToStorage(updated);
+        setProfiles((prev) => {
+          const next = prev.map((p) => (p.id === editingProfile.id ? updated : p));
+          if (onProfilesChange) onProfilesChange(next);
+          return next;
+        });
         showNotification(`✓ Updated profile ${editingProfile.id} successfully!`);
         setIsFormOpen(false);
       } else {
@@ -257,7 +283,12 @@ export default function AdminPanel({ onBackToPortal }) {
           console.warn('API create fallback:', apiErr.message);
         }
 
-        setProfiles((prev) => [newProf, ...prev]);
+        saveCustomProfileToStorage(newProf);
+        setProfiles((prev) => {
+          const next = [newProf, ...prev];
+          if (onProfilesChange) onProfilesChange(next);
+          return next;
+        });
         showNotification(`✓ Published new profile ${newProf.id} successfully!`);
         setIsFormOpen(false);
       }
@@ -364,10 +395,15 @@ export default function AdminPanel({ onBackToPortal }) {
 
   const handleDeleteProfile = async (id) => {
     if (!window.confirm(`Remove profile ${id}?`)) return;
+    removeCustomProfileFromStorage(id);
+    setProfiles((prev) => {
+      const next = prev.filter(p => p.id !== id);
+      if (onProfilesChange) onProfilesChange(next);
+      return next;
+    });
+    showNotification(`Profile ${id} removed.`);
     try {
-      const res = await fetch(`${API_BASE}/profiles/${id}`, { method: 'DELETE' });
-      const data = await res.json();
-      if (data.success) { showNotification(`Profile ${id} removed.`); fetchData(); }
+      await fetch(`${API_BASE}/profiles/${id}`, { method: 'DELETE' });
     } catch (err) { console.error(err); }
   };
 
