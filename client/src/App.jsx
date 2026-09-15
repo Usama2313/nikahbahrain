@@ -69,6 +69,10 @@ export default function App() {
   const [selectedProfile, setSelectedProfile] = useState(null);
   const [isCreateProfileOpen, setIsCreateProfileOpen] = useState(false);
 
+  // 8. Instagram sync state
+  const [isSyncingIG, setIsSyncingIG] = useState(false);
+  const [syncMessage, setSyncMessage] = useState('');
+
   // Handle URL hash / route for /admin
   useEffect(() => {
     const handleLocationChange = () => {
@@ -107,6 +111,29 @@ export default function App() {
     }
   };
 
+  // Trigger Instagram sync — works when local Chrome is available
+  const syncInstagram = async (silent = false) => {
+    if (isSyncingIG) return;
+    setIsSyncingIG(true);
+    if (!silent) setSyncMessage('Syncing latest Instagram posts…');
+    try {
+      const res = await fetch(`${API_BASE}/sync-instagram`, { method: 'POST' });
+      const data = await res.json();
+      if (data.success) {
+        setSyncMessage(`✓ ${data.freshlyFetched || 0} new posts loaded!`);
+        // Refresh profiles after successful sync
+        await fetchProfiles();
+      } else {
+        if (!silent) setSyncMessage(data.message || 'Sync unavailable on this server.');
+      }
+    } catch (err) {
+      if (!silent) setSyncMessage('Instagram sync not available in this environment.');
+    } finally {
+      setIsSyncingIG(false);
+      setTimeout(() => setSyncMessage(''), 4000);
+    }
+  };
+
   const fetchFavorites = async () => {
     try {
       const res = await fetch(`${API_BASE}/favorites/${visitorId}`);
@@ -124,6 +151,8 @@ export default function App() {
   useEffect(() => {
     fetchProfiles();
     fetchFavorites();
+    // Attempt Instagram sync silently on page load
+    syncInstagram(true);
   }, [visitorId]);
 
   // Auto-refresh profiles every 30 seconds
@@ -297,6 +326,44 @@ export default function App() {
 
   return (
     <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
+      {/* Floating Instagram Sync Button */}
+      {!isAdminActive && (
+        <div style={{ position: 'fixed', bottom: '24px', right: '24px', zIndex: 500, display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '8px' }}>
+          {syncMessage && (
+            <div style={{ background: 'rgba(16,185,129,0.95)', color: '#fff', padding: '8px 16px', borderRadius: '9999px', fontSize: '0.8rem', fontWeight: 600, boxShadow: '0 4px 20px rgba(0,0,0,0.3)', maxWidth: '260px', textAlign: 'center', backdropFilter: 'blur(8px)' }}>
+              {syncMessage}
+            </div>
+          )}
+          <button
+            id="sync-instagram-btn"
+            onClick={() => syncInstagram(false)}
+            disabled={isSyncingIG}
+            title="Sync latest Instagram posts"
+            style={{
+              width: '52px',
+              height: '52px',
+              borderRadius: '50%',
+              background: isSyncingIG
+                ? 'linear-gradient(135deg,#94a3b8,#64748b)'
+                : 'linear-gradient(135deg,#f09433 0%,#e6683c 25%,#dc2743 50%,#cc2366 75%,#bc1888 100%)',
+              border: 'none',
+              color: '#fff',
+              fontSize: '1.4rem',
+              cursor: isSyncingIG ? 'not-allowed' : 'pointer',
+              boxShadow: '0 4px 20px rgba(220,39,67,0.5)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              transition: 'transform 0.2s ease, box-shadow 0.2s ease',
+              animation: isSyncingIG ? 'spin 1s linear infinite' : 'none',
+            }}
+            onMouseEnter={e => { if (!isSyncingIG) { e.currentTarget.style.transform = 'scale(1.1)'; e.currentTarget.style.boxShadow = '0 8px 28px rgba(220,39,67,0.7)'; } }}
+            onMouseLeave={e => { e.currentTarget.style.transform = 'scale(1)'; e.currentTarget.style.boxShadow = '0 4px 20px rgba(220,39,67,0.5)'; }}
+          >
+            {isSyncingIG ? '⏳' : '📸'}
+          </button>
+        </div>
+      )}
       {/* 1. Cinematic Splash Intro Screen (optional) */}
       <SplashIntro 
         isVisible={showSplash} 

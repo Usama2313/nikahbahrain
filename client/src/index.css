@@ -787,3 +787,13 @@ input:focus, textarea:focus, select:focus {
   box-shadow: 0 0 0 2px rgba(196, 155, 31, 0.25) !important;
   outline: none !important;
 }
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+@keyframes pulseGlow {
+  0%, 100% { box-shadow: 0 0 15px rgba(212,175,55,0.3); }
+  50% { box-shadow: 0 0 30px rgba(212,175,55,0.6); }
+}

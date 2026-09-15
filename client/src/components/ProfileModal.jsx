@@ -170,82 +170,93 @@ Please share requirements & family verification steps.`;
           <X size={18} />
         </button>
 
-        {/* Header Section with Avatar */}
+        {/* Header Section with Full Image */}
         <div 
           className="modal-header"
           style={{ 
-            padding: '30px 24px 20px 24px',
-            background: genderConfig.headerBg,
-            borderBottom: '1px solid var(--gold-border)',
-            textAlign: 'center',
             position: 'relative',
             overflow: 'hidden'
           }}
         >
-          {/* Avatar */}
-          <animated.div
-            style={{
-              ...avatarSpring,
-              width: '80px',
-              height: '80px',
-              borderRadius: '50%',
-              background: genderConfig.gradient,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              margin: '0 auto 12px auto',
-              border: '3px solid #ffffff',
-              boxShadow: `0 6px 20px ${profile.gender === 'male' ? 'rgba(59, 130, 246, 0.35)' : 'rgba(236, 72, 153, 0.35)'}`,
-              position: 'relative'
-            }}
-          >
-            <User size={38} color="#ffffff" />
-          </animated.div>
-
-          <h2 
-            className="font-cinzel"
-            style={{ fontSize: '1.6rem', fontWeight: 800, color: '#0f172a', marginBottom: '6px' }}
-          >
-            {profile.name}
-          </h2>
-
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px', color: '#475569', fontSize: '0.88rem', flexWrap: 'wrap' }}>
-            <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-              <Calendar size={14} /> {profile.age} Years
-            </span>
-            <span>•</span>
-            <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-              <Ruler size={14} /> {profile.height}
-            </span>
-            <span>•</span>
-            <span style={{ 
-              color: genderConfig.accentColor,
-              fontWeight: 800
-            }}>
-              {genderConfig.label}
-            </span>
-          </div>
-
-          {/* ID & Verified Badges */}
-          <div style={{ display: 'flex', justifyContent: 'center', gap: '8px', marginTop: '12px', flexWrap: 'wrap' }}>
-            <span className="gold-badge" style={{ background: '#fefce8', color: 'var(--text-gold)' }}>
-              <ShieldCheck size={13} /> {profile.id}
-            </span>
-            <span 
-              style={{
-                background: '#10b981',
-                color: '#ffffff',
-                fontSize: '0.72rem',
-                fontWeight: 700,
-                padding: '4px 10px',
-                borderRadius: 'var(--radius-full)',
+          {/* Full Profile / Flyer Image */}
+          {profile.image && (
+            <animated.div style={avatarSpring}>
+              <div style={{
+                width: '100%',
+                maxHeight: '500px',
+                background: '#000',
                 display: 'flex',
                 alignItems: 'center',
-                gap: '4px'
-              }}
+                justifyContent: 'center',
+                overflow: 'hidden',
+              }}>
+                <img
+                  src={profile.image}
+                  alt={`${profile.id} - ${profile.name}`}
+                  style={{
+                    width: '100%',
+                    maxHeight: '500px',
+                    objectFit: 'contain',
+                    display: 'block',
+                  }}
+                  onError={(e) => { e.target.style.display = 'none'; }}
+                />
+              </div>
+            </animated.div>
+          )}
+
+          {/* Name & Basic Info below image */}
+          <div style={{
+            padding: '20px 24px 16px 24px',
+            background: genderConfig.headerBg,
+            borderBottom: '1px solid var(--gold-border)',
+            textAlign: 'center',
+          }}>
+            <h2 
+              className="font-cinzel"
+              style={{ fontSize: '1.6rem', fontWeight: 800, color: '#0f172a', marginBottom: '6px' }}
             >
-              <CheckCircle2 size={12} /> 100% Verified
-            </span>
+              {profile.name}
+            </h2>
+
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px', color: '#475569', fontSize: '0.88rem', flexWrap: 'wrap' }}>
+              <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                <Calendar size={14} /> {profile.age} Years
+              </span>
+              <span>•</span>
+              <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                <Ruler size={14} /> {profile.height}
+              </span>
+              <span>•</span>
+              <span style={{ 
+                color: genderConfig.accentColor,
+                fontWeight: 800
+              }}>
+                {genderConfig.label}
+              </span>
+            </div>
+
+            {/* ID & Verified Badges */}
+            <div style={{ display: 'flex', justifyContent: 'center', gap: '8px', marginTop: '12px', flexWrap: 'wrap' }}>
+              <span className="gold-badge" style={{ background: '#fefce8', color: 'var(--text-gold)' }}>
+                <ShieldCheck size={13} /> {profile.id}
+              </span>
+              <span 
+                style={{
+                  background: '#10b981',
+                  color: '#ffffff',
+                  fontSize: '0.72rem',
+                  fontWeight: 700,
+                  padding: '4px 10px',
+                  borderRadius: 'var(--radius-full)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '4px'
+                }}
+              >
+                <CheckCircle2 size={12} /> 100% Verified
+              </span>
+            </div>
           </div>
         </div>
 
