@@ -101,7 +101,7 @@ function saveFavoritesMap(map) {
 }
 
 // 1. GET /api/profiles
-app.get('/api/profiles', (req, res) => {
+app.get(['/api/profiles', '/profiles'], (req, res) => {
   let profiles = getProfiles();
   const { category, nationality, maritalStatus, search, visitorId, favoritesOnly } = req.query;
 
@@ -257,7 +257,7 @@ function buildProfileObject(reqBody, profiles) {
 }
 
 // 3. POST /api/profiles (Add new profile from Form or Admin)
-app.post('/api/profiles', (req, res) => {
+app.post(['/api/profiles', '/profiles'], (req, res) => {
   const profiles = getProfiles();
   const newProfile = buildProfileObject(req.body, profiles);
 
@@ -272,7 +272,7 @@ app.post('/api/profiles', (req, res) => {
 });
 
 // 3b. POST /api/google-form-submission (Google Form Webhook & Response Handler)
-app.post(['/api/google-form-submission', '/api/webhook/google-form'], (req, res) => {
+app.post(['/api/google-form-submission', '/google-form-submission', '/api/webhook/google-form', '/webhook/google-form'], (req, res) => {
   try {
     const profiles = getProfiles();
     const payload = req.body || {};
@@ -321,7 +321,7 @@ app.post(['/api/google-form-submission', '/api/webhook/google-form'], (req, res)
 
 
 // 4. PUT /api/profiles/:id (Admin update)
-app.put('/api/profiles/:id', (req, res) => {
+app.put(['/api/profiles/:id', '/profiles/:id'], (req, res) => {
   const profiles = getProfiles();
   const index = profiles.findIndex((p) => p.id === req.params.id);
   if (index === -1) {
@@ -339,7 +339,7 @@ app.put('/api/profiles/:id', (req, res) => {
 });
 
 // 5. DELETE /api/profiles/:id (Admin delete)
-app.delete('/api/profiles/:id', (req, res) => {
+app.delete(['/api/profiles/:id', '/profiles/:id'], (req, res) => {
   let profiles = getProfiles();
   const exists = profiles.some((p) => p.id === req.params.id);
   if (!exists) {
@@ -352,7 +352,7 @@ app.delete('/api/profiles/:id', (req, res) => {
 });
 
 // 6. GET /api/stats (Admin Dashboard Analytics)
-app.get('/api/stats', (req, res) => {
+app.get(['/api/stats', '/stats'], (req, res) => {
   const profiles = getProfiles();
   
   const stats = {
@@ -380,7 +380,7 @@ app.get('/api/stats', (req, res) => {
 });
 
 // 6b. POST /api/sync-instagram (Instagram Sync Agent)
-app.post('/api/sync-instagram', async (req, res) => {
+app.post(['/api/sync-instagram', '/sync-instagram'], async (req, res) => {
   try {
     const { syncLiveInstagramPosts } = await import('./scripts/sync_live_instagram.js');
     const limit = Number(req.query.limit) || 25;
