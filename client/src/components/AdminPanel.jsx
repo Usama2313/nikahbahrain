@@ -116,6 +116,112 @@ export default function AdminPanel({ onBackToPortal }) {
   const [searchQuery, setSearchQuery] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
 
+  // Create / Edit Profile Modal state
+  const DEFAULT_FORM = {
+    name: '',
+    gender: 'male',
+    maritalStatus: 'Never Married',
+    nationality: 'Pakistani',
+    age: 25,
+    height: `5'8"`,
+    sect: 'Sunni',
+    caste: 'General',
+    education: 'Bachelor Degree',
+    profession: 'Professional',
+    salary: 'Confidential / As per discussion',
+    location: 'Bahrain',
+    residence: 'Bahrain / GCC',
+    siblings: '',
+    father: '',
+    mother: '',
+    family: '',
+    languages: 'English, Urdu, Arabic',
+    about: '',
+    requirements: 'Practicing Muslim candidate with good character.',
+    contact: '+973 3718 8557',
+    image: ''
+  };
+
+  const [isFormOpen, setIsFormOpen] = useState(false);
+  const [editingProfile, setEditingProfile] = useState(null);
+  const [formData, setFormData] = useState(DEFAULT_FORM);
+  const [isSaving, setIsSaving] = useState(false);
+
+  const handleOpenCreate = () => {
+    setEditingProfile(null);
+    setFormData(DEFAULT_FORM);
+    setIsFormOpen(true);
+  };
+
+  const handleOpenEdit = (p) => {
+    setEditingProfile(p);
+    setFormData({
+      name: p.name || '',
+      gender: p.gender || 'male',
+      maritalStatus: p.maritalStatus || 'Never Married',
+      nationality: p.nationality || 'Pakistani',
+      age: p.age || 25,
+      height: p.height || `5'8"`,
+      sect: p.sect || 'Sunni',
+      caste: p.caste || 'General',
+      education: p.education || '',
+      profession: p.profession || '',
+      salary: p.salary || '',
+      location: p.location || 'Bahrain',
+      residence: p.residence || 'Bahrain / GCC',
+      siblings: p.siblings || '',
+      father: p.father || '',
+      mother: p.mother || '',
+      family: p.family || '',
+      languages: p.languages || 'English, Urdu',
+      about: p.about || '',
+      requirements: p.requirements || '',
+      contact: p.contact || '+973 3718 8557',
+      image: p.image || ''
+    });
+    setIsFormOpen(true);
+  };
+
+  const handleSaveAdminProfile = async (e) => {
+    e.preventDefault();
+    setIsSaving(true);
+    try {
+      if (editingProfile) {
+        const res = await fetch(`${API_BASE}/profiles/${editingProfile.id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(formData)
+        });
+        const data = await res.json();
+        if (data.success) {
+          showNotification(`Updated profile ${editingProfile.id} successfully!`);
+          setIsFormOpen(false);
+          fetchData();
+        } else {
+          showNotification(data.message || 'Failed to update profile.');
+        }
+      } else {
+        const res = await fetch(`${API_BASE}/profiles`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(formData)
+        });
+        const data = await res.json();
+        if (data.success) {
+          showNotification(`Created new profile ${data.profile?.id || ''}!`);
+          setIsFormOpen(false);
+          fetchData();
+        } else {
+          showNotification(data.message || 'Failed to create profile.');
+        }
+      }
+    } catch (err) {
+      showNotification(`Error: ${err.message}`);
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
 
   const [formResponses, setFormResponses] = useState([]);
   const [responsesLoading, setResponsesLoading] = useState(false);
@@ -673,12 +779,35 @@ export default function AdminPanel({ onBackToPortal }) {
             {showTable && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
                 {/* Table header */}
-                <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px' }}>
                   <div>
                     <h2 className="font-cinzel" style={{ fontSize: '1.3rem', color: 'var(--gold-light)', fontWeight: 800 }}>{sectionLabel}</h2>
                     <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginTop: '2px' }}>{tableProfiles.length} record{tableProfiles.length !== 1 ? 's' : ''} found</p>
                   </div>
-                  <span className="gold-badge">{tableProfiles.length} Active Records</span>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    <button
+                      onClick={handleOpenCreate}
+                      style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '6px',
+                        padding: '8px 16px',
+                        borderRadius: '9999px',
+                        background: 'linear-gradient(135deg, #fae182 0%, #d4af37 50%, #b8860b 100%)',
+                        color: '#0d251c',
+                        fontWeight: 800,
+                        fontSize: '0.8rem',
+                        border: 'none',
+                        cursor: 'pointer',
+                        boxShadow: '0 4px 14px rgba(212, 175, 55, 0.4)',
+                        whiteSpace: 'nowrap'
+                      }}
+                    >
+                      <PlusCircle size={15} />
+                      Add New Profile
+                    </button>
+                    <span className="gold-badge">{tableProfiles.length} Active Records</span>
+                  </div>
                 </div>
 
                 {/* Search bar */}
@@ -806,6 +935,9 @@ export default function AdminPanel({ onBackToPortal }) {
                                   >
                                     <MessageCircle size={13} color="#25D366" />
                                   </a>
+                                  <button onClick={() => handleOpenEdit(p)} className="btn-ghost" style={{ padding: '5px 9px', color: '#f59e0b' }} title="Edit Profile">
+                                    <Edit size={13} />
+                                  </button>
                                   <button onClick={() => handleDeleteProfile(p.id)} className="btn-ghost" style={{ padding: '5px 9px', color: '#ef4444' }} title="Delete">
                                     <Trash2 size={13} />
                                   </button>
@@ -980,6 +1112,149 @@ export default function AdminPanel({ onBackToPortal }) {
           </div>
         </main>
       </div>
+
+      {/* ════ ADMIN CREATE / EDIT PROFILE MODAL ════ */}
+      {isFormOpen && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: 'rgba(15, 23, 42, 0.75)',
+          backdropFilter: 'blur(8px)',
+          zIndex: 9999,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          padding: '20px',
+        }}>
+          <div style={{
+            background: '#ffffff',
+            borderRadius: '16px',
+            width: '100%',
+            maxWidth: '680px',
+            maxHeight: '90vh',
+            overflowY: 'auto',
+            boxShadow: '0 25px 50px -12px rgba(0,0,0,0.35)',
+            border: '1.5px solid var(--gold-border)',
+            padding: '24px'
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid #e2e8f0', paddingBottom: '14px', marginBottom: '20px' }}>
+              <h3 className="font-cinzel" style={{ fontSize: '1.25rem', fontWeight: 800, color: '#0f172a' }}>
+                {editingProfile ? `Edit Profile (${editingProfile.id})` : '➕ Add New Groom / Bride Profile'}
+              </h3>
+              <button onClick={() => setIsFormOpen(false)} className="btn-ghost" style={{ padding: '6px', borderRadius: '50%' }}>
+                <X size={18} />
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveAdminProfile} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
+              <div style={{ gridColumn: 'span 2' }}>
+                <label style={{ fontSize: '0.78rem', fontWeight: 700, color: '#475569', display: 'block', marginBottom: '4px' }}>Full Name / Profile Title *</label>
+                <input required type="text" value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value })} placeholder="e.g. NPF-230 (Groom) or Candidate Name" style={{ width: '100%', padding: '9px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '0.85rem' }} />
+              </div>
+
+              <div>
+                <label style={{ fontSize: '0.78rem', fontWeight: 700, color: '#475569', display: 'block', marginBottom: '4px' }}>Gender *</label>
+                <select value={formData.gender} onChange={e => setFormData({ ...formData, gender: e.target.value })} style={{ width: '100%', padding: '9px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '0.85rem' }}>
+                  <option value="male">Male (Groom)</option>
+                  <option value="female">Female (Bride)</option>
+                </select>
+              </div>
+
+              <div>
+                <label style={{ fontSize: '0.78rem', fontWeight: 700, color: '#475569', display: 'block', marginBottom: '4px' }}>Marital Status *</label>
+                <select value={formData.maritalStatus} onChange={e => setFormData({ ...formData, maritalStatus: e.target.value })} style={{ width: '100%', padding: '9px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '0.85rem' }}>
+                  <option value="Never Married">Never Married</option>
+                  <option value="Divorced">Divorced</option>
+                  <option value="2nd Marriage">2nd Marriage</option>
+                  <option value="Widowed">Widowed</option>
+                </select>
+              </div>
+
+              <div>
+                <label style={{ fontSize: '0.78rem', fontWeight: 700, color: '#475569', display: 'block', marginBottom: '4px' }}>Nationality *</label>
+                <select value={formData.nationality} onChange={e => setFormData({ ...formData, nationality: e.target.value })} style={{ width: '100%', padding: '9px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '0.85rem' }}>
+                  <option value="Pakistani">Pakistani</option>
+                  <option value="Indian">Indian</option>
+                  <option value="Bahraini">Bahraini</option>
+                  <option value="Saudi Arabia">Saudi Arabia</option>
+                  <option value="Emirati">Emirati</option>
+                  <option value="GCC / Other">GCC / Other</option>
+                </select>
+              </div>
+
+              <div>
+                <label style={{ fontSize: '0.78rem', fontWeight: 700, color: '#475569', display: 'block', marginBottom: '4px' }}>Age *</label>
+                <input required type="number" min="18" max="80" value={formData.age} onChange={e => setFormData({ ...formData, age: Number(e.target.value) })} style={{ width: '100%', padding: '9px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '0.85rem' }} />
+              </div>
+
+              <div>
+                <label style={{ fontSize: '0.78rem', fontWeight: 700, color: '#475569', display: 'block', marginBottom: '4px' }}>Height</label>
+                <input type="text" value={formData.height} onChange={e => setFormData({ ...formData, height: e.target.value })} placeholder="e.g. 5'10&quot;" style={{ width: '100%', padding: '9px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '0.85rem' }} />
+              </div>
+
+              <div>
+                <label style={{ fontSize: '0.78rem', fontWeight: 700, color: '#475569', display: 'block', marginBottom: '4px' }}>Religious Sect</label>
+                <input type="text" value={formData.sect} onChange={e => setFormData({ ...formData, sect: e.target.value })} placeholder="e.g. Sunni / Ahle Sunnat" style={{ width: '100%', padding: '9px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '0.85rem' }} />
+              </div>
+
+              <div>
+                <label style={{ fontSize: '0.78rem', fontWeight: 700, color: '#475569', display: 'block', marginBottom: '4px' }}>Caste / Sub-caste</label>
+                <input type="text" value={formData.caste} onChange={e => setFormData({ ...formData, caste: e.target.value })} placeholder="e.g. Syed, Rajput, Arain, General" style={{ width: '100%', padding: '9px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '0.85rem' }} />
+              </div>
+
+              <div>
+                <label style={{ fontSize: '0.78rem', fontWeight: 700, color: '#475569', display: 'block', marginBottom: '4px' }}>Education</label>
+                <input type="text" value={formData.education} onChange={e => setFormData({ ...formData, education: e.target.value })} placeholder="e.g. MBA, B.Tech, Master Degree" style={{ width: '100%', padding: '9px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '0.85rem' }} />
+              </div>
+
+              <div>
+                <label style={{ fontSize: '0.78rem', fontWeight: 700, color: '#475569', display: 'block', marginBottom: '4px' }}>Profession / Job</label>
+                <input type="text" value={formData.profession} onChange={e => setFormData({ ...formData, profession: e.target.value })} placeholder="e.g. Software Engineer, Business" style={{ width: '100%', padding: '9px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '0.85rem' }} />
+              </div>
+
+              <div>
+                <label style={{ fontSize: '0.78rem', fontWeight: 700, color: '#475569', display: 'block', marginBottom: '4px' }}>Current Location</label>
+                <input type="text" value={formData.location} onChange={e => setFormData({ ...formData, location: e.target.value })} placeholder="e.g. Manama, Bahrain" style={{ width: '100%', padding: '9px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '0.85rem' }} />
+              </div>
+
+              <div>
+                <label style={{ fontSize: '0.78rem', fontWeight: 700, color: '#475569', display: 'block', marginBottom: '4px' }}>Residence Status</label>
+                <input type="text" value={formData.residence} onChange={e => setFormData({ ...formData, residence: e.target.value })} placeholder="e.g. CPR Holder, Resident" style={{ width: '100%', padding: '9px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '0.85rem' }} />
+              </div>
+
+              <div>
+                <label style={{ fontSize: '0.78rem', fontWeight: 700, color: '#475569', display: 'block', marginBottom: '4px' }}>WhatsApp Contact</label>
+                <input type="text" value={formData.contact} onChange={e => setFormData({ ...formData, contact: e.target.value })} placeholder="+973 3718 8557" style={{ width: '100%', padding: '9px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '0.85rem' }} />
+              </div>
+
+              <div style={{ gridColumn: 'span 2' }}>
+                <label style={{ fontSize: '0.78rem', fontWeight: 700, color: '#475569', display: 'block', marginBottom: '4px' }}>Image URL (Instagram / Cloud Image Link)</label>
+                <input type="url" value={formData.image} onChange={e => setFormData({ ...formData, image: e.target.value })} placeholder="https://..." style={{ width: '100%', padding: '9px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '0.85rem' }} />
+              </div>
+
+              <div style={{ gridColumn: 'span 2' }}>
+                <label style={{ fontSize: '0.78rem', fontWeight: 700, color: '#475569', display: 'block', marginBottom: '4px' }}>About Candidate / Family Background</label>
+                <textarea rows="3" value={formData.about} onChange={e => setFormData({ ...formData, about: e.target.value })} placeholder="Brief summary of candidate background..." style={{ width: '100%', padding: '9px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '0.85rem' }} />
+              </div>
+
+              <div style={{ gridColumn: 'span 2' }}>
+                <label style={{ fontSize: '0.78rem', fontWeight: 700, color: '#475569', display: 'block', marginBottom: '4px' }}>Partner Requirements</label>
+                <textarea rows="2" value={formData.requirements} onChange={e => setFormData({ ...formData, requirements: e.target.value })} placeholder="Preferences for partner..." style={{ width: '100%', padding: '9px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '0.85rem' }} />
+              </div>
+
+              <div style={{ gridColumn: 'span 2', display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '10px' }}>
+                <button type="button" onClick={() => setIsFormOpen(false)} style={{ padding: '9px 18px', borderRadius: '8px', border: '1px solid #cbd5e1', background: '#f8fafc', color: '#475569', fontWeight: 600, cursor: 'pointer' }}>Cancel</button>
+                <button type="submit" disabled={isSaving} style={{ padding: '9px 24px', borderRadius: '8px', border: 'none', background: 'linear-gradient(135deg, #fae182 0%, #d4af37 50%, #b8860b 100%)', color: '#0d251c', fontWeight: 800, cursor: 'pointer', boxShadow: '0 4px 14px rgba(212, 175, 55, 0.4)' }}>
+                  {isSaving ? 'Saving...' : editingProfile ? 'Update Profile' : 'Save & Publish Profile'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </animated.div>
   );
 }
