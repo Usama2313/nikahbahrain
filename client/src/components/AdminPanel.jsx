@@ -346,6 +346,25 @@ export default function AdminPanel({ onBackToPortal, onProfilesChange }) {
     setPasswordInput('');
   };
 
+  const getMergedProfiles = (baseList) => {
+    try {
+      const custom = JSON.parse(localStorage.getItem('nikah_custom_profiles') || '[]');
+      if (!Array.isArray(custom) || custom.length === 0) return baseList;
+      const map = new Map();
+      for (const c of custom) {
+        if (c && c.id) map.set(c.id, c);
+      }
+      for (const b of baseList) {
+        if (b && b.id) {
+          if (!map.has(b.id)) map.set(b.id, b);
+        }
+      }
+      return Array.from(map.values());
+    } catch (e) {
+      return baseList;
+    }
+  };
+
   const fetchData = async () => {
     try {
       setLoading(true);
@@ -360,13 +379,17 @@ export default function AdminPanel({ onBackToPortal, onProfilesChange }) {
       if (profilesRes && profilesRes.ok) {
         const profilesData = await profilesRes.json();
         if (profilesData.success && Array.isArray(profilesData.profiles)) {
-          setProfiles(profilesData.profiles);
+          const merged = getMergedProfiles(profilesData.profiles);
+          setProfiles(merged);
+          if (onProfilesChange) onProfilesChange(merged);
           return;
         }
       }
       // Fallback if API is offline
-      setProfiles((prev) => (prev && prev.length > 0 ? prev : fallbackProfiles));
-      const pList = fallbackProfiles || [];
+      const mergedFallback = getMergedProfiles(fallbackProfiles || []);
+      setProfiles(mergedFallback);
+      if (onProfilesChange) onProfilesChange(mergedFallback);
+      const pList = mergedFallback;
       setStats((prev) => prev || {
         total: pList.length,
         grooms: pList.filter(p => p.gender === 'male').length,
@@ -378,7 +401,9 @@ export default function AdminPanel({ onBackToPortal, onProfilesChange }) {
       });
     } catch (err) {
       console.warn('Admin fetch API fallback used:', err.message);
-      setProfiles((prev) => (prev && prev.length > 0 ? prev : fallbackProfiles));
+      const mergedFallback = getMergedProfiles(fallbackProfiles || []);
+      setProfiles(mergedFallback);
+      if (onProfilesChange) onProfilesChange(mergedFallback);
     } finally {
       setLoading(false);
     }
