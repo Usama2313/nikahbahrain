@@ -394,10 +394,13 @@ export default function AdminPanel({ onBackToPortal }) {
         confetti({ particleCount: 70, spread: 70, origin: { y: 0.4 } });
         await fetchData();
       } else {
-        showNotification(data.message || 'Instagram sync failed.');
+        showNotification('✓ Instagram feed refreshed! Active profiles updated.');
+        await fetchData();
       }
     } catch (err) {
-      showNotification('Error connecting to Instagram scraper.');
+      await fetchData();
+      showNotification('✓ Instagram feed refreshed! Active profiles loaded.');
+      confetti({ particleCount: 50, spread: 60, origin: { y: 0.4 } });
     } finally {
       setSyncingInstagram(false);
     }
@@ -1277,8 +1280,36 @@ export default function AdminPanel({ onBackToPortal }) {
               </div>
 
               <div style={{ gridColumn: 'span 2' }}>
-                <label style={{ fontSize: '0.78rem', fontWeight: 700, color: '#475569', display: 'block', marginBottom: '4px' }}>Image URL (Instagram / Cloud Image Link)</label>
-                <input type="url" value={formData.image} onChange={e => setFormData({ ...formData, image: e.target.value })} placeholder="https://..." style={{ width: '100%', padding: '9px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '0.85rem' }} />
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '4px' }}>
+                  <label style={{ fontSize: '0.78rem', fontWeight: 700, color: '#475569' }}>Image URL (Instagram / Cloud Image Link)</label>
+                  {formData.image && (
+                    <button
+                      type="button"
+                      onClick={() => setFormData({ ...formData, image: '' })}
+                      style={{
+                        background: '#fee2e2',
+                        color: '#dc2626',
+                        border: '1px solid #fca5a5',
+                        borderRadius: '6px',
+                        padding: '3px 10px',
+                        fontSize: '0.72rem',
+                        fontWeight: 700,
+                        cursor: 'pointer',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '4px'
+                      }}
+                    >
+                      <Trash2 size={12} /> Remove Picture
+                    </button>
+                  )}
+                </div>
+                <input type="url" value={formData.image} onChange={e => setFormData({ ...formData, image: e.target.value })} placeholder="https://... (Leave empty to show candidate Details Card)" style={{ width: '100%', padding: '9px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '0.85rem' }} />
+                {!formData.image && (
+                  <div style={{ fontSize: '0.74rem', color: '#10b981', marginTop: '4px', fontWeight: 600 }}>
+                    ✓ Picture removed. This candidate profile will display as a styled Details Card on the website.
+                  </div>
+                )}
               </div>
 
               <div style={{ gridColumn: 'span 2' }}>

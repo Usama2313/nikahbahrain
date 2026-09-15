@@ -125,13 +125,42 @@ Please provide more details. JazakAllah Khair!`;
             alignItems: 'center',
             justifyContent: 'center',
             background: profile.gender === 'male'
-              ? 'linear-gradient(135deg, #dbeafe, #bfdbfe)'
-              : 'linear-gradient(135deg, #fce7f3, #fbcfe8)',
+              ? 'linear-gradient(135deg, #0f172a 0%, #1e293b 100%)'
+              : 'linear-gradient(135deg, #831843 0%, #500724 100%)',
             flexDirection: 'column',
-            gap: '8px'
+            gap: '8px',
+            padding: '24px 16px',
+            textAlign: 'center',
+            position: 'relative'
           }}>
-            <User size={48} color={profile.gender === 'male' ? '#3b82f6' : '#ec4899'} />
-            <span style={{ fontSize: '0.75rem', color: '#94a3b8', fontWeight: 600 }}>No Image</span>
+            <div style={{
+              width: '56px',
+              height: '56px',
+              borderRadius: '50%',
+              background: 'rgba(255,255,255,0.1)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              border: '2px solid var(--gold-primary)',
+              boxShadow: '0 0 15px rgba(212,175,55,0.4)',
+              marginBottom: '2px'
+            }}>
+              <User size={28} color="var(--gold-primary)" />
+            </div>
+            <div className="font-cinzel" style={{ color: '#ffffff', fontWeight: 800, fontSize: '1rem', letterSpacing: '0.4px', lineHeight: 1.2 }}>
+              {profile.name}
+            </div>
+            <div style={{ color: '#fae182', fontSize: '0.78rem', fontWeight: 700 }}>
+              {profile.age} Yrs • {profile.maritalStatus}
+            </div>
+            {profile.profession && (
+              <div style={{ color: '#cbd5e1', fontSize: '0.72rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '90%' }}>
+                💼 {profile.profession}
+              </div>
+            )}
+            <div style={{ background: 'rgba(255,215,0,0.15)', color: '#ffd700', padding: '3px 10px', borderRadius: '9999px', fontSize: '0.68rem', fontWeight: 800, border: '1px solid rgba(255,215,0,0.3)', marginTop: '4px' }}>
+              📋 Details Card
+            </div>
           </div>
         )}
 
