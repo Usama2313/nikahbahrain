@@ -92,51 +92,12 @@ export default function App() {
     };
   }, []);
 
-  // Helper to merge admin custom created/edited profiles and filter deleted ones
-  const getMergedProfiles = (baseList) => {
-    try {
-      const deletedIds = new Set(JSON.parse(localStorage.getItem('nikah_deleted_profiles') || '[]'));
-      const custom = JSON.parse(localStorage.getItem('nikah_custom_profiles') || '[]');
-      const map = new Map();
-      if (Array.isArray(custom)) {
-        let changed = false;
-        for (const c of custom) {
-          if (!c) continue;
-          // Clean up auto-added fake dummy values if present on custom profiles
-          if (c.profession === 'Professional') { c.profession = ''; changed = true; }
-          if (c.height === "5'8\"") { c.height = ''; changed = true; }
-          if (c.salary && c.salary.includes('Confidential')) { c.salary = ''; changed = true; }
-          if (c.education === 'Bachelor Degree') { c.education = ''; changed = true; }
-          // Specifically ensure NPF-26 displays accurate age 41 from flyer picture
-          if ((c.name && c.name.includes('NPF-26')) || c.id === 'NPF-3754' || c.id === 'NPF-26') {
-            c.id = 'NPF-26';
-            if (c.age === 25) {
-              c.age = 41;
-              changed = true;
-            }
-          }
-          if (c.id && !deletedIds.has(c.id)) {
-            map.set(c.id, c);
-          }
-        }
-        if (changed) {
-          try {
-            localStorage.setItem('nikah_custom_profiles', JSON.stringify(custom));
-          } catch (_) {}
-        }
-      }
-      for (const b of (baseList || [])) {
-        if (b && b.id && !deletedIds.has(b.id)) {
-          if (!map.has(b.id)) map.set(b.id, b);
-        }
-      }
-      return Array.from(map.values());
-    } catch (e) {
-      return baseList || [];
-    }
-  };
+  // NOTE: Profile merging is now server-side only.
+  // localStorage was removed as a profile source because it is device-specific,
+  // causing PC and mobile to show different profile counts.
+  // All admin-created profiles are persisted directly to server/data/profiles.json.
 
-  // Fetch initial profiles & visitor favorites
+  // Fetch profiles from server — single source of truth for ALL devices (PC, mobile, etc.)
   const fetchProfiles = async () => {
     try {
       setError(null);
@@ -144,7 +105,7 @@ export default function App() {
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
       if (data.success && Array.isArray(data.profiles) && data.profiles.length > 0) {
-        setProfiles(getMergedProfiles(data.profiles));
+        setProfiles(data.profiles);
         return;
       }
     } catch (err) {
@@ -152,7 +113,8 @@ export default function App() {
     } finally {
       setLoading(false);
     }
-    setProfiles(getMergedProfiles(fallbackProfiles));
+    // Fallback: use bundled profiles.json (same for all devices)
+    setProfiles(fallbackProfiles || []);
   };
 
   // Trigger Instagram sync — works on all environments with clean fallback
