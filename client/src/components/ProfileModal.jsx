@@ -106,10 +106,10 @@ Please share requirements & family verification steps.`;
     { icon: MapPin, label: 'Location', value: profile.location },
     { icon: Home, label: 'Residency', value: profile.residence },
     { icon: BookOpen, label: 'Sect', value: profile.sect },
-    { icon: User, label: 'Caste', value: profile.caste },
+    { icon: User, label: 'Caste', value: (profile.caste && profile.caste !== 'General') ? profile.caste : '' },
     { icon: FileText, label: 'Languages', value: profile.languages },
     { icon: Sparkles, label: 'Complexion & Build', value: [profile.complexion, profile.build].filter(Boolean).join(' • ') }
-  ];
+  ].filter(r => r.value && typeof r.value === 'string' && r.value.trim() !== '' && !r.value.includes('Confidential'));
 
   return (
     <animated.div
@@ -220,14 +220,18 @@ Please share requirements & family verification steps.`;
             </h2>
 
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px', color: '#475569', fontSize: '0.88rem', flexWrap: 'wrap' }}>
-              <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                <Calendar size={14} /> {profile.age} Years
-              </span>
-              <span>•</span>
-              <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                <Ruler size={14} /> {profile.height}
-              </span>
-              <span>•</span>
+              {profile.age ? (
+                <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                  <Calendar size={14} /> {profile.age} Years
+                </span>
+              ) : null}
+              {profile.age && profile.height ? <span>•</span> : null}
+              {profile.height ? (
+                <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                  <Ruler size={14} /> {profile.height}
+                </span>
+              ) : null}
+              {(profile.age || profile.height) ? <span>•</span> : null}
               <span style={{ 
                 color: genderConfig.accentColor,
                 fontWeight: 800
@@ -264,189 +268,207 @@ Please share requirements & family verification steps.`;
         <div style={{ padding: '20px 24px', display: 'flex', flexDirection: 'column', gap: '18px' }}>
 
           {/* Nationality & Marital Status Labels */}
-          <animated.div style={sectionTrail[0]}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-              <span
-                style={{
-                  background: profile.nationality === 'Pakistani' ? '#ecfdf5' : profile.nationality === 'Indian' ? '#fff7ed' : '#fef2f2',
-                  border: '1px solid var(--gold-border)',
-                  color: profile.nationality === 'Pakistani' ? '#065f46' : profile.nationality === 'Indian' ? '#9a3412' : '#991b1b',
-                  fontSize: '0.8rem',
-                  fontWeight: 700,
-                  padding: '5px 12px',
-                  borderRadius: 'var(--radius-full)',
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '5px'
-                }}
-              >
-                <CheckCircle2 size={13} />
-                {profile.nationality === 'Pakistani' ? '🇵🇰 Pakistani' : profile.nationality === 'Indian' ? '🇮🇳 Indian' : '🇧🇭 Bahraini'}
-              </span>
+          {(profile.nationality || profile.maritalStatus || profile.instagramPostUrl) && (
+            <animated.div style={sectionTrail[0]}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                {profile.nationality ? (
+                  <span
+                    style={{
+                      background: profile.nationality === 'Pakistani' ? '#ecfdf5' : profile.nationality === 'Indian' ? '#fff7ed' : '#fef2f2',
+                      border: '1px solid var(--gold-border)',
+                      color: profile.nationality === 'Pakistani' ? '#065f46' : profile.nationality === 'Indian' ? '#9a3412' : '#991b1b',
+                      fontSize: '0.8rem',
+                      fontWeight: 700,
+                      padding: '5px 12px',
+                      borderRadius: 'var(--radius-full)',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '5px'
+                    }}
+                  >
+                    <CheckCircle2 size={13} />
+                    {profile.nationality === 'Pakistani' ? '🇵🇰 Pakistani' : profile.nationality === 'Indian' ? '🇮🇳 Indian' : profile.nationality === 'Bahraini' ? '🇧🇭 Bahraini' : `🌍 ${profile.nationality}`}
+                  </span>
+                ) : null}
 
-              <span 
-                style={{
-                  background: '#fefce8',
-                  border: '1px solid rgba(196, 155, 31, 0.4)',
-                  color: 'var(--text-gold)',
-                  fontSize: '0.8rem',
-                  fontWeight: 700,
-                  padding: '5px 12px',
-                  borderRadius: 'var(--radius-full)',
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '5px'
-                }}
-              >
-                <CheckCircle2 size={13} />
-                {profile.maritalStatus}
-              </span>
+                {profile.maritalStatus ? (
+                  <span 
+                    style={{
+                      background: '#fefce8',
+                      border: '1px solid rgba(196, 155, 31, 0.4)',
+                      color: 'var(--text-gold)',
+                      fontSize: '0.8rem',
+                      fontWeight: 700,
+                      padding: '5px 12px',
+                      borderRadius: 'var(--radius-full)',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '5px'
+                    }}
+                  >
+                    <CheckCircle2 size={13} />
+                    {profile.maritalStatus}
+                  </span>
+                ) : null}
 
-              {/* Instagram Source */}
-              <a
-                href={profile.instagramPostUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '5px',
-                  color: 'var(--text-gold)',
-                  fontSize: '0.78rem',
-                  textDecoration: 'none',
-                  background: '#fefce8',
-                  padding: '5px 12px',
-                  borderRadius: 'var(--radius-full)',
-                  border: '1px solid rgba(196, 155, 31, 0.3)'
-                }}
-              >
-                <Instagram size={13} />
-                <span>@nikah_bahrain</span>
-              </a>
-            </div>
-          </animated.div>
-
-          {/* Info Grid */}
-          <animated.div style={sectionTrail[1]}>
-            <div 
-              className="modal-detail-grid"
-              style={{ 
-                display: 'grid', 
-                gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))',
-                gap: '10px',
-                background: '#f8fafc',
-                padding: '16px',
-                borderRadius: 'var(--radius-md)',
-                border: '1px solid #e2e8f0'
-              }}
-            >
-              {detailRows.map((row, idx) => {
-                const Icon = row.icon;
-                return row.value ? (
-                  <div key={idx} style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.88rem', color: '#1e293b' }}>
-                    <Icon size={16} color="var(--gold-primary)" style={{ flexShrink: 0 }} />
-                    <span><strong style={{ color: 'var(--text-gold)' }}>{row.label}:</strong> {row.value}</span>
-                  </div>
-                ) : null;
-              })}
-            </div>
-          </animated.div>
-
-          {/* Dedicated Family & Siblings Section */}
-          <animated.div style={sectionTrail[2]}>
-            <h4 
-              className="font-cinzel"
-              style={{ fontSize: '0.98rem', color: 'var(--text-gold)', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '6px' }}
-            >
-              <Users size={16} color="var(--gold-primary)" />
-              Family & Sibling Information
-            </h4>
-            <div
-              style={{
-                display: 'flex',
-                flexDirection: 'column',
-                gap: '8px',
-                background: '#fffdf5',
-                padding: '14px 16px',
-                borderRadius: 'var(--radius-md)',
-                border: '1px solid rgba(196, 155, 31, 0.25)'
-              }}
-            >
-              {/* Siblings Labeled Row */}
-              <div style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', fontSize: '0.88rem', flexWrap: 'wrap' }}>
-                <span style={{ color: 'var(--text-gold)', fontWeight: 700, minWidth: '110px', flexShrink: 0 }}>
-                  • Siblings:
-                </span>
-                <span style={{ color: '#0f172a', fontWeight: 600 }}>
-                  {profile.siblings || 'Available upon family request'}
-                </span>
+                {/* Instagram Source */}
+                {profile.instagramPostUrl ? (
+                  <a
+                    href={profile.instagramPostUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '5px',
+                      color: 'var(--text-gold)',
+                      fontSize: '0.78rem',
+                      textDecoration: 'none',
+                      background: '#fefce8',
+                      padding: '5px 12px',
+                      borderRadius: 'var(--radius-full)',
+                      border: '1px solid rgba(196, 155, 31, 0.3)'
+                    }}
+                  >
+                    <Instagram size={13} />
+                    <span>@nikah_bahrain</span>
+                  </a>
+                ) : null}
               </div>
+            </animated.div>
+          )}
 
-              {/* Father Labeled Row */}
-              {profile.father && (
-                <div style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', fontSize: '0.88rem', flexWrap: 'wrap' }}>
-                  <span style={{ color: 'var(--text-gold)', fontWeight: 700, minWidth: '110px', flexShrink: 0 }}>
-                    • Father:
-                  </span>
-                  <span style={{ color: '#334155' }}>
-                    {profile.father}
-                  </span>
-                </div>
-              )}
+          {/* Info Grid - only if fields are present */}
+          {detailRows.length > 0 && (
+            <animated.div style={sectionTrail[1]}>
+              <div 
+                className="modal-detail-grid"
+                style={{ 
+                  display: 'grid', 
+                  gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))',
+                  gap: '10px',
+                  background: '#f8fafc',
+                  padding: '16px',
+                  borderRadius: 'var(--radius-md)',
+                  border: '1px solid #e2e8f0'
+                }}
+              >
+                {detailRows.map((row, idx) => {
+                  const Icon = row.icon;
+                  return (
+                    <div key={idx} style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.88rem', color: '#1e293b' }}>
+                      <Icon size={16} color="var(--gold-primary)" style={{ flexShrink: 0 }} />
+                      <span><strong style={{ color: 'var(--text-gold)' }}>{row.label}:</strong> {row.value}</span>
+                    </div>
+                  );
+                })}
+              </div>
+            </animated.div>
+          )}
 
-              {/* Mother Labeled Row */}
-              {profile.mother && (
-                <div style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', fontSize: '0.88rem', flexWrap: 'wrap' }}>
-                  <span style={{ color: 'var(--text-gold)', fontWeight: 700, minWidth: '110px', flexShrink: 0 }}>
-                    • Mother:
-                  </span>
-                  <span style={{ color: '#334155' }}>
-                    {profile.mother}
-                  </span>
-                </div>
-              )}
+          {/* Dedicated Family & Siblings Section - only if info is provided */}
+          {(profile.siblings || profile.father || profile.mother || profile.family) && (
+            <animated.div style={sectionTrail[2]}>
+              <h4 
+                className="font-cinzel"
+                style={{ fontSize: '0.98rem', color: 'var(--text-gold)', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '6px' }}
+              >
+                <Users size={16} color="var(--gold-primary)" />
+                Family & Sibling Information
+              </h4>
+              <div
+                style={{
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '8px',
+                  background: '#fffdf5',
+                  padding: '14px 16px',
+                  borderRadius: 'var(--radius-md)',
+                  border: '1px solid rgba(196, 155, 31, 0.25)'
+                }}
+              >
+                {/* Siblings Labeled Row */}
+                {profile.siblings ? (
+                  <div style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', fontSize: '0.88rem', flexWrap: 'wrap' }}>
+                    <span style={{ color: 'var(--text-gold)', fontWeight: 700, minWidth: '110px', flexShrink: 0 }}>
+                      • Siblings:
+                    </span>
+                    <span style={{ color: '#0f172a', fontWeight: 600 }}>
+                      {profile.siblings}
+                    </span>
+                  </div>
+                ) : null}
 
-              {/* Family Background Row */}
-              {profile.family && (
-                <div style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', fontSize: '0.88rem', flexWrap: 'wrap' }}>
-                  <span style={{ color: 'var(--text-gold)', fontWeight: 700, minWidth: '110px', flexShrink: 0 }}>
-                    • Family:
-                  </span>
-                  <span style={{ color: '#475569' }}>
-                    {profile.family}
-                  </span>
-                </div>
-              )}
-            </div>
-          </animated.div>
+                {/* Father Labeled Row */}
+                {profile.father ? (
+                  <div style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', fontSize: '0.88rem', flexWrap: 'wrap' }}>
+                    <span style={{ color: 'var(--text-gold)', fontWeight: 700, minWidth: '110px', flexShrink: 0 }}>
+                      • Father:
+                    </span>
+                    <span style={{ color: '#334155' }}>
+                      {profile.father}
+                    </span>
+                  </div>
+                ) : null}
 
-          {/* About Section */}
-          <animated.div style={sectionTrail[3]}>
-            <h4 
-              className="font-cinzel"
-              style={{ fontSize: '0.98rem', color: 'var(--text-gold)', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '6px' }}
-            >
-              <FileText size={16} color="var(--gold-primary)" />
-              Candidate Profile & Short Bio
-            </h4>
-            <p style={{ color: '#1e293b', fontSize: '0.88rem', lineHeight: '1.6', background: '#f8fafc', padding: '12px 16px', borderRadius: 'var(--radius-md)', border: '1px solid #e2e8f0' }}>
-              {profile.about}
-            </p>
-          </animated.div>
+                {/* Mother Labeled Row */}
+                {profile.mother ? (
+                  <div style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', fontSize: '0.88rem', flexWrap: 'wrap' }}>
+                    <span style={{ color: 'var(--text-gold)', fontWeight: 700, minWidth: '110px', flexShrink: 0 }}>
+                      • Mother:
+                    </span>
+                    <span style={{ color: '#334155' }}>
+                      {profile.mother}
+                    </span>
+                  </div>
+                ) : null}
 
-          {/* Requirements Section */}
-          <animated.div style={sectionTrail[4]}>
-            <h4 
-              className="font-cinzel"
-              style={{ fontSize: '0.98rem', color: 'var(--text-gold)', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '6px' }}
-            >
-              <Sparkles size={16} color="var(--gold-primary)" />
-              Partner Requirements & Expectations
-            </h4>
-            <p style={{ color: '#1e293b', fontSize: '0.88rem', lineHeight: '1.6', background: '#fffdf5', padding: '12px 16px', borderRadius: 'var(--radius-md)', border: '1px solid rgba(196, 155, 31, 0.25)' }}>
-              {profile.requirements}
-            </p>
-          </animated.div>
+                {/* Family Background Row */}
+                {profile.family ? (
+                  <div style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', fontSize: '0.88rem', flexWrap: 'wrap' }}>
+                    <span style={{ color: 'var(--text-gold)', fontWeight: 700, minWidth: '110px', flexShrink: 0 }}>
+                      • Family:
+                    </span>
+                    <span style={{ color: '#475569' }}>
+                      {profile.family}
+                    </span>
+                  </div>
+                ) : null}
+              </div>
+            </animated.div>
+          )}
+
+          {/* About Section - only if provided */}
+          {profile.about && profile.about.trim() !== '' && (
+            <animated.div style={sectionTrail[3]}>
+              <h4 
+                className="font-cinzel"
+                style={{ fontSize: '0.98rem', color: 'var(--text-gold)', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '6px' }}
+              >
+                <FileText size={16} color="var(--gold-primary)" />
+                Candidate Profile & Short Bio
+              </h4>
+              <p style={{ color: '#1e293b', fontSize: '0.88rem', lineHeight: '1.6', background: '#f8fafc', padding: '12px 16px', borderRadius: 'var(--radius-md)', border: '1px solid #e2e8f0' }}>
+                {profile.about}
+              </p>
+            </animated.div>
+          )}
+
+          {/* Requirements Section - only if provided */}
+          {profile.requirements && profile.requirements.trim() !== '' && (
+            <animated.div style={sectionTrail[4]}>
+              <h4 
+                className="font-cinzel"
+                style={{ fontSize: '0.98rem', color: 'var(--text-gold)', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '6px' }}
+              >
+                <Sparkles size={16} color="var(--gold-primary)" />
+                Partner Requirements & Expectations
+              </h4>
+              <p style={{ color: '#1e293b', fontSize: '0.88rem', lineHeight: '1.6', background: '#fffdf5', padding: '12px 16px', borderRadius: 'var(--radius-md)', border: '1px solid rgba(196, 155, 31, 0.25)' }}>
+                {profile.requirements}
+              </p>
+            </animated.div>
+          )}
 
           {/* Action Buttons */}
           <animated.div 

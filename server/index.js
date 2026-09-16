@@ -189,28 +189,29 @@ function getNextProfileId(profiles) {
 // Helper to construct profile object from inputs or Google Form
 function buildProfileObject(reqBody, profiles) {
   const gender = (reqBody.gender || 'male').toLowerCase() === 'female' ? 'female' : 'male';
-  const maritalStatus = reqBody.maritalStatus || 'Never Married';
+  const maritalStatus = reqBody.maritalStatus || '';
   const id = reqBody.id || getNextProfileId(profiles);
   const name = reqBody.name || `${id} (${gender === 'female' ? 'Bride' : 'Groom'})`;
-  const nationality = reqBody.nationality || 'Pakistani';
-  const age = Number(reqBody.age) || (gender === 'male' ? 29 : 25);
-  const height = reqBody.height || (gender === 'male' ? "5'10\"" : "5'4\"");
-  const sect = reqBody.sect || 'Sunni';
-  const caste = reqBody.caste || 'General';
-  const education = reqBody.education || 'Graduate';
-  const profession = reqBody.profession || (gender === 'male' ? 'Professional in Bahrain' : 'Qualified Candidate');
-  const location = reqBody.location || 'Bahrain';
-  const residence = reqBody.residence || 'Bahrain Resident';
+  const nationality = reqBody.nationality || '';
+  const age = reqBody.age ? Number(reqBody.age) : null;
+  const height = reqBody.height || '';
+  const sect = reqBody.sect || '';
+  const caste = reqBody.caste || '';
+  const education = reqBody.education || '';
+  const profession = reqBody.profession || '';
+  const location = reqBody.location || '';
+  const residence = reqBody.residence || '';
   const siblings = reqBody.siblings || reqBody['Siblings'] || reqBody['Sibling Details'] || '';
   const father = reqBody.father || reqBody["Father's Details"] || reqBody["Father's Occupation"] || reqBody['Father'] || '';
   const mother = reqBody.mother || reqBody["Mother's Details"] || reqBody["Mother's Occupation"] || reqBody['Mother'] || '';
   const family = reqBody.family || reqBody['Family Background'] || reqBody['Family Details'] || '';
-  const languages = reqBody.languages || reqBody['Languages'] || (nationality === 'Pakistani' ? 'English, Urdu' : 'Arabic, English');
+  const languages = reqBody.languages || reqBody['Languages'] || '';
   const complexion = reqBody.complexion || '';
   const build = reqBody.build || '';
-  const about = reqBody.about || reqBody['Short Bio'] || `Practicing, Deen-conscious candidate from a respectable Muslim family settled in Bahrain.`;
-  const requirements = reqBody.requirements || reqBody['Partner Requirements'] || reqBody['Looking For'] || `Seeking a righteous, well-mannered practicing partner residing in Bahrain or GCC.`;
+  const about = reqBody.about || reqBody['Short Bio'] || '';
+  const requirements = reqBody.requirements || reqBody['Partner Requirements'] || reqBody['Looking For'] || '';
   const contact = reqBody.contact || reqBody['WhatsApp Number'] || reqBody['Phone'] || '+973 3718 8557';
+  const salary = reqBody.salary || '';
 
   let category = 'grooms';
   if (maritalStatus === 'Divorced') {
@@ -221,11 +222,7 @@ function buildProfileObject(reqBody, profiles) {
     category = gender === 'male' ? 'grooms' : 'brides';
   }
 
-  const defaultImage = gender === 'female'
-    ? 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=800&q=80'
-    : 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=800&q=80';
-
-  const rawFlyerText = `Profile #${id} Gender ${gender === 'female' ? 'Female' : 'Male'} Location: ${location} Height: ${height} Age: ${age} Nationality: ${nationality} Marital Status: ${maritalStatus} Languages: ${languages} Sect: ${sect} Caste: ${caste} Education: ${education} Profession: ${profession} Father: ${father} Mother: ${mother} Siblings: ${siblings} Family: ${family} Short Bio: ${about} Seeking: ${requirements} Interested In: DM ${id} Qabul Hai`;
+  const rawFlyerText = reqBody.rawFlyerText || `Profile #${id} Gender ${gender === 'female' ? 'Female' : 'Male'}`;
 
   return {
     id,
@@ -240,7 +237,7 @@ function buildProfileObject(reqBody, profiles) {
     caste,
     education,
     profession,
-    salary: reqBody.salary || 'Confidential / As per discussion',
+    salary,
     location,
     residence,
     siblings,
@@ -250,9 +247,9 @@ function buildProfileObject(reqBody, profiles) {
     languages,
     complexion,
     build,
-    image: reqBody.image || defaultImage,
-    instagramPostUrl: reqBody.instagramPostUrl || `https://www.instagram.com/nikah_bahrain/`,
-    instagramPostId: reqBody.instagramPostId || `ig_post_${id.toLowerCase().replace(/[^a-z0-9]/g, '_')}`,
+    image: reqBody.image || '',
+    instagramPostUrl: reqBody.instagramPostUrl || '',
+    instagramPostId: reqBody.instagramPostId || '',
     about,
     requirements,
     contact,

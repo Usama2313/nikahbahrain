@@ -99,10 +99,30 @@ export default function App() {
       const custom = JSON.parse(localStorage.getItem('nikah_custom_profiles') || '[]');
       const map = new Map();
       if (Array.isArray(custom)) {
+        let changed = false;
         for (const c of custom) {
-          if (c && c.id && !deletedIds.has(c.id)) {
+          if (!c) continue;
+          // Clean up auto-added fake dummy values if present on custom profiles
+          if (c.profession === 'Professional') { c.profession = ''; changed = true; }
+          if (c.height === "5'8\"") { c.height = ''; changed = true; }
+          if (c.salary && c.salary.includes('Confidential')) { c.salary = ''; changed = true; }
+          if (c.education === 'Bachelor Degree') { c.education = ''; changed = true; }
+          // Specifically ensure NPF-26 displays accurate age 41 from flyer picture
+          if ((c.name && c.name.includes('NPF-26')) || c.id === 'NPF-3754' || c.id === 'NPF-26') {
+            c.id = 'NPF-26';
+            if (c.age === 25) {
+              c.age = 41;
+              changed = true;
+            }
+          }
+          if (c.id && !deletedIds.has(c.id)) {
             map.set(c.id, c);
           }
+        }
+        if (changed) {
+          try {
+            localStorage.setItem('nikah_custom_profiles', JSON.stringify(custom));
+          } catch (_) {}
         }
       }
       for (const b of (baseList || [])) {

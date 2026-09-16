@@ -125,24 +125,24 @@ export default function AdminPanel({ onBackToPortal, onProfilesChange }) {
   const DEFAULT_FORM = {
     name: '',
     gender: 'male',
-    maritalStatus: 'Never Married',
-    nationality: 'Pakistani',
-    age: 25,
-    height: `5'8"`,
-    sect: 'Sunni',
-    caste: 'General',
-    education: 'Bachelor Degree',
-    profession: 'Professional',
-    salary: 'Confidential / As per discussion',
-    location: 'Bahrain',
-    residence: 'Bahrain / GCC',
+    maritalStatus: '',
+    nationality: '',
+    age: '',
+    height: '',
+    sect: '',
+    caste: '',
+    education: '',
+    profession: '',
+    salary: '',
+    location: '',
+    residence: '',
     siblings: '',
     father: '',
     mother: '',
     family: '',
-    languages: 'English, Urdu, Arabic',
+    languages: '',
     about: '',
-    requirements: 'Practicing Muslim candidate with good character.',
+    requirements: '',
     contact: '+973 3718 8557',
     image: '',
     instagramPostUrl: ''
@@ -259,7 +259,7 @@ export default function AdminPanel({ onBackToPortal, onProfilesChange }) {
       ...DEFAULT_FORM,
       name: `${nextId} (Groom)`,
       gender: 'male',
-      about: mode === 'picture' ? 'Candidate bio-data and family details are presented in the attached flyer picture.' : '',
+      about: '',
       image: '',
       instagramPostUrl: ''
     });
@@ -272,22 +272,22 @@ export default function AdminPanel({ onBackToPortal, onProfilesChange }) {
     setFormData({
       name: p.name || '',
       gender: p.gender || 'male',
-      maritalStatus: p.maritalStatus || 'Never Married',
-      nationality: p.nationality || 'Pakistani',
-      age: p.age || 25,
-      height: p.height || `5'8"`,
-      sect: p.sect || 'Sunni',
-      caste: p.caste || 'General',
+      maritalStatus: p.maritalStatus || '',
+      nationality: p.nationality || '',
+      age: p.age !== null && p.age !== undefined ? p.age : '',
+      height: p.height || '',
+      sect: p.sect || '',
+      caste: p.caste || '',
       education: p.education || '',
       profession: p.profession || '',
       salary: p.salary || '',
-      location: p.location || 'Bahrain',
-      residence: p.residence || 'Bahrain / GCC',
+      location: p.location || '',
+      residence: p.residence || '',
       siblings: p.siblings || '',
       father: p.father || '',
       mother: p.mother || '',
       family: p.family || '',
-      languages: p.languages || 'English, Urdu',
+      languages: p.languages || '',
       about: p.about || '',
       requirements: p.requirements || '',
       contact: p.contact || '+973 3718 8557',
@@ -360,10 +360,12 @@ export default function AdminPanel({ onBackToPortal, onProfilesChange }) {
           }
           return max;
         }, 228);
-        candidateName = `NPF-${maxNpf + 1} (${formData.gender === 'male' ? 'Groom' : 'Bride'})`;
+        candidateName = `NPF-${maxNpf + 1} (${formData.gender === 'female' ? 'Bride' : 'Groom'})`;
       }
 
-      const candidateAge = formData.age ? Number(formData.age) : 25;
+      const candidateAge = formData.age !== '' && formData.age !== null && !isNaN(Number(formData.age))
+        ? Number(formData.age)
+        : null;
 
       let igPostId = '';
       if (formData.instagramPostUrl) {
@@ -378,9 +380,25 @@ export default function AdminPanel({ onBackToPortal, onProfilesChange }) {
           name: candidateName,
           age: candidateAge,
           image: creationMode === 'form' ? '' : (formData.image || ''),
-          instagramPostUrl: formData.instagramPostUrl || '',
+          instagramPostUrl: formData.instagramPostUrl?.trim() || '',
           instagramPostId: igPostId || editingProfile.instagramPostId || '',
           category: formData.gender === 'male' ? 'grooms' : 'brides',
+          salary: formData.salary?.trim() || '',
+          location: formData.location?.trim() || '',
+          residence: formData.residence?.trim() || '',
+          siblings: formData.siblings?.trim() || '',
+          father: formData.father?.trim() || '',
+          mother: formData.mother?.trim() || '',
+          family: formData.family?.trim() || '',
+          languages: formData.languages?.trim() || '',
+          about: formData.about?.trim() || '',
+          requirements: formData.requirements?.trim() || '',
+          contact: formData.contact?.trim() || '+973 3718 8557',
+          height: formData.height?.trim() || '',
+          profession: formData.profession?.trim() || '',
+          education: formData.education?.trim() || '',
+          sect: formData.sect?.trim() || '',
+          caste: formData.caste?.trim() || '',
           updatedAt: new Date().toISOString()
         };
 
@@ -409,7 +427,8 @@ export default function AdminPanel({ onBackToPortal, onProfilesChange }) {
         if (openInstagram) setInstagramModalProfile(updated);
       } else {
         let nextCustomId = `NPF-${Date.now().toString().slice(-4)}`;
-        const npfMatch = candidateName.match(/^NPF-?(\d+)/i);
+        // Match NPF ID anywhere in candidate name, e.g. #NPF-26(GROOM) -> NPF-26
+        const npfMatch = candidateName.match(/NPF-?(\d+)/i);
         if (npfMatch) {
           nextCustomId = `NPF-${npfMatch[1]}`;
         }
@@ -420,19 +439,24 @@ export default function AdminPanel({ onBackToPortal, onProfilesChange }) {
           name: candidateName,
           age: candidateAge,
           category: formData.gender === 'male' ? 'grooms' : 'brides',
-          salary: formData.salary || 'Confidential / As per discussion',
-          location: formData.location || 'Bahrain',
-          residence: formData.residence || 'Bahrain Resident',
-          siblings: formData.siblings || '',
-          father: formData.father || '',
-          mother: formData.mother || '',
-          family: formData.family || '',
-          languages: formData.languages || 'English, Urdu',
-          about: formData.about || (creationMode === 'picture' ? 'Candidate bio-data and family details are presented in the attached flyer picture.' : ''),
-          requirements: formData.requirements || 'Seeking a practicing, compatible partner.',
-          contact: formData.contact || '+973 3718 8557',
+          salary: formData.salary?.trim() || '',
+          location: formData.location?.trim() || '',
+          residence: formData.residence?.trim() || '',
+          siblings: formData.siblings?.trim() || '',
+          father: formData.father?.trim() || '',
+          mother: formData.mother?.trim() || '',
+          family: formData.family?.trim() || '',
+          languages: formData.languages?.trim() || '',
+          about: formData.about?.trim() || '',
+          requirements: formData.requirements?.trim() || '',
+          contact: formData.contact?.trim() || '+973 3718 8557',
+          height: formData.height?.trim() || '',
+          profession: formData.profession?.trim() || '',
+          education: formData.education?.trim() || '',
+          sect: formData.sect?.trim() || '',
+          caste: formData.caste?.trim() || '',
           image: creationMode === 'form' ? '' : (formData.image || ''),
-          instagramPostUrl: formData.instagramPostUrl || '',
+          instagramPostUrl: formData.instagramPostUrl?.trim() || '',
           instagramPostId: igPostId,
           verified: true,
           featured: false,
@@ -523,10 +547,30 @@ export default function AdminPanel({ onBackToPortal, onProfilesChange }) {
       const custom = JSON.parse(localStorage.getItem('nikah_custom_profiles') || '[]');
       const map = new Map();
       if (Array.isArray(custom)) {
+        let changed = false;
         for (const c of custom) {
-          if (c && c.id && !deletedIds.has(c.id)) {
+          if (!c) continue;
+          // Clean up auto-added fake dummy values if present on custom profiles
+          if (c.profession === 'Professional') { c.profession = ''; changed = true; }
+          if (c.height === "5'8\"") { c.height = ''; changed = true; }
+          if (c.salary && c.salary.includes('Confidential')) { c.salary = ''; changed = true; }
+          if (c.education === 'Bachelor Degree') { c.education = ''; changed = true; }
+          // Specifically ensure NPF-26 displays accurate age 41 from flyer picture
+          if ((c.name && c.name.includes('NPF-26')) || c.id === 'NPF-3754' || c.id === 'NPF-26') {
+            c.id = 'NPF-26';
+            if (c.age === 25) {
+              c.age = 41;
+              changed = true;
+            }
+          }
+          if (c.id && !deletedIds.has(c.id)) {
             map.set(c.id, c);
           }
+        }
+        if (changed) {
+          try {
+            localStorage.setItem('nikah_custom_profiles', JSON.stringify(custom));
+          } catch (_) {}
         }
       }
       for (const b of (baseList || [])) {
@@ -1756,7 +1800,14 @@ export default function AdminPanel({ onBackToPortal, onProfilesChange }) {
                   </div>
 
                   {/* Basic Profile Essentials for Picture Mode */}
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
+                  <div style={{ background: '#fefce8', border: '1px solid #fef08a', borderRadius: '10px', padding: '12px 14px', display: 'flex', alignItems: 'center', gap: '10px', textAlign: 'left' }}>
+                    <ShieldCheck size={18} color="#ca8a04" style={{ flexShrink: 0 }} />
+                    <div style={{ fontSize: '0.78rem', color: '#854d0e', lineHeight: 1.4 }}>
+                      <strong>Accurate Flyer Data:</strong> Fill in the candidate details that are mentioned on the flyer picture (e.g. Age, Profession, Marital Status). Any field left blank will <em>not</em> be displayed on the candidate profile.
+                    </div>
+                  </div>
+
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px', textAlign: 'left' }}>
                     <div>
                       <label style={{ fontSize: '0.78rem', fontWeight: 700, color: '#475569', display: 'block', marginBottom: '4px' }}>Candidate Type / Gender *</label>
                       <select
@@ -1779,12 +1830,25 @@ export default function AdminPanel({ onBackToPortal, onProfilesChange }) {
                     </div>
 
                     <div>
-                      <label style={{ fontSize: '0.78rem', fontWeight: 700, color: '#475569', display: 'block', marginBottom: '4px' }}>Profile Title / Code</label>
+                      <label style={{ fontSize: '0.78rem', fontWeight: 700, color: '#475569', display: 'block', marginBottom: '4px' }}>Profile Title / Code *</label>
                       <input
                         type="text"
                         value={formData.name}
                         onChange={e => setFormData({ ...formData, name: e.target.value })}
-                        placeholder="e.g. NPF-229 (Groom)"
+                        placeholder="e.g. NPF-26 (Groom)"
+                        style={{ width: '100%', padding: '9px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '0.85rem' }}
+                      />
+                    </div>
+
+                    <div>
+                      <label style={{ fontSize: '0.78rem', fontWeight: 700, color: '#475569', display: 'block', marginBottom: '4px' }}>Age (Years)</label>
+                      <input
+                        type="number"
+                        min="18"
+                        max="90"
+                        value={formData.age}
+                        onChange={e => setFormData({ ...formData, age: e.target.value })}
+                        placeholder="e.g. 41 (from flyer)"
                         style={{ width: '100%', padding: '9px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '0.85rem' }}
                       />
                     </div>
@@ -1792,6 +1856,7 @@ export default function AdminPanel({ onBackToPortal, onProfilesChange }) {
                     <div>
                       <label style={{ fontSize: '0.78rem', fontWeight: 700, color: '#475569', display: 'block', marginBottom: '4px' }}>Marital Status</label>
                       <select value={formData.maritalStatus} onChange={e => setFormData({ ...formData, maritalStatus: e.target.value })} style={{ width: '100%', padding: '9px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '0.85rem' }}>
+                        <option value="">Select Marital Status (Optional)</option>
                         <option value="Never Married">Never Married</option>
                         <option value="Divorced">Divorced</option>
                         <option value="2nd Marriage">2nd Marriage</option>
@@ -1802,8 +1867,9 @@ export default function AdminPanel({ onBackToPortal, onProfilesChange }) {
                     <div>
                       <label style={{ fontSize: '0.78rem', fontWeight: 700, color: '#475569', display: 'block', marginBottom: '4px' }}>Nationality</label>
                       <select value={formData.nationality} onChange={e => setFormData({ ...formData, nationality: e.target.value })} style={{ width: '100%', padding: '9px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '0.85rem' }}>
-                        <option value="Pakistani">Pakistani</option>
+                        <option value="">Select Nationality (Optional)</option>
                         <option value="Bahraini">Bahraini</option>
+                        <option value="Pakistani">Pakistani</option>
                         <option value="Indian">Indian</option>
                         <option value="Saudi Arabia">Saudi Arabia</option>
                         <option value="Emirati">Emirati</option>
@@ -1811,7 +1877,51 @@ export default function AdminPanel({ onBackToPortal, onProfilesChange }) {
                       </select>
                     </div>
 
-                    <div style={{ gridColumn: 'span 2' }}>
+                    <div>
+                      <label style={{ fontSize: '0.78rem', fontWeight: 700, color: '#475569', display: 'block', marginBottom: '4px' }}>Profession / Job</label>
+                      <input
+                        type="text"
+                        value={formData.profession}
+                        onChange={e => setFormData({ ...formData, profession: e.target.value })}
+                        placeholder="e.g. Engineer / Businessman (or leave blank)"
+                        style={{ width: '100%', padding: '9px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '0.85rem' }}
+                      />
+                    </div>
+
+                    <div>
+                      <label style={{ fontSize: '0.78rem', fontWeight: 700, color: '#475569', display: 'block', marginBottom: '4px' }}>Height</label>
+                      <input
+                        type="text"
+                        value={formData.height}
+                        onChange={e => setFormData({ ...formData, height: e.target.value })}
+                        placeholder="e.g. 5'8&quot; (or leave blank)"
+                        style={{ width: '100%', padding: '9px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '0.85rem' }}
+                      />
+                    </div>
+
+                    <div>
+                      <label style={{ fontSize: '0.78rem', fontWeight: 700, color: '#475569', display: 'block', marginBottom: '4px' }}>Education / Qualification</label>
+                      <input
+                        type="text"
+                        value={formData.education}
+                        onChange={e => setFormData({ ...formData, education: e.target.value })}
+                        placeholder="e.g. Bachelor Degree (or leave blank)"
+                        style={{ width: '100%', padding: '9px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '0.85rem' }}
+                      />
+                    </div>
+
+                    <div>
+                      <label style={{ fontSize: '0.78rem', fontWeight: 700, color: '#475569', display: 'block', marginBottom: '4px' }}>Location / City</label>
+                      <input
+                        type="text"
+                        value={formData.location}
+                        onChange={e => setFormData({ ...formData, location: e.target.value })}
+                        placeholder="e.g. Bahrain / Manama (or leave blank)"
+                        style={{ width: '100%', padding: '9px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '0.85rem' }}
+                      />
+                    </div>
+
+                    <div>
                       <label style={{ fontSize: '0.78rem', fontWeight: 700, color: '#475569', display: 'block', marginBottom: '4px' }}>WhatsApp Contact</label>
                       <input
                         type="text"

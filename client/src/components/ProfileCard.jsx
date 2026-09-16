@@ -150,9 +150,11 @@ Please provide more details. JazakAllah Khair!`;
             <div className="font-cinzel" style={{ color: '#ffffff', fontWeight: 800, fontSize: '1rem', letterSpacing: '0.4px', lineHeight: 1.2 }}>
               {profile.name}
             </div>
-            <div style={{ color: '#fae182', fontSize: '0.78rem', fontWeight: 700 }}>
-              {profile.age} Yrs • {profile.maritalStatus}
-            </div>
+            {(profile.age || profile.maritalStatus) && (
+              <div style={{ color: '#fae182', fontSize: '0.78rem', fontWeight: 700 }}>
+                {[profile.age ? `${profile.age} Yrs` : '', profile.maritalStatus].filter(Boolean).join(' • ')}
+              </div>
+            )}
             {profile.profession && (
               <div style={{ color: '#cbd5e1', fontSize: '0.72rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '90%' }}>
                 💼 {profile.profession}
@@ -288,46 +290,54 @@ Please provide more details. JazakAllah Khair!`;
         flex: 1
       }}>
         {/* Marital Status + Nationality row */}
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '5px', alignItems: 'center' }}>
-          <span style={{
-            background: '#fef9c3',
-            border: '1px solid #fde68a',
-            color: '#92400e',
-            fontSize: '0.72rem',
-            fontWeight: 700,
-            padding: '2px 8px',
-            borderRadius: '999px',
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: '3px'
-          }}>
-            {maritalEmoji} {profile.maritalStatus}
-          </span>
-          <span style={{
-            background: '#f0fdf4',
-            border: '1px solid #bbf7d0',
-            color: '#166534',
-            fontSize: '0.72rem',
-            fontWeight: 700,
-            padding: '2px 8px',
-            borderRadius: '999px'
-          }}>
-            {nationalityFlag} {profile.nationality}
-          </span>
-        </div>
+        {(profile.maritalStatus || profile.nationality) && (
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '5px', alignItems: 'center' }}>
+            {profile.maritalStatus && (
+              <span style={{
+                background: '#fef9c3',
+                border: '1px solid #fde68a',
+                color: '#92400e',
+                fontSize: '0.72rem',
+                fontWeight: 700,
+                padding: '2px 8px',
+                borderRadius: '999px',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '3px'
+              }}>
+                {maritalEmoji} {profile.maritalStatus}
+              </span>
+            )}
+            {profile.nationality && (
+              <span style={{
+                background: '#f0fdf4',
+                border: '1px solid #bbf7d0',
+                color: '#166534',
+                fontSize: '0.72rem',
+                fontWeight: 700,
+                padding: '2px 8px',
+                borderRadius: '999px'
+              }}>
+                {nationalityFlag} {profile.nationality}
+              </span>
+            )}
+          </div>
+        )}
 
         {/* Location + age row */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.78rem', color: '#475569', flexWrap: 'wrap' }}>
-          {profile.age && (
-            <span style={{ fontWeight: 600, color: '#334155' }}>{profile.age} yrs</span>
-          )}
-          {profile.age && profile.location && <span style={{ color: '#cbd5e1' }}>â€¢</span>}
-          {profile.location && (
-            <span style={{ display: 'flex', alignItems: 'center', gap: '3px' }}>
-              <MapPin size={11} color="#d4af37" /> {profile.location}
-            </span>
-          )}
-        </div>
+        {(profile.age || profile.location) && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.78rem', color: '#475569', flexWrap: 'wrap' }}>
+            {profile.age && (
+              <span style={{ fontWeight: 600, color: '#334155' }}>{profile.age} yrs</span>
+            )}
+            {profile.age && profile.location && <span style={{ color: '#cbd5e1' }}>•</span>}
+            {profile.location && (
+              <span style={{ display: 'flex', alignItems: 'center', gap: '3px' }}>
+                <MapPin size={11} color="#d4af37" /> {profile.location}
+              </span>
+            )}
+          </div>
+        )}
 
         {/* Sect / Caste small tags */}
         {(profile.sect || (profile.caste && profile.caste !== 'General')) && (
