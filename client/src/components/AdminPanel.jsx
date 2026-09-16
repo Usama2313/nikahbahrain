@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useSpring, animated, config } from '@react-spring/web';
 import {
   Users,
@@ -22,6 +22,10 @@ import {
   X,
   ChevronLeft,
   ChevronRight,
+  Upload,
+  Download,
+  Copy,
+  Image,
 } from '../icons';
 import confetti from 'canvas-confetti';
 import API_BASE from '../api';
@@ -146,6 +150,93 @@ export default function AdminPanel({ onBackToPortal, onProfilesChange }) {
   const [editingProfile, setEditingProfile] = useState(null);
   const [formData, setFormData] = useState(DEFAULT_FORM);
   const [isSaving, setIsSaving] = useState(false);
+  const [instagramModalProfile, setInstagramModalProfile] = useState(null);
+  const [isUploadingImage, setIsUploadingImage] = useState(false);
+  const fileInputRef = useRef(null);
+
+  const generateInstagramCaption = (p) => {
+    if (!p) return '';
+    const isMale = p.gender === 'male';
+    const candidateType = isMale ? 'GROOM' : 'BRIDE';
+    const id = p.id || 'NPF-Proposal';
+    const nat = p.nationality || 'Pakistani';
+    return `✨ BISMILLAHIR RAHMANIR RAHEEM ✨\n\n` +
+      `💍 PROPOSAL: ${id} | ${candidateType} (${nat.toUpperCase()})\n` +
+      `━━━━━━━━━━━━━━━━━━━━━━━━━━\n` +
+      `• Age: ${p.age} years\n` +
+      `• Marital Status: ${p.maritalStatus}\n` +
+      `• Height: ${p.height || "5'8\""}\n` +
+      `• Sect: ${p.sect || 'Sunni'}\n` +
+      (p.caste && p.caste !== 'General' ? `• Caste: ${p.caste}\n` : '') +
+      `• Education: ${p.education || 'Graduate'}\n` +
+      `• Profession: ${p.profession || 'Professional'}\n` +
+      `• Current Location: ${p.location || 'Bahrain'}\n` +
+      `• Residence: ${p.residence || 'Bahrain Resident'}\n` +
+      `• Languages: ${p.languages || 'Arabic, English'}\n` +
+      (p.father ? `• Father: ${p.father}\n` : '') +
+      (p.mother ? `• Mother: ${p.mother}\n` : '') +
+      (p.siblings ? `• Siblings: ${p.siblings}\n` : '') +
+      `\n📝 ABOUT CANDIDATE:\n${p.about || 'Practicing, Deen-conscious candidate from a respected and noble family settled in Bahrain.'}\n\n` +
+      `🎯 PARTNER EXPECTATIONS:\n${p.requirements || 'Seeking a practicing, well-mannered Muslim partner residing in Bahrain or GCC.'}\n\n` +
+      `━━━━━━━━━━━━━━━━━━━━━━━━━━\n` +
+      `📩 TO CONNECT: Send a Direct Message to @nikah_bahrain with Profile ID ${id}\n` +
+      `💬 WhatsApp: ${p.contact || '+973 3718 8557'}\n\n` +
+      `#NikahBahrain #QabulHai #HalalNikah #BahrainMatrimonial #MuslimMatrimony #GCCMuslims #NPF`;
+  };
+
+  const handleImageFileUpload = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setIsUploadingImage(true);
+    const reader = new FileReader();
+    reader.onload = async (event) => {
+      const dataUrl = event.target.result;
+      setFormData(prev => ({ ...prev, image: dataUrl }));
+
+      try {
+        const res = await fetch(`${API_BASE}/upload`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ image: dataUrl, filename: file.name })
+        });
+        const d = await res.json();
+        if (d.success && d.url) {
+          setFormData(prev => ({ ...prev, image: d.url }));
+        }
+      } catch (_) {}
+      setIsUploadingImage(false);
+      showNotification('✓ Picture uploaded successfully from device!');
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleDownloadFlyer = (p) => {
+    if (!p?.image) {
+      showNotification('No flyer image attached to this profile.');
+      return;
+    }
+    const a = document.createElement('a');
+    a.href = p.image;
+    a.download = `${p.id || 'proposal'}_flyer.jpg`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    showNotification('✓ Flyer image download started!');
+  };
+
+  const handleCopyInstagramCaption = (text) => {
+    navigator.clipboard.writeText(text);
+    confetti({ particleCount: 40, spread: 50, origin: { y: 0.5 } });
+    showNotification('✓ Instagram caption copied to clipboard!');
+  };
+
+  const handleOpenInstagramToPost = (p) => {
+    const caption = generateInstagramCaption(p);
+    navigator.clipboard.writeText(caption);
+    if (p.image) handleDownloadFlyer(p);
+    showNotification('✓ Caption copied & flyer downloaded! Opening Instagram...');
+    window.open('https://www.instagram.com/', '_blank');
+  };
 
   const handleOpenCreate = () => {
     setEditingProfile(null);
@@ -220,8 +311,8 @@ export default function AdminPanel({ onBackToPortal, onProfilesChange }) {
     }
   };
 
-  const handleSaveAdminProfile = async (e) => {
-    e.preventDefault();
+  const handleSaveAdminProfile = async (e, openInstagram = false) => {
+    e?.preventDefault();
     setIsSaving(true);
     try {
       if (editingProfile) {
@@ -248,30 +339,21 @@ export default function AdminPanel({ onBackToPortal, onProfilesChange }) {
 
         saveCustomProfileToStorage(updated);
         setProfiles((prev) => {
-          const next = prev.map((p) => (p.id === editingProfile.id ? updated : p));
+          const next = prev.map((p) => (p.id === updated.id ? updated : p));
           if (onProfilesChange) onProfilesChange(next);
           return next;
         });
-        showNotification(`✓ Updated profile ${editingProfile.id} successfully!`);
+        showNotification(`✓ Updated profile ${updated.id} successfully!`);
         setIsFormOpen(false);
+        if (openInstagram) setInstagramModalProfile(updated);
       } else {
-        const newId = `NPF-${Math.floor(100 + Math.random() * 900)}`;
         let newProf = {
-          id: newId,
-          name: formData.name || `${newId} (${formData.gender === 'male' ? 'Groom' : 'Bride'})`,
-          gender: formData.gender,
-          maritalStatus: formData.maritalStatus,
+          ...formData,
+          id: `NPF-${Date.now().toString().slice(-4)}`,
           category: formData.gender === 'male' ? 'grooms' : 'brides',
-          nationality: formData.nationality,
-          age: Number(formData.age) || 25,
-          height: formData.height || `5'8"`,
-          sect: formData.sect || 'Sunni',
-          caste: formData.caste || 'General',
-          education: formData.education || '',
-          profession: formData.profession || '',
           salary: formData.salary || 'Confidential / As per discussion',
           location: formData.location || 'Bahrain',
-          residence: formData.residence || 'Bahrain / GCC',
+          residence: formData.residence || 'Bahrain Resident',
           siblings: formData.siblings || '',
           father: formData.father || '',
           mother: formData.mother || '',
@@ -308,6 +390,7 @@ export default function AdminPanel({ onBackToPortal, onProfilesChange }) {
         });
         showNotification(`✓ Published new profile ${newProf.id} successfully!`);
         setIsFormOpen(false);
+        if (openInstagram) setInstagramModalProfile(newProf);
       }
     } catch (err) {
       showNotification(`Error: ${err.message}`);
@@ -1057,6 +1140,14 @@ export default function AdminPanel({ onBackToPortal, onProfilesChange }) {
                               </td>
                               <td style={{ padding: '11px 14px', textAlign: 'right' }}>
                                 <div style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                                  <button
+                                    onClick={() => setInstagramModalProfile(p)}
+                                    className="btn-ghost"
+                                    style={{ padding: '5px 9px', color: '#E1306C' }}
+                                    title="Post / Share to Instagram (@nikah_bahrain)"
+                                  >
+                                    <Instagram size={13} color="#E1306C" />
+                                  </button>
                                   <a
                                     href={`https://wa.me/97337188557?text=${encodeURIComponent(`Admin check: ${p.id} — ${p.name}`)}`}
                                     target="_blank" rel="noopener noreferrer"
@@ -1361,9 +1452,16 @@ export default function AdminPanel({ onBackToPortal, onProfilesChange }) {
                 <input type="text" value={formData.contact} onChange={e => setFormData({ ...formData, contact: e.target.value })} placeholder="+973 3718 8557" style={{ width: '100%', padding: '9px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '0.85rem' }} />
               </div>
 
-              <div style={{ gridColumn: 'span 2' }}>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '4px' }}>
-                  <label style={{ fontSize: '0.78rem', fontWeight: 700, color: '#475569' }}>Image URL (Instagram / Cloud Image Link)</label>
+              <div style={{ gridColumn: 'span 2', background: '#f8fafc', border: '1.5px dashed #cbd5e1', borderRadius: '12px', padding: '16px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px' }}>
+                  <div>
+                    <label style={{ fontSize: '0.82rem', fontWeight: 800, color: '#1e293b', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <Image size={15} color="var(--text-gold)" /> Candidate Flyer / Profile Picture
+                    </label>
+                    <p style={{ fontSize: '0.74rem', color: '#64748b', margin: '2px 0 0' }}>
+                      Upload flyer picture from your computer/mobile OR paste image URL below
+                    </p>
+                  </div>
                   {formData.image && (
                     <button
                       type="button"
@@ -1373,7 +1471,7 @@ export default function AdminPanel({ onBackToPortal, onProfilesChange }) {
                         color: '#dc2626',
                         border: '1px solid #fca5a5',
                         borderRadius: '6px',
-                        padding: '3px 10px',
+                        padding: '4px 10px',
                         fontSize: '0.72rem',
                         fontWeight: 700,
                         cursor: 'pointer',
@@ -1386,10 +1484,48 @@ export default function AdminPanel({ onBackToPortal, onProfilesChange }) {
                     </button>
                   )}
                 </div>
-                <input type="url" value={formData.image} onChange={e => setFormData({ ...formData, image: e.target.value })} placeholder="https://... (Leave empty to show candidate Details Card)" style={{ width: '100%', padding: '9px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '0.85rem' }} />
+
+                {/* Live Preview & Upload Actions */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '16px', flexWrap: 'wrap' }}>
+                  {formData.image ? (
+                    <div style={{ position: 'relative', width: '84px', height: '84px', borderRadius: '10px', overflow: 'hidden', border: '2px solid var(--gold-border)', flexShrink: 0, boxShadow: '0 4px 10px rgba(0,0,0,0.1)' }}>
+                      <img src={formData.image} alt="Preview" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                    </div>
+                  ) : null}
+
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', flex: 1 }}>
+                    <input
+                      type="file"
+                      ref={fileInputRef}
+                      accept="image/*"
+                      style={{ display: 'none' }}
+                      onChange={handleImageFileUpload}
+                    />
+                    <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                      <button
+                        type="button"
+                        onClick={() => fileInputRef.current?.click()}
+                        disabled={isUploadingImage}
+                        className="btn-gold"
+                        style={{ fontSize: '0.78rem', padding: '7px 14px', display: 'inline-flex', alignItems: 'center', gap: '6px' }}
+                      >
+                        <Upload size={14} />
+                        <span>{isUploadingImage ? 'Uploading...' : formData.image ? 'Change Picture / Flyer' : 'Upload from Device'}</span>
+                      </button>
+                    </div>
+
+                    <input
+                      type="url"
+                      value={formData.image}
+                      onChange={e => setFormData({ ...formData, image: e.target.value })}
+                      placeholder="Or paste direct image URL (https://...)"
+                      style={{ width: '100%', padding: '7px 10px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '0.78rem', background: '#ffffff' }}
+                    />
+                  </div>
+                </div>
                 {!formData.image && (
-                  <div style={{ fontSize: '0.74rem', color: '#10b981', marginTop: '4px', fontWeight: 600 }}>
-                    ✓ Picture removed. This candidate profile will display as a styled Details Card on the website.
+                  <div style={{ fontSize: '0.72rem', color: '#64748b', marginTop: '8px' }}>
+                    ℹ️ If no image is provided, candidate will display with an elegant Typography Profile Card.
                   </div>
                 )}
               </div>
@@ -1404,13 +1540,204 @@ export default function AdminPanel({ onBackToPortal, onProfilesChange }) {
                 <textarea rows="2" value={formData.requirements} onChange={e => setFormData({ ...formData, requirements: e.target.value })} placeholder="Preferences for partner..." style={{ width: '100%', padding: '9px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '0.85rem' }} />
               </div>
 
-              <div style={{ gridColumn: 'span 2', display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '10px' }}>
+              <div style={{ gridColumn: 'span 2', display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: '10px', marginTop: '10px', flexWrap: 'wrap' }}>
                 <button type="button" onClick={() => setIsFormOpen(false)} style={{ padding: '9px 18px', borderRadius: '8px', border: '1px solid #cbd5e1', background: '#f8fafc', color: '#475569', fontWeight: 600, cursor: 'pointer' }}>Cancel</button>
+                <button
+                  type="button"
+                  disabled={isSaving}
+                  onClick={(e) => handleSaveAdminProfile(e, true)}
+                  style={{
+                    padding: '9px 16px',
+                    borderRadius: '8px',
+                    border: '1px solid #E1306C',
+                    background: 'linear-gradient(135deg, #fdf2f8 0%, #fce7f3 100%)',
+                    color: '#be185d',
+                    fontWeight: 700,
+                    fontSize: '0.82rem',
+                    cursor: 'pointer',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '6px'
+                  }}
+                >
+                  <Instagram size={14} color="#E1306C" />
+                  <span>Save & Post to Instagram</span>
+                </button>
                 <button type="submit" disabled={isSaving} style={{ padding: '9px 24px', borderRadius: '8px', border: 'none', background: 'linear-gradient(135deg, #fae182 0%, #d4af37 50%, #b8860b 100%)', color: '#0d251c', fontWeight: 800, cursor: 'pointer', boxShadow: '0 4px 14px rgba(212, 175, 55, 0.4)' }}>
                   {isSaving ? 'Saving...' : editingProfile ? 'Update Profile' : 'Save & Publish Profile'}
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* ════ INSTAGRAM PUBLISHER MODAL ════ */}
+      {instagramModalProfile && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: 'rgba(15, 23, 42, 0.8)',
+          backdropFilter: 'blur(8px)',
+          zIndex: 10000,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          padding: '20px'
+        }}>
+          <div style={{
+            background: '#ffffff',
+            borderRadius: '16px',
+            width: '100%',
+            maxWidth: '720px',
+            maxHeight: '92vh',
+            overflowY: 'auto',
+            boxShadow: '0 25px 50px -12px rgba(0,0,0,0.4)',
+            border: '1.5px solid var(--gold-border)',
+            padding: '24px'
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid #e2e8f0', paddingBottom: '14px', marginBottom: '16px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <div style={{ width: '32px', height: '32px', borderRadius: '8px', background: 'linear-gradient(45deg, #f09433 0%, #e6683c 25%, #dc2743 50%, #cc2366 75%, #bc1888 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff' }}>
+                  <Instagram size={18} />
+                </div>
+                <div>
+                  <h3 className="font-cinzel" style={{ fontSize: '1.2rem', fontWeight: 800, color: '#0f172a', margin: 0 }}>
+                    Post to Instagram (@nikah_bahrain)
+                  </h3>
+                  <span style={{ fontSize: '0.74rem', color: '#64748b' }}>Profile ID: {instagramModalProfile.id} ({instagramModalProfile.gender === 'male' ? 'Groom' : 'Bride'})</span>
+                </div>
+              </div>
+              <button onClick={() => setInstagramModalProfile(null)} className="btn-ghost" style={{ padding: '6px', borderRadius: '50%' }}>
+                <X size={18} />
+              </button>
+            </div>
+
+            {/* Step instructions banner */}
+            <div style={{ background: '#fdf2f8', border: '1px solid #fbcfe8', borderRadius: '10px', padding: '12px 16px', marginBottom: '18px', display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <Sparkles size={20} color="#db2777" />
+              <div style={{ fontSize: '0.78rem', color: '#9d174d' }}>
+                <strong>3-Step Instagram Publish:</strong> 1. Click <b>Download Flyer</b> → 2. Click <b>Copy Caption</b> → 3. Click <b>Open Instagram Creator</b> to upload and paste!
+              </div>
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: instagramModalProfile.image ? '180px 1fr' : '1fr', gap: '18px', marginBottom: '20px' }}>
+              {instagramModalProfile.image && (
+                <div>
+                  <label style={{ fontSize: '0.74rem', fontWeight: 700, color: '#475569', display: 'block', marginBottom: '6px' }}>Flyer Image</label>
+                  <div style={{ width: '100%', height: '220px', borderRadius: '10px', overflow: 'hidden', border: '1.5px solid #e2e8f0', boxShadow: '0 4px 10px rgba(0,0,0,0.06)' }}>
+                    <img src={instagramModalProfile.image} alt={instagramModalProfile.id} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  </div>
+                  <button
+                    onClick={() => handleDownloadFlyer(instagramModalProfile)}
+                    className="btn-ghost"
+                    style={{ width: '100%', marginTop: '8px', fontSize: '0.76rem', padding: '6px 10px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '4px' }}
+                  >
+                    <Download size={13} /> Download Flyer
+                  </button>
+                </div>
+              )}
+
+              <div>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px' }}>
+                  <label style={{ fontSize: '0.74rem', fontWeight: 700, color: '#475569' }}>Instagram Caption (Ready to Paste)</label>
+                  <button
+                    onClick={() => handleCopyInstagramCaption(generateInstagramCaption(instagramModalProfile))}
+                    style={{
+                      background: '#f1f5f9',
+                      border: '1px solid #cbd5e1',
+                      borderRadius: '6px',
+                      padding: '4px 8px',
+                      fontSize: '0.72rem',
+                      fontWeight: 700,
+                      cursor: 'pointer',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '4px',
+                      color: '#0f172a'
+                    }}
+                  >
+                    <Copy size={12} /> Copy Caption
+                  </button>
+                </div>
+                <textarea
+                  readOnly
+                  rows={8}
+                  value={generateInstagramCaption(instagramModalProfile)}
+                  style={{
+                    width: '100%',
+                    padding: '10px 12px',
+                    borderRadius: '8px',
+                    border: '1px solid #cbd5e1',
+                    fontSize: '0.76rem',
+                    fontFamily: 'monospace',
+                    background: '#f8fafc',
+                    color: '#1e293b',
+                    lineHeight: '1.4'
+                  }}
+                />
+              </div>
+            </div>
+
+            {/* Modal Actions */}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderTop: '1px solid #e2e8f0', paddingTop: '16px', flexWrap: 'wrap', gap: '10px' }}>
+              <div style={{ display: 'flex', gap: '8px' }}>
+                <button
+                  type="button"
+                  onClick={() => handleCopyInstagramCaption(generateInstagramCaption(instagramModalProfile))}
+                  className="btn-ghost"
+                  style={{ fontSize: '0.8rem', padding: '8px 14px', display: 'inline-flex', alignItems: 'center', gap: '6px' }}
+                >
+                  <Copy size={14} />
+                  <span>Copy Caption</span>
+                </button>
+                {instagramModalProfile.image && (
+                  <button
+                    type="button"
+                    onClick={() => handleDownloadFlyer(instagramModalProfile)}
+                    className="btn-ghost"
+                    style={{ fontSize: '0.8rem', padding: '8px 14px', display: 'inline-flex', alignItems: 'center', gap: '6px' }}
+                  >
+                    <Download size={14} />
+                    <span>Download Flyer</span>
+                  </button>
+                )}
+              </div>
+
+              <div style={{ display: 'flex', gap: '8px' }}>
+                <button
+                  type="button"
+                  onClick={() => setInstagramModalProfile(null)}
+                  style={{ padding: '8px 16px', borderRadius: '8px', border: '1px solid #cbd5e1', background: '#f8fafc', color: '#475569', fontWeight: 600, cursor: 'pointer', fontSize: '0.8rem' }}
+                >
+                  Close
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleOpenInstagramToPost(instagramModalProfile)}
+                  style={{
+                    padding: '8px 20px',
+                    borderRadius: '8px',
+                    border: 'none',
+                    background: 'linear-gradient(45deg, #f09433 0%, #e6683c 25%, #dc2743 50%, #cc2366 75%, #bc1888 100%)',
+                    color: '#ffffff',
+                    fontWeight: 800,
+                    cursor: 'pointer',
+                    fontSize: '0.82rem',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    boxShadow: '0 4px 14px rgba(225, 48, 108, 0.35)'
+                  }}
+                >
+                  <Instagram size={15} />
+                  <span>Open Instagram to Post</span>
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}

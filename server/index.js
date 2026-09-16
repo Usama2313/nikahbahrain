@@ -15,14 +15,15 @@ const PORT = process.env.PORT || 5000;
 
 app.use(cors());
 app.use(morgan('dev'));
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
 // Static directory for logos and uploads
 const publicDir = path.join(__dirname, 'public');
 if (!process.env.VERCEL && !fs.existsSync(publicDir)) {
   try {
     fs.mkdirSync(publicDir, { recursive: true });
+    fs.mkdirSync(path.join(publicDir, 'uploads'), { recursive: true });
   } catch (e) {
     console.error('Could not create public dir:', e);
   }
@@ -61,22 +62,28 @@ function getProfiles() {
 
 // Helper to save profiles across server and client bundles
 function saveProfiles(profiles) {
+  const jsonStr = JSON.stringify(profiles, null, 2);
   const targetFile = getDataFilePath();
   try {
-    const jsonStr = JSON.stringify(profiles, null, 2);
     fs.writeFileSync(targetFile, jsonStr, 'utf8');
+  } catch (err) {
+    console.error('Error saving profiles:', err);
+  }
 
-    // Also sync to client bundle if present
-    const clientPath = path.join(__dirname, '..', 'client', 'src', 'data', 'profiles.json');
-    if (fs.existsSync(clientPath) && clientPath !== targetFile) {
+  // Also sync to client bundle if present
+  const clientCandidates = [
+    path.join(__dirname, '..', 'client', 'src', 'data', 'profiles.json'),
+    path.join(process.cwd(), 'client', 'src', 'data', 'profiles.json'),
+    path.join(__dirname, 'client', 'src', 'data', 'profiles.json'),
+  ];
+  for (const c of clientCandidates) {
+    if (fs.existsSync(c) && c !== targetFile) {
       try {
-        fs.writeFileSync(clientPath, jsonStr, 'utf8');
+        fs.writeFileSync(c, jsonStr, 'utf8');
       } catch (e) {
         console.warn('Could not sync client profiles:', e.message);
       }
     }
-  } catch (err) {
-    console.error('Error saving profiles:', err);
   }
 }
 
@@ -319,6 +326,52 @@ app.post(['/api/google-form-submission', '/google-form-submission', '/api/webhoo
   }
 });
 
+
+// 3c. POST /api/upload (Admin Photo & Flyer Upload Handler)
+app.post(['/api/upload', '/upload'], (req, res) => {
+  try {
+    const { image, filename } = req.body || {};
+    if (!image) {
+      return res.status(400).json({ success: false, message: 'No image data provided' });
+    }
+
+    // If it's already an external URL
+    if (image.startsWith('http://') || image.startsWith('https://')) {
+      return res.json({ success: true, url: image, dataUrl: image });
+    }
+
+    // If it's a base64 Data URL
+    if (image.startsWith('data:image/')) {
+      const matches = image.match(/^data:image\/([a-zA-Z0-9+]+);base64,(.+)$/);
+      if (matches) {
+        const ext = matches[1] === 'jpeg' ? 'jpg' : matches[1];
+        const base64Data = matches[2];
+        const fname = filename || `flyer_${Date.now()}_${Math.floor(Math.random() * 1000)}.${ext}`;
+        const uploadsDir = path.join(publicDir, 'uploads');
+        if (!process.env.VERCEL) {
+          try {
+            if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir, { recursive: true });
+            fs.writeFileSync(path.join(uploadsDir, fname), Buffer.from(base64Data, 'base64'));
+          } catch (writeErr) {
+            console.warn('Could not write image to disk (using dataUrl):', writeErr.message);
+          }
+        }
+        // Return both relative public URL and dataUrl so it renders on both localhost and Vercel
+        return res.json({
+          success: true,
+          url: image, // Use dataUrl for guaranteed persistence across serverless & static builds
+          publicUrl: `/public/uploads/${fname}`,
+          filename: fname
+        });
+      }
+    }
+
+    res.json({ success: true, url: image });
+  } catch (err) {
+    console.error('Upload error:', err);
+    res.status(500).json({ success: false, message: `Failed to upload image: ${err.message}` });
+  }
+});
 
 // 4. PUT /api/profiles/:id (Admin update)
 app.put(['/api/profiles/:id', '/profiles/:id'], (req, res) => {
