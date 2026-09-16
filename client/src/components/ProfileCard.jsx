@@ -112,8 +112,8 @@ Please provide more details. JazakAllah Khair!`;
             style={{
               ...imgSpring,
               width: '100%',
-              height: '100%',
-              objectFit: 'contain',
+              height: 'auto',
+              objectFit: 'cover',
               display: 'block',
               background: '#000'
             }}
