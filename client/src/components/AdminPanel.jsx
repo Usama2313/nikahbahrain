@@ -27,6 +27,7 @@ import {
   Copy,
   Image,
   FileText,
+  AlertCircle,
 } from '../icons';
 import confetti from 'canvas-confetti';
 import API_BASE from '../api';
@@ -151,10 +152,23 @@ export default function AdminPanel({ onBackToPortal, onProfilesChange }) {
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingProfile, setEditingProfile] = useState(null);
   const [formData, setFormData] = useState(DEFAULT_FORM);
+  const [formErrors, setFormErrors] = useState({});
+  const [loginErrors, setLoginErrors] = useState({});
   const [isSaving, setIsSaving] = useState(false);
   const [instagramModalProfile, setInstagramModalProfile] = useState(null);
   const [isUploadingImage, setIsUploadingImage] = useState(false);
   const fileInputRef = useRef(null);
+
+  const handleFieldChange = (field, value) => {
+    setFormData(prev => ({ ...prev, [field]: value }));
+    if (formErrors[field]) {
+      setFormErrors(prev => {
+        const copy = { ...prev };
+        delete copy[field];
+        return copy;
+      });
+    }
+  };
 
   const generateInstagramCaption = (p) => {
     if (!p) return '';
@@ -194,6 +208,11 @@ export default function AdminPanel({ onBackToPortal, onProfilesChange }) {
     reader.onload = async (event) => {
       const dataUrl = event.target.result;
       setFormData(prev => ({ ...prev, image: dataUrl }));
+      setFormErrors(prev => {
+        const copy = { ...prev };
+        delete copy.image;
+        return copy;
+      });
 
       try {
         const res = await fetch(`${API_BASE}/upload`, {
@@ -245,6 +264,7 @@ export default function AdminPanel({ onBackToPortal, onProfilesChange }) {
   const handleOpenCreate = (mode = 'form') => {
     setEditingProfile(null);
     setCreationMode(mode);
+    setFormErrors({});
     const maxNpf = profiles.reduce((max, p) => {
       const m = (p.id || '').match(/NPF-?(\d+)/i);
       if (m) {
@@ -269,6 +289,7 @@ export default function AdminPanel({ onBackToPortal, onProfilesChange }) {
   const handleOpenEdit = (p) => {
     setEditingProfile(p);
     setCreationMode(p.image ? 'picture' : 'form');
+    setFormErrors({});
     setFormData({
       name: p.name || '',
       gender: p.gender || 'male',
@@ -335,18 +356,92 @@ export default function AdminPanel({ onBackToPortal, onProfilesChange }) {
     }
   };
 
+  const validateProfileForm = () => {
+    const errs = {};
+
+    if (creationMode === 'form') {
+      if (!formData.name?.trim()) {
+        errs.name = 'Full Name / Profile Title is required.';
+      } else if (formData.name.trim().length < 3) {
+        errs.name = 'Profile Title must be at least 3 characters.';
+      }
+
+      if (!formData.gender) {
+        errs.gender = 'Candidate Gender is required.';
+      }
+
+      if (!formData.maritalStatus) {
+        errs.maritalStatus = 'Please select a marital status.';
+      }
+
+      if (!formData.nationality) {
+        errs.nationality = 'Please select a nationality.';
+      }
+
+      if (formData.age !== '' && formData.age !== null && formData.age !== undefined) {
+        const numAge = Number(formData.age);
+        if (isNaN(numAge) || numAge < 18 || numAge > 80) {
+          errs.age = 'Age must be a valid number between 18 and 80.';
+        }
+      }
+
+      if (formData.contact?.trim()) {
+        const digits = formData.contact.replace(/\D/g, '');
+        if (digits.length < 7 || digits.length > 16) {
+          errs.contact = 'Please enter a valid phone number (7-16 digits, e.g. +973 3718 8557).';
+        }
+      }
+    } else {
+      // creationMode === 'picture'
+      if (!formData.image?.trim()) {
+        errs.image = 'Candidate picture / flyer is required. Please upload an image or paste a direct image URL.';
+      }
+
+      if (!formData.name?.trim()) {
+        errs.name = 'Profile Title / Code is required (e.g. NPF-26 (Groom)).';
+      } else if (formData.name.trim().length < 3) {
+        errs.name = 'Profile Title / Code must be at least 3 characters.';
+      }
+
+      if (!formData.gender) {
+        errs.gender = 'Candidate Gender is required.';
+      }
+
+      if (formData.age !== '' && formData.age !== null && formData.age !== undefined) {
+        const numAge = Number(formData.age);
+        if (isNaN(numAge) || numAge < 18 || numAge > 80) {
+          errs.age = 'Age must be a valid number between 18 and 80.';
+        }
+      }
+
+      if (formData.instagramPostUrl?.trim()) {
+        const url = formData.instagramPostUrl.trim();
+        if (!/^https?:\/\/(www\.)?instagram\.com\//i.test(url)) {
+          errs.instagramPostUrl = 'Please enter a valid Instagram URL (e.g. https://www.instagram.com/p/...).';
+        }
+      }
+
+      if (formData.contact?.trim()) {
+        const digits = formData.contact.replace(/\D/g, '');
+        if (digits.length < 7 || digits.length > 16) {
+          errs.contact = 'Please enter a valid phone number (7-16 digits, e.g. +973 3718 8557).';
+        }
+      }
+    }
+
+    return errs;
+  };
+
   const handleSaveAdminProfile = async (e, openInstagram = false) => {
     e?.preventDefault();
 
-    if (creationMode === 'picture' && !formData.image) {
-      showNotification('⚠️ Please upload or provide a candidate picture first.');
+    const errs = validateProfileForm();
+    if (Object.keys(errs).length > 0) {
+      setFormErrors(errs);
+      showNotification('⚠️ Please correct the highlighted errors in the form.');
       return;
     }
-
-    if (creationMode === 'form' && !formData.name?.trim()) {
-      showNotification('⚠️ Please enter a Full Name or Profile Title.');
-      return;
-    }
+    setFormErrors({});
 
     setIsSaving(true);
     try {
@@ -521,8 +616,23 @@ export default function AdminPanel({ onBackToPortal, onProfilesChange }) {
   const handleLogin = (e) => {
     e?.preventDefault();
     setLoginError('');
+    const errs = {};
     const cleanUser = usernameInput.trim().toLowerCase();
     const cleanPass = passwordInput.trim();
+
+    if (!cleanUser) {
+      errs.username = 'Admin username is required.';
+    }
+    if (!cleanPass) {
+      errs.password = 'Admin password is required.';
+    }
+
+    if (Object.keys(errs).length > 0) {
+      setLoginErrors(errs);
+      return;
+    }
+    setLoginErrors({});
+
     if (
       (cleanUser === ADMIN_CREDENTIALS.username || cleanUser === ADMIN_CREDENTIALS.altUsername) &&
       cleanPass === ADMIN_CREDENTIALS.password
@@ -531,7 +641,7 @@ export default function AdminPanel({ onBackToPortal, onProfilesChange }) {
       setIsAuthenticated(true);
       confetti({ particleCount: 50, spread: 60, origin: { y: 0.5 } });
     } else {
-      setLoginError('Invalid username or password.');
+      setLoginError('Invalid username or password. Please verify your credentials.');
     }
   };
 
@@ -796,41 +906,76 @@ export default function AdminPanel({ onBackToPortal, onProfilesChange }) {
           <form onSubmit={handleLogin} style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: '14px' }}>
             <div>
               <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 700, color: '#1e293b', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                Admin Username
+                Admin Username *
               </label>
               <input
                 id="admin-username-input"
                 type="text"
                 value={usernameInput}
-                onChange={e => setUsernameInput(e.target.value)}
+                onChange={e => {
+                  setUsernameInput(e.target.value);
+                  if (loginErrors.username) setLoginErrors(prev => ({ ...prev, username: '' }));
+                  if (loginError) setLoginError('');
+                }}
                 placeholder="admin"
-                required
-                style={{ width: '100%', padding: '11px 14px', borderRadius: 'var(--radius-md)', background: '#f8fafc', border: '1.5px solid rgba(196, 155, 31, 0.35)', color: '#0f172a', fontSize: '0.9rem', outline: 'none' }}
+                style={{
+                  width: '100%',
+                  padding: '11px 14px',
+                  borderRadius: 'var(--radius-md)',
+                  background: loginErrors.username ? '#fef2f2' : '#f8fafc',
+                  border: loginErrors.username ? '1.5px solid #ef4444' : '1.5px solid rgba(196, 155, 31, 0.35)',
+                  color: '#0f172a',
+                  fontSize: '0.9rem',
+                  outline: 'none'
+                }}
               />
+              {loginErrors.username && (
+                <span style={{ color: '#dc2626', fontSize: '0.74rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '4px', marginTop: '4px' }}>
+                  <AlertCircle size={12} /> {loginErrors.username}
+                </span>
+              )}
             </div>
             <div>
               <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 700, color: '#1e293b', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                Admin Password
+                Admin Password *
               </label>
               <div style={{ position: 'relative' }}>
                 <input
                   id="admin-password-input"
                   type={showPassword ? 'text' : 'password'}
                   value={passwordInput}
-                  onChange={e => setPasswordInput(e.target.value)}
+                  onChange={e => {
+                    setPasswordInput(e.target.value);
+                    if (loginErrors.password) setLoginErrors(prev => ({ ...prev, password: '' }));
+                    if (loginError) setLoginError('');
+                  }}
                   placeholder="Enter admin password"
-                  required
-                  style={{ width: '100%', padding: '11px 40px 11px 14px', borderRadius: 'var(--radius-md)', background: '#f8fafc', border: '1.5px solid rgba(196, 155, 31, 0.35)', color: '#0f172a', fontSize: '0.9rem', outline: 'none' }}
+                  style={{
+                    width: '100%',
+                    padding: '11px 40px 11px 14px',
+                    borderRadius: 'var(--radius-md)',
+                    background: loginErrors.password ? '#fef2f2' : '#f8fafc',
+                    border: loginErrors.password ? '1.5px solid #ef4444' : '1.5px solid rgba(196, 155, 31, 0.35)',
+                    color: '#0f172a',
+                    fontSize: '0.9rem',
+                    outline: 'none'
+                  }}
                 />
                 <button type="button" onClick={() => setShowPassword(!showPassword)}
                   style={{ position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', color: '#64748b', cursor: 'pointer', fontSize: '0.75rem', padding: '4px' }}>
                   {showPassword ? 'Hide' : 'Show'}
                 </button>
               </div>
+              {loginErrors.password && (
+                <span style={{ color: '#dc2626', fontSize: '0.74rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '4px', marginTop: '4px' }}>
+                  <AlertCircle size={12} /> {loginErrors.password}
+                </span>
+              )}
             </div>
             {loginError && (
-              <div style={{ background: '#fef2f2', border: '1px solid #fca5a5', color: '#b91c1c', padding: '8px 12px', borderRadius: 'var(--radius-sm)', fontSize: '0.8rem', textAlign: 'center' }}>
-                {loginError}
+              <div style={{ background: '#fef2f2', border: '1px solid #fca5a5', color: '#b91c1c', padding: '10px 14px', borderRadius: 'var(--radius-sm)', fontSize: '0.82rem', textAlign: 'left', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <AlertCircle size={16} color="#dc2626" style={{ flexShrink: 0 }} />
+                <span>{loginError}</span>
               </div>
             )}
             <button id="admin-login-submit-btn" type="submit" className="btn-gold" style={{ width: '100%', padding: '12px', fontSize: '0.92rem', marginTop: '6px', letterSpacing: '0.5px' }}>
@@ -1526,7 +1671,10 @@ export default function AdminPanel({ onBackToPortal, onProfilesChange }) {
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginBottom: '18px', background: '#f1f5f9', padding: '5px', borderRadius: '12px' }}>
               <button
                 type="button"
-                onClick={() => setCreationMode('form')}
+                onClick={() => {
+                  setCreationMode('form');
+                  setFormErrors({});
+                }}
                 style={{
                   padding: '11px 16px',
                   borderRadius: '8px',
@@ -1549,7 +1697,10 @@ export default function AdminPanel({ onBackToPortal, onProfilesChange }) {
               </button>
               <button
                 type="button"
-                onClick={() => setCreationMode('picture')}
+                onClick={() => {
+                  setCreationMode('picture');
+                  setFormErrors({});
+                }}
                 style={{
                   padding: '11px 16px',
                   borderRadius: '8px',
@@ -1581,6 +1732,33 @@ export default function AdminPanel({ onBackToPortal, onProfilesChange }) {
                 onChange={handleImageFileUpload}
               />
 
+              {/* ── Error Summary Banner ── */}
+              {Object.keys(formErrors).length > 0 && (
+                <div style={{
+                  background: '#fef2f2',
+                  border: '1.5px solid #f87171',
+                  borderRadius: '10px',
+                  padding: '12px 16px',
+                  marginBottom: '16px',
+                  display: 'flex',
+                  alignItems: 'flex-start',
+                  gap: '10px',
+                  animation: 'fadeIn 0.2s ease-in-out'
+                }}>
+                  <AlertCircle size={20} color="#dc2626" style={{ flexShrink: 0, marginTop: '2px' }} />
+                  <div style={{ flex: 1 }}>
+                    <h5 style={{ margin: '0 0 4px', color: '#991b1b', fontSize: '0.85rem', fontWeight: 800 }}>
+                      Please correct the following errors before saving:
+                    </h5>
+                    <ul style={{ margin: 0, paddingLeft: '18px', color: '#b91c1c', fontSize: '0.78rem', lineHeight: 1.5 }}>
+                      {Object.values(formErrors).map((msg, idx) => (
+                        <li key={idx}>{msg}</li>
+                      ))}
+                    </ul>
+                  </div>
+                </div>
+              )}
+
               {creationMode === 'form' ? (
                 /* ════ TAB 1: FORM FILLING (NO PICTURE) ════ */
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
@@ -1592,31 +1770,103 @@ export default function AdminPanel({ onBackToPortal, onProfilesChange }) {
                   </div>
 
                   <div style={{ gridColumn: 'span 2' }}>
-                    <label style={{ fontSize: '0.78rem', fontWeight: 700, color: '#475569', display: 'block', marginBottom: '4px' }}>Full Name / Profile Title *</label>
-                    <input type="text" value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value })} placeholder="e.g. NPF-230 (Groom) or Candidate Name" style={{ width: '100%', padding: '9px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '0.85rem' }} />
+                    <label style={{ fontSize: '0.78rem', fontWeight: 700, color: formErrors.name ? '#dc2626' : '#475569', display: 'block', marginBottom: '4px' }}>
+                      Full Name / Profile Title *
+                    </label>
+                    <input
+                      type="text"
+                      value={formData.name}
+                      onChange={e => handleFieldChange('name', e.target.value)}
+                      placeholder="e.g. NPF-230 (Groom) or Candidate Name"
+                      style={{
+                        width: '100%',
+                        padding: '9px 12px',
+                        borderRadius: '8px',
+                        border: formErrors.name ? '1.5px solid #ef4444' : '1px solid #cbd5e1',
+                        background: formErrors.name ? '#fff5f5' : '#ffffff',
+                        fontSize: '0.85rem',
+                        transition: 'border-color 0.15s ease'
+                      }}
+                    />
+                    {formErrors.name && (
+                      <span style={{ color: '#dc2626', fontSize: '0.74rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '4px', marginTop: '4px' }}>
+                        <AlertCircle size={12} /> {formErrors.name}
+                      </span>
+                    )}
                   </div>
 
                   <div>
-                    <label style={{ fontSize: '0.78rem', fontWeight: 700, color: '#475569', display: 'block', marginBottom: '4px' }}>Gender *</label>
-                    <select value={formData.gender} onChange={e => setFormData({ ...formData, gender: e.target.value })} style={{ width: '100%', padding: '9px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '0.85rem' }}>
+                    <label style={{ fontSize: '0.78rem', fontWeight: 700, color: formErrors.gender ? '#dc2626' : '#475569', display: 'block', marginBottom: '4px' }}>
+                      Gender *
+                    </label>
+                    <select
+                      value={formData.gender}
+                      onChange={e => handleFieldChange('gender', e.target.value)}
+                      style={{
+                        width: '100%',
+                        padding: '9px 12px',
+                        borderRadius: '8px',
+                        border: formErrors.gender ? '1.5px solid #ef4444' : '1px solid #cbd5e1',
+                        background: formErrors.gender ? '#fff5f5' : '#ffffff',
+                        fontSize: '0.85rem'
+                      }}
+                    >
                       <option value="male">Male (Groom)</option>
                       <option value="female">Female (Bride)</option>
                     </select>
+                    {formErrors.gender && (
+                      <span style={{ color: '#dc2626', fontSize: '0.74rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '4px', marginTop: '4px' }}>
+                        <AlertCircle size={12} /> {formErrors.gender}
+                      </span>
+                    )}
                   </div>
 
                   <div>
-                    <label style={{ fontSize: '0.78rem', fontWeight: 700, color: '#475569', display: 'block', marginBottom: '4px' }}>Marital Status *</label>
-                    <select value={formData.maritalStatus} onChange={e => setFormData({ ...formData, maritalStatus: e.target.value })} style={{ width: '100%', padding: '9px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '0.85rem' }}>
+                    <label style={{ fontSize: '0.78rem', fontWeight: 700, color: formErrors.maritalStatus ? '#dc2626' : '#475569', display: 'block', marginBottom: '4px' }}>
+                      Marital Status *
+                    </label>
+                    <select
+                      value={formData.maritalStatus}
+                      onChange={e => handleFieldChange('maritalStatus', e.target.value)}
+                      style={{
+                        width: '100%',
+                        padding: '9px 12px',
+                        borderRadius: '8px',
+                        border: formErrors.maritalStatus ? '1.5px solid #ef4444' : '1px solid #cbd5e1',
+                        background: formErrors.maritalStatus ? '#fff5f5' : '#ffffff',
+                        fontSize: '0.85rem'
+                      }}
+                    >
+                      <option value="">Select Marital Status</option>
                       <option value="Never Married">Never Married</option>
                       <option value="Divorced">Divorced</option>
                       <option value="2nd Marriage">2nd Marriage</option>
                       <option value="Widowed">Widowed</option>
                     </select>
+                    {formErrors.maritalStatus && (
+                      <span style={{ color: '#dc2626', fontSize: '0.74rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '4px', marginTop: '4px' }}>
+                        <AlertCircle size={12} /> {formErrors.maritalStatus}
+                      </span>
+                    )}
                   </div>
 
                   <div>
-                    <label style={{ fontSize: '0.78rem', fontWeight: 700, color: '#475569', display: 'block', marginBottom: '4px' }}>Nationality *</label>
-                    <select value={formData.nationality} onChange={e => setFormData({ ...formData, nationality: e.target.value })} style={{ width: '100%', padding: '9px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '0.85rem' }}>
+                    <label style={{ fontSize: '0.78rem', fontWeight: 700, color: formErrors.nationality ? '#dc2626' : '#475569', display: 'block', marginBottom: '4px' }}>
+                      Nationality *
+                    </label>
+                    <select
+                      value={formData.nationality}
+                      onChange={e => handleFieldChange('nationality', e.target.value)}
+                      style={{
+                        width: '100%',
+                        padding: '9px 12px',
+                        borderRadius: '8px',
+                        border: formErrors.nationality ? '1.5px solid #ef4444' : '1px solid #cbd5e1',
+                        background: formErrors.nationality ? '#fff5f5' : '#ffffff',
+                        fontSize: '0.85rem'
+                      }}
+                    >
+                      <option value="">Select Nationality</option>
                       <option value="Pakistani">Pakistani</option>
                       <option value="Indian">Indian</option>
                       <option value="Bahraini">Bahraini</option>
@@ -1624,61 +1874,108 @@ export default function AdminPanel({ onBackToPortal, onProfilesChange }) {
                       <option value="Emirati">Emirati</option>
                       <option value="GCC / Other">GCC / Other</option>
                     </select>
+                    {formErrors.nationality && (
+                      <span style={{ color: '#dc2626', fontSize: '0.74rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '4px', marginTop: '4px' }}>
+                        <AlertCircle size={12} /> {formErrors.nationality}
+                      </span>
+                    )}
                   </div>
 
                   <div>
-                    <label style={{ fontSize: '0.78rem', fontWeight: 700, color: '#475569', display: 'block', marginBottom: '4px' }}>Age</label>
-                    <input type="number" min="18" max="80" value={formData.age} onChange={e => setFormData({ ...formData, age: Number(e.target.value) })} style={{ width: '100%', padding: '9px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '0.85rem' }} />
+                    <label style={{ fontSize: '0.78rem', fontWeight: 700, color: formErrors.age ? '#dc2626' : '#475569', display: 'block', marginBottom: '4px' }}>
+                      Age
+                    </label>
+                    <input
+                      type="number"
+                      min="18"
+                      max="80"
+                      value={formData.age}
+                      onChange={e => handleFieldChange('age', e.target.value === '' ? '' : Number(e.target.value))}
+                      placeholder="e.g. 28"
+                      style={{
+                        width: '100%',
+                        padding: '9px 12px',
+                        borderRadius: '8px',
+                        border: formErrors.age ? '1.5px solid #ef4444' : '1px solid #cbd5e1',
+                        background: formErrors.age ? '#fff5f5' : '#ffffff',
+                        fontSize: '0.85rem'
+                      }}
+                    />
+                    {formErrors.age && (
+                      <span style={{ color: '#dc2626', fontSize: '0.74rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '4px', marginTop: '4px' }}>
+                        <AlertCircle size={12} /> {formErrors.age}
+                      </span>
+                    )}
                   </div>
 
                   <div>
                     <label style={{ fontSize: '0.78rem', fontWeight: 700, color: '#475569', display: 'block', marginBottom: '4px' }}>Height</label>
-                    <input type="text" value={formData.height} onChange={e => setFormData({ ...formData, height: e.target.value })} placeholder="e.g. 5'10&quot;" style={{ width: '100%', padding: '9px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '0.85rem' }} />
+                    <input type="text" value={formData.height} onChange={e => handleFieldChange('height', e.target.value)} placeholder="e.g. 5'10&quot;" style={{ width: '100%', padding: '9px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '0.85rem' }} />
                   </div>
 
                   <div>
                     <label style={{ fontSize: '0.78rem', fontWeight: 700, color: '#475569', display: 'block', marginBottom: '4px' }}>Religious Sect</label>
-                    <input type="text" value={formData.sect} onChange={e => setFormData({ ...formData, sect: e.target.value })} placeholder="e.g. Sunni / Ahle Sunnat" style={{ width: '100%', padding: '9px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '0.85rem' }} />
+                    <input type="text" value={formData.sect} onChange={e => handleFieldChange('sect', e.target.value)} placeholder="e.g. Sunni / Ahle Sunnat" style={{ width: '100%', padding: '9px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '0.85rem' }} />
                   </div>
 
                   <div>
                     <label style={{ fontSize: '0.78rem', fontWeight: 700, color: '#475569', display: 'block', marginBottom: '4px' }}>Caste / Sub-caste</label>
-                    <input type="text" value={formData.caste} onChange={e => setFormData({ ...formData, caste: e.target.value })} placeholder="e.g. Syed, Rajput, Arain, General" style={{ width: '100%', padding: '9px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '0.85rem' }} />
+                    <input type="text" value={formData.caste} onChange={e => handleFieldChange('caste', e.target.value)} placeholder="e.g. Syed, Rajput, Arain, General" style={{ width: '100%', padding: '9px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '0.85rem' }} />
                   </div>
 
                   <div>
                     <label style={{ fontSize: '0.78rem', fontWeight: 700, color: '#475569', display: 'block', marginBottom: '4px' }}>Education</label>
-                    <input type="text" value={formData.education} onChange={e => setFormData({ ...formData, education: e.target.value })} placeholder="e.g. MBA, B.Tech, Master Degree" style={{ width: '100%', padding: '9px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '0.85rem' }} />
+                    <input type="text" value={formData.education} onChange={e => handleFieldChange('education', e.target.value)} placeholder="e.g. MBA, B.Tech, Master Degree" style={{ width: '100%', padding: '9px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '0.85rem' }} />
                   </div>
 
                   <div>
                     <label style={{ fontSize: '0.78rem', fontWeight: 700, color: '#475569', display: 'block', marginBottom: '4px' }}>Profession / Job</label>
-                    <input type="text" value={formData.profession} onChange={e => setFormData({ ...formData, profession: e.target.value })} placeholder="e.g. Software Engineer, Business" style={{ width: '100%', padding: '9px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '0.85rem' }} />
+                    <input type="text" value={formData.profession} onChange={e => handleFieldChange('profession', e.target.value)} placeholder="e.g. Software Engineer, Business" style={{ width: '100%', padding: '9px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '0.85rem' }} />
                   </div>
 
                   <div>
                     <label style={{ fontSize: '0.78rem', fontWeight: 700, color: '#475569', display: 'block', marginBottom: '4px' }}>Current Location</label>
-                    <input type="text" value={formData.location} onChange={e => setFormData({ ...formData, location: e.target.value })} placeholder="e.g. Manama, Bahrain" style={{ width: '100%', padding: '9px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '0.85rem' }} />
+                    <input type="text" value={formData.location} onChange={e => handleFieldChange('location', e.target.value)} placeholder="e.g. Manama, Bahrain" style={{ width: '100%', padding: '9px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '0.85rem' }} />
                   </div>
 
                   <div>
                     <label style={{ fontSize: '0.78rem', fontWeight: 700, color: '#475569', display: 'block', marginBottom: '4px' }}>Residence Status</label>
-                    <input type="text" value={formData.residence} onChange={e => setFormData({ ...formData, residence: e.target.value })} placeholder="e.g. CPR Holder, Resident" style={{ width: '100%', padding: '9px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '0.85rem' }} />
+                    <input type="text" value={formData.residence} onChange={e => handleFieldChange('residence', e.target.value)} placeholder="e.g. CPR Holder, Resident" style={{ width: '100%', padding: '9px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '0.85rem' }} />
                   </div>
 
                   <div>
-                    <label style={{ fontSize: '0.78rem', fontWeight: 700, color: '#475569', display: 'block', marginBottom: '4px' }}>WhatsApp Contact</label>
-                    <input type="text" value={formData.contact} onChange={e => setFormData({ ...formData, contact: e.target.value })} placeholder="+973 3718 8557" style={{ width: '100%', padding: '9px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '0.85rem' }} />
+                    <label style={{ fontSize: '0.78rem', fontWeight: 700, color: formErrors.contact ? '#dc2626' : '#475569', display: 'block', marginBottom: '4px' }}>
+                      WhatsApp Contact
+                    </label>
+                    <input
+                      type="text"
+                      value={formData.contact}
+                      onChange={e => handleFieldChange('contact', e.target.value)}
+                      placeholder="+973 3718 8557"
+                      style={{
+                        width: '100%',
+                        padding: '9px 12px',
+                        borderRadius: '8px',
+                        border: formErrors.contact ? '1.5px solid #ef4444' : '1px solid #cbd5e1',
+                        background: formErrors.contact ? '#fff5f5' : '#ffffff',
+                        fontSize: '0.85rem'
+                      }}
+                    />
+                    {formErrors.contact && (
+                      <span style={{ color: '#dc2626', fontSize: '0.74rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '4px', marginTop: '4px' }}>
+                        <AlertCircle size={12} /> {formErrors.contact}
+                      </span>
+                    )}
                   </div>
 
                   <div style={{ gridColumn: 'span 2' }}>
                     <label style={{ fontSize: '0.78rem', fontWeight: 700, color: '#475569', display: 'block', marginBottom: '4px' }}>About Candidate / Family Background</label>
-                    <textarea rows="3" value={formData.about} onChange={e => setFormData({ ...formData, about: e.target.value })} placeholder="Brief summary of candidate background..." style={{ width: '100%', padding: '9px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '0.85rem' }} />
+                    <textarea rows="3" value={formData.about} onChange={e => handleFieldChange('about', e.target.value)} placeholder="Brief summary of candidate background..." style={{ width: '100%', padding: '9px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '0.85rem' }} />
                   </div>
 
                   <div style={{ gridColumn: 'span 2' }}>
                     <label style={{ fontSize: '0.78rem', fontWeight: 700, color: '#475569', display: 'block', marginBottom: '4px' }}>Partner Requirements</label>
-                    <textarea rows="2" value={formData.requirements} onChange={e => setFormData({ ...formData, requirements: e.target.value })} placeholder="Preferences for partner..." style={{ width: '100%', padding: '9px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '0.85rem' }} />
+                    <textarea rows="2" value={formData.requirements} onChange={e => handleFieldChange('requirements', e.target.value)} placeholder="Preferences for partner..." style={{ width: '100%', padding: '9px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '0.85rem' }} />
                   </div>
                 </div>
               ) : (
@@ -1692,15 +1989,22 @@ export default function AdminPanel({ onBackToPortal, onProfilesChange }) {
                   </div>
 
                   {/* Candidate Picture Upload Area */}
-                  <div style={{ background: '#f8fafc', border: '2px dashed #cbd5e1', borderRadius: '14px', padding: '20px', textAlign: 'center' }}>
+                  <div style={{
+                    background: formErrors.image ? '#fef2f2' : '#f8fafc',
+                    border: formErrors.image ? '2px dashed #ef4444' : '2px dashed #cbd5e1',
+                    borderRadius: '14px',
+                    padding: '20px',
+                    textAlign: 'center',
+                    transition: 'all 0.2s ease'
+                  }}>
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px' }}>
-                      <label style={{ fontSize: '0.85rem', fontWeight: 800, color: '#1e293b', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <Image size={18} color="var(--text-gold)" /> Candidate Picture / Flyer *
+                      <label style={{ fontSize: '0.85rem', fontWeight: 800, color: formErrors.image ? '#dc2626' : '#1e293b', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <Image size={18} color={formErrors.image ? '#dc2626' : 'var(--text-gold)'} /> Candidate Picture / Flyer *
                       </label>
                       {formData.image && (
                         <button
                           type="button"
-                          onClick={() => setFormData({ ...formData, image: '' })}
+                          onClick={() => handleFieldChange('image', '')}
                           style={{
                             background: '#fee2e2',
                             color: '#dc2626',
@@ -1740,11 +2044,11 @@ export default function AdminPanel({ onBackToPortal, onProfilesChange }) {
                       </div>
                     ) : (
                       <div style={{ padding: '24px 16px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px' }}>
-                        <div style={{ width: '56px', height: '56px', borderRadius: '50%', background: '#fef3c7', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#d97706' }}>
+                        <div style={{ width: '56px', height: '56px', borderRadius: '50%', background: formErrors.image ? '#fee2e2' : '#fef3c7', display: 'flex', alignItems: 'center', justifyContent: 'center', color: formErrors.image ? '#dc2626' : '#d97706' }}>
                           <Upload size={28} />
                         </div>
                         <div>
-                          <h4 style={{ fontSize: '0.98rem', fontWeight: 800, color: '#0f172a', margin: '0 0 4px' }}>Upload Candidate Picture / Flyer</h4>
+                          <h4 style={{ fontSize: '0.98rem', fontWeight: 800, color: formErrors.image ? '#991b1b' : '#0f172a', margin: '0 0 4px' }}>Upload Candidate Picture / Flyer</h4>
                           <p style={{ fontSize: '0.76rem', color: '#64748b', margin: 0 }}>Click below to choose image from your computer/phone OR paste image URL</p>
                         </div>
                         <button
@@ -1773,17 +2077,36 @@ export default function AdminPanel({ onBackToPortal, onProfilesChange }) {
                           <input
                             type="url"
                             value={formData.image}
-                            onChange={e => setFormData({ ...formData, image: e.target.value })}
+                            onChange={e => handleFieldChange('image', e.target.value)}
                             placeholder="Or paste direct image URL (https://...)"
-                            style={{ width: '100%', padding: '8px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '0.8rem', background: '#ffffff', textAlign: 'center' }}
+                            style={{
+                              width: '100%',
+                              padding: '8px 12px',
+                              borderRadius: '8px',
+                              border: formErrors.image ? '1.5px solid #ef4444' : '1px solid #cbd5e1',
+                              fontSize: '0.8rem',
+                              background: '#ffffff',
+                              textAlign: 'center'
+                            }}
                           />
                         </div>
+                        {formErrors.image && (
+                          <div style={{ color: '#dc2626', fontSize: '0.76rem', fontWeight: 600, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '5px', marginTop: '6px' }}>
+                            <AlertCircle size={14} /> {formErrors.image}
+                          </div>
+                        )}
                       </div>
                     )}
                   </div>
 
                   {/* Instagram Post Link (Optional) */}
-                  <div style={{ background: '#fdf2f8', border: '1.5px solid #fbcfe8', borderRadius: '12px', padding: '14px 16px', textAlign: 'left' }}>
+                  <div style={{
+                    background: formErrors.instagramPostUrl ? '#fef2f2' : '#fdf2f8',
+                    border: formErrors.instagramPostUrl ? '1.5px solid #ef4444' : '1.5px solid #fbcfe8',
+                    borderRadius: '12px',
+                    padding: '14px 16px',
+                    textAlign: 'left'
+                  }}>
                     <label style={{ fontSize: '0.82rem', fontWeight: 800, color: '#9d174d', display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '4px' }}>
                       <Instagram size={16} color="#E1306C" /> Instagram Post Link (Optional)
                     </label>
@@ -1793,10 +2116,22 @@ export default function AdminPanel({ onBackToPortal, onProfilesChange }) {
                     <input
                       type="url"
                       value={formData.instagramPostUrl}
-                      onChange={e => setFormData({ ...formData, instagramPostUrl: e.target.value })}
+                      onChange={e => handleFieldChange('instagramPostUrl', e.target.value)}
                       placeholder="https://www.instagram.com/p/... (Optional)"
-                      style={{ width: '100%', padding: '9px 12px', borderRadius: '8px', border: '1px solid #f472b6', fontSize: '0.84rem', background: '#ffffff' }}
+                      style={{
+                        width: '100%',
+                        padding: '9px 12px',
+                        borderRadius: '8px',
+                        border: formErrors.instagramPostUrl ? '1.5px solid #ef4444' : '1px solid #f472b6',
+                        background: formErrors.instagramPostUrl ? '#fff5f5' : '#ffffff',
+                        fontSize: '0.84rem'
+                      }}
                     />
+                    {formErrors.instagramPostUrl && (
+                      <span style={{ color: '#dc2626', fontSize: '0.74rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '4px', marginTop: '4px' }}>
+                        <AlertCircle size={12} /> {formErrors.instagramPostUrl}
+                      </span>
+                    )}
                   </div>
 
                   {/* Basic Profile Essentials for Picture Mode */}
@@ -1809,7 +2144,9 @@ export default function AdminPanel({ onBackToPortal, onProfilesChange }) {
 
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px', textAlign: 'left' }}>
                     <div>
-                      <label style={{ fontSize: '0.78rem', fontWeight: 700, color: '#475569', display: 'block', marginBottom: '4px' }}>Candidate Type / Gender *</label>
+                      <label style={{ fontSize: '0.78rem', fontWeight: 700, color: formErrors.gender ? '#dc2626' : '#475569', display: 'block', marginBottom: '4px' }}>
+                        Candidate Type / Gender *
+                      </label>
                       <select
                         value={formData.gender}
                         onChange={e => {
@@ -1820,42 +2157,89 @@ export default function AdminPanel({ onBackToPortal, onProfilesChange }) {
                           } else if (newName.includes('Bride') && newGender === 'male') {
                             newName = newName.replace('Bride', 'Groom');
                           }
-                          setFormData({ ...formData, gender: newGender, name: newName });
+                          setFormData(prev => ({ ...prev, gender: newGender, name: newName }));
+                          if (formErrors.gender) {
+                            setFormErrors(prev => {
+                              const copy = { ...prev };
+                              delete copy.gender;
+                              return copy;
+                            });
+                          }
                         }}
-                        style={{ width: '100%', padding: '9px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '0.85rem' }}
+                        style={{
+                          width: '100%',
+                          padding: '9px 12px',
+                          borderRadius: '8px',
+                          border: formErrors.gender ? '1.5px solid #ef4444' : '1px solid #cbd5e1',
+                          background: formErrors.gender ? '#fff5f5' : '#ffffff',
+                          fontSize: '0.85rem'
+                        }}
                       >
                         <option value="male">Male (Groom)</option>
                         <option value="female">Female (Bride)</option>
                       </select>
+                      {formErrors.gender && (
+                        <span style={{ color: '#dc2626', fontSize: '0.74rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '4px', marginTop: '4px' }}>
+                          <AlertCircle size={12} /> {formErrors.gender}
+                        </span>
+                      )}
                     </div>
 
                     <div>
-                      <label style={{ fontSize: '0.78rem', fontWeight: 700, color: '#475569', display: 'block', marginBottom: '4px' }}>Profile Title / Code *</label>
+                      <label style={{ fontSize: '0.78rem', fontWeight: 700, color: formErrors.name ? '#dc2626' : '#475569', display: 'block', marginBottom: '4px' }}>
+                        Profile Title / Code *
+                      </label>
                       <input
                         type="text"
                         value={formData.name}
-                        onChange={e => setFormData({ ...formData, name: e.target.value })}
+                        onChange={e => handleFieldChange('name', e.target.value)}
                         placeholder="e.g. NPF-26 (Groom)"
-                        style={{ width: '100%', padding: '9px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '0.85rem' }}
+                        style={{
+                          width: '100%',
+                          padding: '9px 12px',
+                          borderRadius: '8px',
+                          border: formErrors.name ? '1.5px solid #ef4444' : '1px solid #cbd5e1',
+                          background: formErrors.name ? '#fff5f5' : '#ffffff',
+                          fontSize: '0.85rem'
+                        }}
                       />
+                      {formErrors.name && (
+                        <span style={{ color: '#dc2626', fontSize: '0.74rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '4px', marginTop: '4px' }}>
+                          <AlertCircle size={12} /> {formErrors.name}
+                        </span>
+                      )}
                     </div>
 
                     <div>
-                      <label style={{ fontSize: '0.78rem', fontWeight: 700, color: '#475569', display: 'block', marginBottom: '4px' }}>Age (Years)</label>
+                      <label style={{ fontSize: '0.78rem', fontWeight: 700, color: formErrors.age ? '#dc2626' : '#475569', display: 'block', marginBottom: '4px' }}>
+                        Age (Years)
+                      </label>
                       <input
                         type="number"
                         min="18"
                         max="90"
                         value={formData.age}
-                        onChange={e => setFormData({ ...formData, age: e.target.value })}
+                        onChange={e => handleFieldChange('age', e.target.value === '' ? '' : Number(e.target.value))}
                         placeholder="e.g. 41 (from flyer)"
-                        style={{ width: '100%', padding: '9px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '0.85rem' }}
+                        style={{
+                          width: '100%',
+                          padding: '9px 12px',
+                          borderRadius: '8px',
+                          border: formErrors.age ? '1.5px solid #ef4444' : '1px solid #cbd5e1',
+                          background: formErrors.age ? '#fff5f5' : '#ffffff',
+                          fontSize: '0.85rem'
+                        }}
                       />
+                      {formErrors.age && (
+                        <span style={{ color: '#dc2626', fontSize: '0.74rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '4px', marginTop: '4px' }}>
+                          <AlertCircle size={12} /> {formErrors.age}
+                        </span>
+                      )}
                     </div>
 
                     <div>
                       <label style={{ fontSize: '0.78rem', fontWeight: 700, color: '#475569', display: 'block', marginBottom: '4px' }}>Marital Status</label>
-                      <select value={formData.maritalStatus} onChange={e => setFormData({ ...formData, maritalStatus: e.target.value })} style={{ width: '100%', padding: '9px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '0.85rem' }}>
+                      <select value={formData.maritalStatus} onChange={e => handleFieldChange('maritalStatus', e.target.value)} style={{ width: '100%', padding: '9px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '0.85rem' }}>
                         <option value="">Select Marital Status (Optional)</option>
                         <option value="Never Married">Never Married</option>
                         <option value="Divorced">Divorced</option>
@@ -1866,7 +2250,7 @@ export default function AdminPanel({ onBackToPortal, onProfilesChange }) {
 
                     <div>
                       <label style={{ fontSize: '0.78rem', fontWeight: 700, color: '#475569', display: 'block', marginBottom: '4px' }}>Nationality</label>
-                      <select value={formData.nationality} onChange={e => setFormData({ ...formData, nationality: e.target.value })} style={{ width: '100%', padding: '9px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '0.85rem' }}>
+                      <select value={formData.nationality} onChange={e => handleFieldChange('nationality', e.target.value)} style={{ width: '100%', padding: '9px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '0.85rem' }}>
                         <option value="">Select Nationality (Optional)</option>
                         <option value="Bahraini">Bahraini</option>
                         <option value="Pakistani">Pakistani</option>
@@ -1882,7 +2266,7 @@ export default function AdminPanel({ onBackToPortal, onProfilesChange }) {
                       <input
                         type="text"
                         value={formData.profession}
-                        onChange={e => setFormData({ ...formData, profession: e.target.value })}
+                        onChange={e => handleFieldChange('profession', e.target.value)}
                         placeholder="e.g. Engineer / Businessman (or leave blank)"
                         style={{ width: '100%', padding: '9px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '0.85rem' }}
                       />
@@ -1893,7 +2277,7 @@ export default function AdminPanel({ onBackToPortal, onProfilesChange }) {
                       <input
                         type="text"
                         value={formData.height}
-                        onChange={e => setFormData({ ...formData, height: e.target.value })}
+                        onChange={e => handleFieldChange('height', e.target.value)}
                         placeholder="e.g. 5'8&quot; (or leave blank)"
                         style={{ width: '100%', padding: '9px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '0.85rem' }}
                       />
@@ -1904,7 +2288,7 @@ export default function AdminPanel({ onBackToPortal, onProfilesChange }) {
                       <input
                         type="text"
                         value={formData.education}
-                        onChange={e => setFormData({ ...formData, education: e.target.value })}
+                        onChange={e => handleFieldChange('education', e.target.value)}
                         placeholder="e.g. Bachelor Degree (or leave blank)"
                         style={{ width: '100%', padding: '9px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '0.85rem' }}
                       />
@@ -1915,21 +2299,35 @@ export default function AdminPanel({ onBackToPortal, onProfilesChange }) {
                       <input
                         type="text"
                         value={formData.location}
-                        onChange={e => setFormData({ ...formData, location: e.target.value })}
+                        onChange={e => handleFieldChange('location', e.target.value)}
                         placeholder="e.g. Bahrain / Manama (or leave blank)"
                         style={{ width: '100%', padding: '9px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '0.85rem' }}
                       />
                     </div>
 
                     <div>
-                      <label style={{ fontSize: '0.78rem', fontWeight: 700, color: '#475569', display: 'block', marginBottom: '4px' }}>WhatsApp Contact</label>
+                      <label style={{ fontSize: '0.78rem', fontWeight: 700, color: formErrors.contact ? '#dc2626' : '#475569', display: 'block', marginBottom: '4px' }}>
+                        WhatsApp Contact
+                      </label>
                       <input
                         type="text"
                         value={formData.contact}
-                        onChange={e => setFormData({ ...formData, contact: e.target.value })}
+                        onChange={e => handleFieldChange('contact', e.target.value)}
                         placeholder="+973 3718 8557"
-                        style={{ width: '100%', padding: '9px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '0.85rem' }}
+                        style={{
+                          width: '100%',
+                          padding: '9px 12px',
+                          borderRadius: '8px',
+                          border: formErrors.contact ? '1.5px solid #ef4444' : '1px solid #cbd5e1',
+                          background: formErrors.contact ? '#fff5f5' : '#ffffff',
+                          fontSize: '0.85rem'
+                        }}
                       />
+                      {formErrors.contact && (
+                        <span style={{ color: '#dc2626', fontSize: '0.74rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '4px', marginTop: '4px' }}>
+                          <AlertCircle size={12} /> {formErrors.contact}
+                        </span>
+                      )}
                     </div>
                   </div>
                 </div>
