@@ -200,12 +200,27 @@ export default function App() {
     syncInstagram(true);
   }, [visitorId]);
 
-  // Auto-refresh profiles every 30 seconds
+  // Auto-refresh profiles and listen to focus/storage events for instant sync
   useEffect(() => {
     const interval = setInterval(() => {
       fetchProfiles();
-    }, 30000);
-    return () => clearInterval(interval);
+    }, 15000);
+
+    const handleVisibilityOrFocus = () => {
+      if (!document.hidden) {
+        fetchProfiles();
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibilityOrFocus);
+    window.addEventListener('storage', fetchProfiles);
+    window.addEventListener('focus', handleVisibilityOrFocus);
+
+    return () => {
+      clearInterval(interval);
+      document.removeEventListener('visibilitychange', handleVisibilityOrFocus);
+      window.removeEventListener('storage', fetchProfiles);
+      window.removeEventListener('focus', handleVisibilityOrFocus);
+    };
   }, []);
 
   // Reset pagination to page 1 whenever any filter or tab changes
@@ -438,6 +453,7 @@ export default function App() {
             onBackToPortal={() => {
               setIsAdminActive(false);
               window.history.pushState(null, '', '/');
+              fetchProfiles();
             }} 
             onProfilesChange={(updatedProfiles) => {
               setProfiles(updatedProfiles);

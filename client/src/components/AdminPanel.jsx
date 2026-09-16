@@ -122,6 +122,15 @@ export default function AdminPanel({ onBackToPortal, onProfilesChange }) {
   const [searchQuery, setSearchQuery] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
 
+  const handleNavSelect = (sectionId) => {
+    setActiveSection(sectionId);
+    setSearchQuery('');
+    setCurrentPage(1);
+    if (typeof window !== 'undefined' && window.innerWidth <= 768) {
+      setSidebarOpen(false);
+    }
+  };
+
   // Create / Edit Profile Modal state
   const DEFAULT_FORM = {
     name: '',
@@ -1112,8 +1121,7 @@ export default function AdminPanel({ onBackToPortal, onProfilesChange }) {
                       if (item.children) {
                         setExpandedGroup(isGroupExpanded ? null : item.id);
                       } else {
-                        setActiveSection(item.id);
-                        setSearchQuery('');
+                        handleNavSelect(item.id);
                       }
                     }}
                     style={{
@@ -1154,7 +1162,7 @@ export default function AdminPanel({ onBackToPortal, onProfilesChange }) {
                         return (
                           <button
                             key={child.id}
-                            onClick={() => { setActiveSection(child.id); setSearchQuery(''); }}
+                            onClick={() => handleNavSelect(child.id)}
                             style={{
                               width: '100%',
                               display: 'flex',
@@ -1239,25 +1247,149 @@ export default function AdminPanel({ onBackToPortal, onProfilesChange }) {
                 <CategorySection title="Quick Actions" accent="#d4af37">
                   <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
                     <button
-                      onClick={() => { setActiveSection('all'); handleOpenCreate('form'); }}
+                      onClick={() => { handleNavSelect('all'); handleOpenCreate('form'); }}
                       className="btn-gold"
                       style={{ fontSize: '0.85rem', display: 'inline-flex', alignItems: 'center', gap: '6px' }}
                     >
                       <FileText size={15} /> Fill Profile Form (No Picture)
                     </button>
                     <button
-                      onClick={() => { setActiveSection('all'); handleOpenCreate('picture'); }}
+                      onClick={() => { handleNavSelect('all'); handleOpenCreate('picture'); }}
                       className="btn-ghost"
                       style={{ fontSize: '0.85rem', display: 'inline-flex', alignItems: 'center', gap: '6px' }}
                     >
                       <Upload size={15} /> Picture & Instagram Link
                     </button>
-                    <button onClick={() => setActiveSection('all')} className="btn-ghost" style={{ fontSize: '0.85rem', display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+                    <button onClick={() => handleNavSelect('all')} className="btn-ghost" style={{ fontSize: '0.85rem', display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
                       <Users size={15} /> View All Candidates
                     </button>
                     <button onClick={handleSyncToInstagram} disabled={syncingInstagram} className="btn-ghost" style={{ fontSize: '0.85rem', display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
                       <Instagram size={15} /> {syncingInstagram ? 'Syncing…' : 'Sync Instagram Feed'}
                     </button>
+                  </div>
+                </CategorySection>
+
+                {/* ── Recently Uploaded & Managed Candidates (Always visible on Mobile & Desktop) ── */}
+                <CategorySection title="Recently Uploaded & Managed Candidates" accent="#3b82f6">
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px', flexWrap: 'wrap', gap: '8px' }}>
+                    <span style={{ fontSize: '0.8rem', color: '#64748b' }}>
+                      Latest registered candidate profiles ({profiles.slice(0, 8).length} of {profiles.length})
+                    </span>
+                    <button
+                      onClick={() => handleNavSelect('all')}
+                      style={{
+                        background: 'transparent',
+                        border: 'none',
+                        color: 'var(--text-gold)',
+                        fontWeight: 700,
+                        fontSize: '0.82rem',
+                        cursor: 'pointer',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '4px'
+                      }}
+                    >
+                      View All in Registry &rarr;
+                    </button>
+                  </div>
+
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '12px' }}>
+                    {profiles.slice(0, 8).map((p) => (
+                      <div
+                        key={p.id}
+                        style={{
+                          background: '#ffffff',
+                          border: '1px solid #e2e8f0',
+                          borderRadius: '12px',
+                          padding: '12px 14px',
+                          boxShadow: '0 2px 8px rgba(0,0,0,0.04)',
+                          display: 'flex',
+                          flexDirection: 'column',
+                          gap: '8px'
+                        }}
+                      >
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                          <span style={{ fontWeight: 800, color: 'var(--text-gold)', fontSize: '0.82rem' }}>{p.id}</span>
+                          <span style={{
+                            fontSize: '0.72rem',
+                            fontWeight: 700,
+                            padding: '2px 8px',
+                            borderRadius: '999px',
+                            background: p.gender === 'male' ? '#eff6ff' : '#fdf2f8',
+                            color: p.gender === 'male' ? '#1d4ed8' : '#be185d'
+                          }}>
+                            {p.gender === 'male' ? '👨 Groom' : '👩 Bride'}
+                          </span>
+                        </div>
+
+                        <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+                          {p.image ? (
+                            <img src={p.image} alt={p.name} style={{ width: '44px', height: '44px', borderRadius: '8px', objectFit: 'contain', background: '#000', border: '1px solid var(--gold-border)', flexShrink: 0 }} />
+                          ) : (
+                            <div style={{ width: '44px', height: '44px', borderRadius: '8px', background: '#f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#64748b', fontWeight: 800, fontSize: '0.8rem', flexShrink: 0 }}>
+                              NPF
+                            </div>
+                          )}
+                          <div style={{ minWidth: 0, flex: 1 }}>
+                            <div style={{ fontWeight: 700, fontSize: '0.86rem', color: '#0f172a', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                              {p.name}
+                            </div>
+                            <div style={{ fontSize: '0.74rem', color: '#64748b', marginTop: '2px' }}>
+                              {[p.age ? `${p.age}y` : null, p.maritalStatus, p.nationality].filter(Boolean).join(' • ')}
+                            </div>
+                          </div>
+                        </div>
+
+                        {p.profession && (
+                          <div style={{ fontSize: '0.74rem', color: '#475569', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                            💼 {p.profession} {p.location ? `• ${p.location}` : ''}
+                          </div>
+                        )}
+
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderTop: '1px solid #f1f5f9', paddingTop: '8px', marginTop: '2px' }}>
+                          <button
+                            onClick={() => handleToggleVerified(p)}
+                            style={{
+                              background: p.verified ? '#ecfdf5' : '#fef2f2',
+                              border: `1px solid ${p.verified ? '#a7f3d0' : '#fecaca'}`,
+                              color: p.verified ? '#065f46' : '#991b1b',
+                              padding: '2px 8px',
+                              borderRadius: '999px',
+                              fontSize: '0.68rem',
+                              fontWeight: 700,
+                              cursor: 'pointer'
+                            }}
+                          >
+                            {p.verified ? '✓ Verified' : 'Pending'}
+                          </button>
+
+                          <div style={{ display: 'flex', gap: '6px' }}>
+                            <button
+                              onClick={() => handleOpenEdit(p)}
+                              style={{ background: '#f8fafc', border: '1px solid #cbd5e1', borderRadius: '6px', padding: '4px 8px', fontSize: '0.72rem', cursor: 'pointer', color: '#334155', fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: '3px' }}
+                            >
+                              <Edit size={11} /> Edit
+                            </button>
+                            {p.image && (
+                              <button
+                                onClick={() => handleDownloadFlyer(p)}
+                                style={{ background: '#fefce8', border: '1px solid #fde047', borderRadius: '6px', padding: '4px 8px', fontSize: '0.72rem', cursor: 'pointer', color: '#854d0e', fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: '3px' }}
+                                title="Download flyer"
+                              >
+                                <Upload size={11} /> Flyer
+                              </button>
+                            )}
+                            <button
+                              onClick={() => handleDeleteProfile(p.id)}
+                              style={{ background: '#fee2e2', border: '1px solid #fca5a5', borderRadius: '6px', padding: '4px 7px', fontSize: '0.72rem', cursor: 'pointer', color: '#dc2626' }}
+                              title="Delete profile"
+                            >
+                              <Trash2 size={11} />
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
                   </div>
                 </CategorySection>
               </div>
@@ -1347,8 +1479,8 @@ export default function AdminPanel({ onBackToPortal, onProfilesChange }) {
                   )}
                 </div>
 
-                {/* Table */}
-                <div className="admin-table-wrapper" style={{ borderRadius: 'var(--radius-md)', border: '1px solid #e2e8f0', overflow: 'hidden', background: '#ffffff', boxShadow: '0 2px 10px rgba(0,0,0,0.03)' }}>
+                {/* Desktop Table View */}
+                <div className="admin-table-wrapper admin-desktop-table" style={{ borderRadius: 'var(--radius-md)', border: '1px solid #e2e8f0', overflow: 'hidden', background: '#ffffff', boxShadow: '0 2px 10px rgba(0,0,0,0.03)' }}>
                   <div style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch', width: '100%' }}>
                     <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.84rem', minWidth: '700px' }}>
                       <thead>
@@ -1518,7 +1650,212 @@ export default function AdminPanel({ onBackToPortal, onProfilesChange }) {
                   </div>
                 </div>
 
-                {/* ── Pagination ── */}
+                {/* ── Mobile Cards View for Profiles (< 768px screens) ── */}
+                <div className="admin-mobile-cards">
+                  {paginatedProfiles.length === 0 ? (
+                    <div style={{ padding: '36px 16px', textAlign: 'center', color: '#64748b', background: '#ffffff', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
+                      {searchQuery ? `No results for "${searchQuery}"` : 'No records in this category.'}
+                    </div>
+                  ) : (
+                    paginatedProfiles.map((p) => (
+                      <div
+                        key={p.id}
+                        style={{
+                          background: '#ffffff',
+                          border: '1px solid #e2e8f0',
+                          borderRadius: '12px',
+                          padding: '14px',
+                          boxShadow: '0 2px 8px rgba(0,0,0,0.04)',
+                          display: 'flex',
+                          flexDirection: 'column',
+                          gap: '10px'
+                        }}
+                      >
+                        {/* Card Header: ID, Category & Verified Status */}
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '6px' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <span style={{ fontWeight: 800, color: 'var(--text-gold)', fontSize: '0.86rem' }}>{p.id}</span>
+                            <span style={{
+                              background: '#fefce8',
+                              border: '1px solid rgba(196, 155, 31, 0.35)',
+                              color: 'var(--text-gold)',
+                              padding: '2px 8px',
+                              borderRadius: '999px',
+                              fontSize: '0.7rem',
+                              fontWeight: 700
+                            }}>
+                              {p.maritalStatus || p.category || '—'}
+                            </span>
+                          </div>
+
+                          <button
+                            onClick={() => handleToggleVerified(p)}
+                            style={{
+                              background: p.verified ? '#ecfdf5' : '#fef2f2',
+                              border: `1px solid ${p.verified ? '#a7f3d0' : '#fecaca'}`,
+                              color: p.verified ? '#065f46' : '#991b1b',
+                              padding: '2px 8px',
+                              borderRadius: '999px',
+                              fontSize: '0.68rem',
+                              fontWeight: 700,
+                              cursor: 'pointer',
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '3px'
+                            }}
+                          >
+                            <ShieldCheck size={11} /> {p.verified ? 'Verified' : 'Pending'}
+                          </button>
+                        </div>
+
+                        {/* Candidate Details Row */}
+                        <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+                          {p.image ? (
+                            <img
+                              src={p.image}
+                              alt={p.name}
+                              style={{ width: '56px', height: '56px', borderRadius: '10px', objectFit: 'contain', background: '#000', border: '1px solid var(--gold-border)', flexShrink: 0 }}
+                            />
+                          ) : (
+                            <div style={{ width: '56px', height: '56px', borderRadius: '10px', background: '#f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#64748b', fontWeight: 800, fontSize: '0.85rem', flexShrink: 0 }}>
+                              {p.gender === 'male' ? '👨' : '👩'}
+                            </div>
+                          )}
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <div style={{ fontWeight: 800, color: '#0f172a', fontSize: '0.92rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                              {p.name}
+                            </div>
+                            <div style={{ fontSize: '0.78rem', color: '#475569', marginTop: '2px' }}>
+                              <span style={{ color: p.gender === 'male' ? '#1d4ed8' : '#be185d', fontWeight: 700, textTransform: 'capitalize' }}>
+                                {p.gender}
+                              </span>
+                              {p.age ? ` • ${p.age} yrs` : ''}
+                              {p.nationality ? ` • ${p.nationality}` : ''}
+                            </div>
+                            {(p.profession || p.location) && (
+                              <div style={{ fontSize: '0.74rem', color: '#64748b', marginTop: '2px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                {[p.profession, p.location].filter(Boolean).join(' • ')}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Action Buttons */}
+                        <div style={{ display: 'flex', gap: '8px', borderTop: '1px solid #f1f5f9', paddingTop: '10px', flexWrap: 'wrap' }}>
+                          <button
+                            onClick={() => handleOpenEdit(p)}
+                            style={{
+                              flex: 1,
+                              minWidth: '70px',
+                              padding: '7px 10px',
+                              borderRadius: '8px',
+                              border: '1px solid #cbd5e1',
+                              background: '#f8fafc',
+                              color: '#334155',
+                              fontSize: '0.76rem',
+                              fontWeight: 700,
+                              cursor: 'pointer',
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              gap: '4px'
+                            }}
+                          >
+                            <Edit size={12} /> Edit
+                          </button>
+
+                          {p.image && (
+                            <button
+                              onClick={() => handleDownloadFlyer(p)}
+                              style={{
+                                flex: 1,
+                                minWidth: '70px',
+                                padding: '7px 10px',
+                                borderRadius: '8px',
+                                border: '1px solid #fde047',
+                                background: '#fefce8',
+                                color: '#854d0e',
+                                fontSize: '0.76rem',
+                                fontWeight: 700,
+                                cursor: 'pointer',
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                gap: '4px'
+                              }}
+                            >
+                              <Upload size={12} /> Flyer
+                            </button>
+                          )}
+
+                          <button
+                            onClick={() => setInstagramModalProfile(p)}
+                            style={{
+                              padding: '7px 10px',
+                              borderRadius: '8px',
+                              border: '1px solid #fbcfe8',
+                              background: '#fdf2f8',
+                              color: '#be185d',
+                              fontSize: '0.76rem',
+                              fontWeight: 700,
+                              cursor: 'pointer',
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              gap: '4px'
+                            }}
+                            title="Instagram"
+                          >
+                            <Instagram size={12} color="#E1306C" />
+                          </button>
+
+                          <a
+                            href={`https://wa.me/97337188557?text=${encodeURIComponent(`Admin check: ${p.id} — ${p.name}`)}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            style={{
+                              padding: '7px 10px',
+                              borderRadius: '8px',
+                              border: '1px solid #bbf7d0',
+                              background: '#f0fdf4',
+                              color: '#15803d',
+                              fontSize: '0.76rem',
+                              fontWeight: 700,
+                              textDecoration: 'none',
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              gap: '4px'
+                            }}
+                            title="WhatsApp"
+                          >
+                            <MessageCircle size={12} color="#25D366" />
+                          </a>
+
+                          <button
+                            onClick={() => handleDeleteProfile(p.id)}
+                            style={{
+                              padding: '7px 10px',
+                              borderRadius: '8px',
+                              border: '1px solid #fca5a5',
+                              background: '#fee2e2',
+                              color: '#dc2626',
+                              fontSize: '0.76rem',
+                              fontWeight: 700,
+                              cursor: 'pointer',
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              justifyContent: 'center'
+                            }}
+                            title="Delete"
+                          >
+                            <Trash2 size={12} />
+                          </button>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
                 {totalPages > 1 && (
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px', padding: '4px 0' }}>
                     <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>

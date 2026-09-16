@@ -84,6 +84,7 @@ Please provide more details. JazakAllah Khair!`;
   return (
     <animated.div
       ref={cardRef}
+      onClick={() => onViewDetails && onViewDetails(profile)}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
       style={{
