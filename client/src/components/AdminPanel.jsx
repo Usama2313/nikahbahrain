@@ -144,7 +144,8 @@ export default function AdminPanel({ onBackToPortal, onProfilesChange }) {
     about: '',
     requirements: 'Practicing Muslim candidate with good character.',
     contact: '+973 3718 8557',
-    image: ''
+    image: '',
+    instagramPostUrl: ''
   };
 
   const [isFormOpen, setIsFormOpen] = useState(false);
@@ -239,9 +240,9 @@ export default function AdminPanel({ onBackToPortal, onProfilesChange }) {
     window.open('https://www.instagram.com/', '_blank');
   };
 
-  const [creationMode, setCreationMode] = useState('flyer'); // 'flyer' | 'form'
+  const [creationMode, setCreationMode] = useState('form'); // 'form' (Tab 1: Form Filling) | 'picture' (Tab 2: Picture & Instagram Link)
 
-  const handleOpenCreate = (mode = 'flyer') => {
+  const handleOpenCreate = (mode = 'form') => {
     setEditingProfile(null);
     setCreationMode(mode);
     const maxNpf = profiles.reduce((max, p) => {
@@ -256,17 +257,18 @@ export default function AdminPanel({ onBackToPortal, onProfilesChange }) {
 
     setFormData({
       ...DEFAULT_FORM,
-      name: `${nextId} Groom`,
+      name: `${nextId} (Groom)`,
       gender: 'male',
-      about: mode === 'flyer' ? 'Candidate bio-data and family details are presented in the attached flyer picture.' : '',
-      image: ''
+      about: mode === 'picture' ? 'Candidate bio-data and family details are presented in the attached flyer picture.' : '',
+      image: '',
+      instagramPostUrl: ''
     });
     setIsFormOpen(true);
   };
 
   const handleOpenEdit = (p) => {
     setEditingProfile(p);
-    setCreationMode(p.image ? 'flyer' : 'form');
+    setCreationMode(p.image ? 'picture' : 'form');
     setFormData({
       name: p.name || '',
       gender: p.gender || 'male',
@@ -289,7 +291,8 @@ export default function AdminPanel({ onBackToPortal, onProfilesChange }) {
       about: p.about || '',
       requirements: p.requirements || '',
       contact: p.contact || '+973 3718 8557',
-      image: p.image || ''
+      image: p.image || '',
+      instagramPostUrl: p.instagramPostUrl || ''
     });
     setIsFormOpen(true);
   };
@@ -335,8 +338,8 @@ export default function AdminPanel({ onBackToPortal, onProfilesChange }) {
   const handleSaveAdminProfile = async (e, openInstagram = false) => {
     e?.preventDefault();
 
-    if (creationMode === 'flyer' && !formData.image) {
-      showNotification('⚠️ Please upload or provide a candidate flyer picture first.');
+    if (creationMode === 'picture' && !formData.image) {
+      showNotification('⚠️ Please upload or provide a candidate picture first.');
       return;
     }
 
@@ -362,12 +365,21 @@ export default function AdminPanel({ onBackToPortal, onProfilesChange }) {
 
       const candidateAge = formData.age ? Number(formData.age) : 25;
 
+      let igPostId = '';
+      if (formData.instagramPostUrl) {
+        const match = formData.instagramPostUrl.match(/\/p\/([a-zA-Z0-9_-]+)/);
+        if (match) igPostId = match[1];
+      }
+
       if (editingProfile) {
         let updated = {
           ...editingProfile,
           ...formData,
           name: candidateName,
           age: candidateAge,
+          image: creationMode === 'form' ? '' : (formData.image || ''),
+          instagramPostUrl: formData.instagramPostUrl || '',
+          instagramPostId: igPostId || editingProfile.instagramPostId || '',
           category: formData.gender === 'male' ? 'grooms' : 'brides',
           updatedAt: new Date().toISOString()
         };
@@ -416,10 +428,12 @@ export default function AdminPanel({ onBackToPortal, onProfilesChange }) {
           mother: formData.mother || '',
           family: formData.family || '',
           languages: formData.languages || 'English, Urdu',
-          about: formData.about || (creationMode === 'flyer' ? 'Candidate bio-data and family details are presented in the attached flyer picture.' : ''),
+          about: formData.about || (creationMode === 'picture' ? 'Candidate bio-data and family details are presented in the attached flyer picture.' : ''),
           requirements: formData.requirements || 'Seeking a practicing, compatible partner.',
           contact: formData.contact || '+973 3718 8557',
-          image: formData.image || '',
+          image: creationMode === 'form' ? '' : (formData.image || ''),
+          instagramPostUrl: formData.instagramPostUrl || '',
+          instagramPostId: igPostId,
           verified: true,
           featured: false,
           createdAt: new Date().toISOString()
@@ -1036,18 +1050,18 @@ export default function AdminPanel({ onBackToPortal, onProfilesChange }) {
                 <CategorySection title="Quick Actions" accent="#d4af37">
                   <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
                     <button
-                      onClick={() => { setActiveSection('all'); handleOpenCreate('flyer'); }}
+                      onClick={() => { setActiveSection('all'); handleOpenCreate('form'); }}
                       className="btn-gold"
                       style={{ fontSize: '0.85rem', display: 'inline-flex', alignItems: 'center', gap: '6px' }}
                     >
-                      <Upload size={15} /> Upload Flyer Picture
+                      <FileText size={15} /> Fill Profile Form (No Picture)
                     </button>
                     <button
-                      onClick={() => { setActiveSection('all'); handleOpenCreate('form'); }}
+                      onClick={() => { setActiveSection('all'); handleOpenCreate('picture'); }}
                       className="btn-ghost"
                       style={{ fontSize: '0.85rem', display: 'inline-flex', alignItems: 'center', gap: '6px' }}
                     >
-                      <FileText size={15} /> Fill Profile Form
+                      <Upload size={15} /> Picture & Instagram Link
                     </button>
                     <button onClick={() => setActiveSection('all')} className="btn-ghost" style={{ fontSize: '0.85rem', display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
                       <Users size={15} /> View All Candidates
@@ -1071,7 +1085,7 @@ export default function AdminPanel({ onBackToPortal, onProfilesChange }) {
                   </div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
                     <button
-                      onClick={() => handleOpenCreate('flyer')}
+                      onClick={() => handleOpenCreate('form')}
                       style={{
                         display: 'inline-flex',
                         alignItems: 'center',
@@ -1088,11 +1102,11 @@ export default function AdminPanel({ onBackToPortal, onProfilesChange }) {
                         whiteSpace: 'nowrap'
                       }}
                     >
-                      <Upload size={14} />
-                      Upload Flyer Picture
+                      <FileText size={14} />
+                      Fill Profile Form
                     </button>
                     <button
-                      onClick={() => handleOpenCreate('form')}
+                      onClick={() => handleOpenCreate('picture')}
                       className="btn-ghost"
                       style={{
                         display: 'inline-flex',
@@ -1105,8 +1119,8 @@ export default function AdminPanel({ onBackToPortal, onProfilesChange }) {
                         whiteSpace: 'nowrap'
                       }}
                     >
-                      <FileText size={14} />
-                      Fill Profile Form
+                      <Upload size={14} />
+                      Picture & Instagram Link
                     </button>
                     <span className="gold-badge">{tableProfiles.length} Active Records</span>
                   </div>
@@ -1464,31 +1478,8 @@ export default function AdminPanel({ onBackToPortal, onProfilesChange }) {
               </button>
             </div>
 
-            {/* ── Mode Selection Tabs (Option 1: Upload Flyer Picture vs Option 2: Fill Detailed Form) ── */}
+            {/* ── Two Tabs: Tab 1: Form Filling (No Picture) vs Tab 2: Picture & Instagram Link (Optional) ── */}
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginBottom: '18px', background: '#f1f5f9', padding: '5px', borderRadius: '12px' }}>
-              <button
-                type="button"
-                onClick={() => setCreationMode('flyer')}
-                style={{
-                  padding: '11px 16px',
-                  borderRadius: '8px',
-                  border: creationMode === 'flyer' ? '1.5px solid #d4af37' : '1.5px solid transparent',
-                  background: creationMode === 'flyer' ? '#ffffff' : 'transparent',
-                  color: creationMode === 'flyer' ? '#92400e' : '#64748b',
-                  fontWeight: creationMode === 'flyer' ? 800 : 600,
-                  fontSize: '0.84rem',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: '8px',
-                  boxShadow: creationMode === 'flyer' ? '0 3px 10px rgba(212, 175, 55, 0.25)' : 'none',
-                  transition: 'all 0.15s ease'
-                }}
-              >
-                <Upload size={16} color={creationMode === 'flyer' ? '#b45309' : '#94a3b8'} />
-                <span>Option 1: Upload Flyer Picture</span>
-              </button>
               <button
                 type="button"
                 onClick={() => setCreationMode('form')}
@@ -1510,7 +1501,30 @@ export default function AdminPanel({ onBackToPortal, onProfilesChange }) {
                 }}
               >
                 <FileText size={16} color={creationMode === 'form' ? '#2563eb' : '#94a3b8'} />
-                <span>Option 2: Fill Detailed Form</span>
+                <span>📝 Tab 1: Form Filling (No Picture)</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setCreationMode('picture')}
+                style={{
+                  padding: '11px 16px',
+                  borderRadius: '8px',
+                  border: creationMode === 'picture' ? '1.5px solid #d4af37' : '1.5px solid transparent',
+                  background: creationMode === 'picture' ? '#ffffff' : 'transparent',
+                  color: creationMode === 'picture' ? '#92400e' : '#64748b',
+                  fontWeight: creationMode === 'picture' ? 800 : 600,
+                  fontSize: '0.84rem',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '8px',
+                  boxShadow: creationMode === 'picture' ? '0 3px 10px rgba(212, 175, 55, 0.25)' : 'none',
+                  transition: 'all 0.15s ease'
+                }}
+              >
+                <Upload size={16} color={creationMode === 'picture' ? '#b45309' : '#94a3b8'} />
+                <span>📸 Tab 2: Picture & Instagram Link (Optional)</span>
               </button>
             </div>
 
@@ -1523,182 +1537,13 @@ export default function AdminPanel({ onBackToPortal, onProfilesChange }) {
                 onChange={handleImageFileUpload}
               />
 
-              {creationMode === 'flyer' ? (
-                /* ════ OPTION 1: UPLOAD FLYER PICTURE (QUICK) ════ */
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                  <div style={{ background: '#fefce8', border: '1px solid #fef08a', borderRadius: '10px', padding: '12px 16px', display: 'flex', alignItems: 'center', gap: '10px' }}>
-                    <Sparkles size={20} color="#ca8a04" style={{ flexShrink: 0 }} />
-                    <div style={{ fontSize: '0.78rem', color: '#854d0e', lineHeight: 1.4 }}>
-                      <strong>Quick Flyer Upload:</strong> Upload the candidate's flyer picture directly from your computer or mobile. The bio-data is captured in the flyer itself, so you do NOT need to fill extensive form fields!
-                    </div>
-                  </div>
-
-                  {/* Big Flyer Upload Area */}
-                  <div style={{ background: '#f8fafc', border: '2px dashed #cbd5e1', borderRadius: '14px', padding: '20px', textAlign: 'center' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px' }}>
-                      <label style={{ fontSize: '0.85rem', fontWeight: 800, color: '#1e293b', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <Image size={18} color="var(--text-gold)" /> Candidate Flyer / Profile Picture *
-                      </label>
-                      {formData.image && (
-                        <button
-                          type="button"
-                          onClick={() => setFormData({ ...formData, image: '' })}
-                          style={{
-                            background: '#fee2e2',
-                            color: '#dc2626',
-                            border: '1px solid #fca5a5',
-                            borderRadius: '6px',
-                            padding: '4px 10px',
-                            fontSize: '0.74rem',
-                            fontWeight: 700,
-                            cursor: 'pointer',
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            gap: '4px'
-                          }}
-                        >
-                          <Trash2 size={12} /> Remove Picture
-                        </button>
-                      )}
-                    </div>
-
-                    {formData.image ? (
-                      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px' }}>
-                        <div style={{ maxWidth: '320px', maxHeight: '340px', width: '100%', borderRadius: '12px', overflow: 'hidden', border: '2px solid var(--gold-border)', boxShadow: '0 8px 24px rgba(0,0,0,0.12)' }}>
-                          <img src={formData.image} alt="Candidate Flyer" style={{ width: '100%', height: 'auto', display: 'block', objectFit: 'contain' }} />
-                        </div>
-                        <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', justifyContent: 'center' }}>
-                          <button
-                            type="button"
-                            onClick={() => fileInputRef.current?.click()}
-                            disabled={isUploadingImage}
-                            className="btn-gold"
-                            style={{ fontSize: '0.78rem', padding: '7px 16px', display: 'inline-flex', alignItems: 'center', gap: '6px' }}
-                          >
-                            <Upload size={14} />
-                            <span>{isUploadingImage ? 'Uploading...' : 'Change Picture from Device'}</span>
-                          </button>
-                        </div>
-                      </div>
-                    ) : (
-                      <div style={{ padding: '24px 16px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px' }}>
-                        <div style={{ width: '56px', height: '56px', borderRadius: '50%', background: '#fef3c7', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#d97706' }}>
-                          <Upload size={28} />
-                        </div>
-                        <div>
-                          <h4 style={{ fontSize: '0.98rem', fontWeight: 800, color: '#0f172a', margin: '0 0 4px' }}>Upload Candidate Flyer Picture</h4>
-                          <p style={{ fontSize: '0.76rem', color: '#64748b', margin: 0 }}>Click below to choose flyer image from your computer/phone OR paste image URL</p>
-                        </div>
-                        <button
-                          type="button"
-                          onClick={() => fileInputRef.current?.click()}
-                          disabled={isUploadingImage}
-                          style={{
-                            padding: '11px 24px',
-                            borderRadius: '8px',
-                            border: 'none',
-                            background: 'linear-gradient(135deg, #fae182 0%, #d4af37 50%, #b8860b 100%)',
-                            color: '#0d251c',
-                            fontWeight: 800,
-                            fontSize: '0.85rem',
-                            cursor: 'pointer',
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            gap: '8px',
-                            boxShadow: '0 4px 14px rgba(212, 175, 55, 0.4)'
-                          }}
-                        >
-                          <Upload size={16} />
-                          <span>{isUploadingImage ? 'Uploading...' : 'Upload from Device'}</span>
-                        </button>
-                        <div style={{ width: '100%', maxWidth: '440px', marginTop: '4px' }}>
-                          <input
-                            type="url"
-                            value={formData.image}
-                            onChange={e => setFormData({ ...formData, image: e.target.value })}
-                            placeholder="Or paste direct image URL (https://...)"
-                            style={{ width: '100%', padding: '8px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '0.8rem', background: '#ffffff', textAlign: 'center' }}
-                          />
-                        </div>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Quick Flyer Profile Essentials */}
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
-                    <div>
-                      <label style={{ fontSize: '0.78rem', fontWeight: 700, color: '#475569', display: 'block', marginBottom: '4px' }}>Candidate Type / Gender *</label>
-                      <select
-                        value={formData.gender}
-                        onChange={e => {
-                          const newGender = e.target.value;
-                          let newName = formData.name;
-                          if (newName.includes('Groom') && newGender === 'female') {
-                            newName = newName.replace('Groom', 'Bride');
-                          } else if (newName.includes('Bride') && newGender === 'male') {
-                            newName = newName.replace('Bride', 'Groom');
-                          }
-                          setFormData({ ...formData, gender: newGender, name: newName });
-                        }}
-                        style={{ width: '100%', padding: '9px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '0.85rem' }}
-                      >
-                        <option value="male">Male (Groom)</option>
-                        <option value="female">Female (Bride)</option>
-                      </select>
-                    </div>
-
-                    <div>
-                      <label style={{ fontSize: '0.78rem', fontWeight: 700, color: '#475569', display: 'block', marginBottom: '4px' }}>Profile Title / Code</label>
-                      <input
-                        type="text"
-                        value={formData.name}
-                        onChange={e => setFormData({ ...formData, name: e.target.value })}
-                        placeholder="e.g. NPF-229 (Groom)"
-                        style={{ width: '100%', padding: '9px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '0.85rem' }}
-                      />
-                    </div>
-
-                    <div>
-                      <label style={{ fontSize: '0.78rem', fontWeight: 700, color: '#475569', display: 'block', marginBottom: '4px' }}>Marital Status</label>
-                      <select value={formData.maritalStatus} onChange={e => setFormData({ ...formData, maritalStatus: e.target.value })} style={{ width: '100%', padding: '9px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '0.85rem' }}>
-                        <option value="Never Married">Never Married</option>
-                        <option value="Divorced">Divorced</option>
-                        <option value="2nd Marriage">2nd Marriage</option>
-                        <option value="Widowed">Widowed</option>
-                      </select>
-                    </div>
-
-                    <div>
-                      <label style={{ fontSize: '0.78rem', fontWeight: 700, color: '#475569', display: 'block', marginBottom: '4px' }}>Nationality</label>
-                      <select value={formData.nationality} onChange={e => setFormData({ ...formData, nationality: e.target.value })} style={{ width: '100%', padding: '9px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '0.85rem' }}>
-                        <option value="Pakistani">Pakistani</option>
-                        <option value="Bahraini">Bahraini</option>
-                        <option value="Indian">Indian</option>
-                        <option value="Saudi Arabia">Saudi Arabia</option>
-                        <option value="Emirati">Emirati</option>
-                        <option value="GCC / Other">GCC / Other</option>
-                      </select>
-                    </div>
-
-                    <div style={{ gridColumn: 'span 2' }}>
-                      <label style={{ fontSize: '0.78rem', fontWeight: 700, color: '#475569', display: 'block', marginBottom: '4px' }}>WhatsApp Contact</label>
-                      <input
-                        type="text"
-                        value={formData.contact}
-                        onChange={e => setFormData({ ...formData, contact: e.target.value })}
-                        placeholder="+973 3718 8557"
-                        style={{ width: '100%', padding: '9px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '0.85rem' }}
-                      />
-                    </div>
-                  </div>
-                </div>
-              ) : (
-                /* ════ OPTION 2: FILL DETAILED FORM ════ */
+              {creationMode === 'form' ? (
+                /* ════ TAB 1: FORM FILLING (NO PICTURE) ════ */
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
                   <div style={{ gridColumn: 'span 2', background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: '10px', padding: '12px 16px', display: 'flex', alignItems: 'center', gap: '10px' }}>
                     <FileText size={20} color="#2563eb" style={{ flexShrink: 0 }} />
                     <div style={{ fontSize: '0.78rem', color: '#1e40af', lineHeight: 1.4 }}>
-                      <strong>Detailed Form Mode:</strong> Fill out complete candidate attributes for text-based typography profile cards. Image flyer is optional in this mode.
+                      <strong>Form Filling Mode (No Picture):</strong> Fill out candidate bio-data details below for a text-based Typography Profile Card. No picture is uploaded in this mode.
                     </div>
                   </div>
 
@@ -1782,17 +1627,32 @@ export default function AdminPanel({ onBackToPortal, onProfilesChange }) {
                     <input type="text" value={formData.contact} onChange={e => setFormData({ ...formData, contact: e.target.value })} placeholder="+973 3718 8557" style={{ width: '100%', padding: '9px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '0.85rem' }} />
                   </div>
 
-                  {/* Optional candidate picture */}
-                  <div style={{ gridColumn: 'span 2', background: '#f8fafc', border: '1.5px dashed #cbd5e1', borderRadius: '12px', padding: '16px' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px' }}>
-                      <div>
-                        <label style={{ fontSize: '0.82rem', fontWeight: 800, color: '#1e293b', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                          <Image size={15} color="var(--text-gold)" /> Optional Candidate Picture / Flyer
-                        </label>
-                        <p style={{ fontSize: '0.74rem', color: '#64748b', margin: '2px 0 0' }}>
-                          Attach flyer image if available (leave blank for typography card)
-                        </p>
-                      </div>
+                  <div style={{ gridColumn: 'span 2' }}>
+                    <label style={{ fontSize: '0.78rem', fontWeight: 700, color: '#475569', display: 'block', marginBottom: '4px' }}>About Candidate / Family Background</label>
+                    <textarea rows="3" value={formData.about} onChange={e => setFormData({ ...formData, about: e.target.value })} placeholder="Brief summary of candidate background..." style={{ width: '100%', padding: '9px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '0.85rem' }} />
+                  </div>
+
+                  <div style={{ gridColumn: 'span 2' }}>
+                    <label style={{ fontSize: '0.78rem', fontWeight: 700, color: '#475569', display: 'block', marginBottom: '4px' }}>Partner Requirements</label>
+                    <textarea rows="2" value={formData.requirements} onChange={e => setFormData({ ...formData, requirements: e.target.value })} placeholder="Preferences for partner..." style={{ width: '100%', padding: '9px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '0.85rem' }} />
+                  </div>
+                </div>
+              ) : (
+                /* ════ TAB 2: PICTURE & INSTAGRAM LINK (OPTIONAL) ════ */
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                  <div style={{ background: '#fefce8', border: '1px solid #fef08a', borderRadius: '10px', padding: '12px 16px', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    <Sparkles size={20} color="#ca8a04" style={{ flexShrink: 0 }} />
+                    <div style={{ fontSize: '0.78rem', color: '#854d0e', lineHeight: 1.4 }}>
+                      <strong>Picture & Instagram Mode:</strong> Upload the candidate's flyer picture directly and optionally provide the Instagram post link. Candidate details are captured in the flyer image.
+                    </div>
+                  </div>
+
+                  {/* Candidate Picture Upload Area */}
+                  <div style={{ background: '#f8fafc', border: '2px dashed #cbd5e1', borderRadius: '14px', padding: '20px', textAlign: 'center' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px' }}>
+                      <label style={{ fontSize: '0.85rem', fontWeight: 800, color: '#1e293b', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <Image size={18} color="var(--text-gold)" /> Candidate Picture / Flyer *
+                      </label>
                       {formData.image && (
                         <button
                           type="button"
@@ -1803,7 +1663,7 @@ export default function AdminPanel({ onBackToPortal, onProfilesChange }) {
                             border: '1px solid #fca5a5',
                             borderRadius: '6px',
                             padding: '4px 10px',
-                            fontSize: '0.72rem',
+                            fontSize: '0.74rem',
                             fontWeight: 700,
                             cursor: 'pointer',
                             display: 'inline-flex',
@@ -1816,45 +1676,151 @@ export default function AdminPanel({ onBackToPortal, onProfilesChange }) {
                       )}
                     </div>
 
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '16px', flexWrap: 'wrap' }}>
-                      {formData.image ? (
-                        <div style={{ position: 'relative', width: '84px', height: '84px', borderRadius: '10px', overflow: 'hidden', border: '2px solid var(--gold-border)', flexShrink: 0, boxShadow: '0 4px 10px rgba(0,0,0,0.1)' }}>
-                          <img src={formData.image} alt="Preview" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                    {formData.image ? (
+                      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px' }}>
+                        <div style={{ maxWidth: '320px', maxHeight: '340px', width: '100%', borderRadius: '12px', overflow: 'hidden', border: '2px solid var(--gold-border)', boxShadow: '0 8px 24px rgba(0,0,0,0.12)' }}>
+                          <img src={formData.image} alt="Candidate Flyer" style={{ width: '100%', height: 'auto', display: 'block', objectFit: 'contain' }} />
                         </div>
-                      ) : null}
-
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', flex: 1 }}>
-                        <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                        <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', justifyContent: 'center' }}>
                           <button
                             type="button"
                             onClick={() => fileInputRef.current?.click()}
                             disabled={isUploadingImage}
                             className="btn-gold"
-                            style={{ fontSize: '0.78rem', padding: '7px 14px', display: 'inline-flex', alignItems: 'center', gap: '6px' }}
+                            style={{ fontSize: '0.78rem', padding: '7px 16px', display: 'inline-flex', alignItems: 'center', gap: '6px' }}
                           >
                             <Upload size={14} />
-                            <span>{isUploadingImage ? 'Uploading...' : formData.image ? 'Change Picture' : 'Upload from Device'}</span>
+                            <span>{isUploadingImage ? 'Uploading...' : 'Change Picture from Device'}</span>
                           </button>
                         </div>
-                        <input
-                          type="url"
-                          value={formData.image}
-                          onChange={e => setFormData({ ...formData, image: e.target.value })}
-                          placeholder="Or paste direct image URL (https://...)"
-                          style={{ width: '100%', padding: '7px 10px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '0.78rem', background: '#ffffff' }}
-                        />
                       </div>
+                    ) : (
+                      <div style={{ padding: '24px 16px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px' }}>
+                        <div style={{ width: '56px', height: '56px', borderRadius: '50%', background: '#fef3c7', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#d97706' }}>
+                          <Upload size={28} />
+                        </div>
+                        <div>
+                          <h4 style={{ fontSize: '0.98rem', fontWeight: 800, color: '#0f172a', margin: '0 0 4px' }}>Upload Candidate Picture / Flyer</h4>
+                          <p style={{ fontSize: '0.76rem', color: '#64748b', margin: 0 }}>Click below to choose image from your computer/phone OR paste image URL</p>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => fileInputRef.current?.click()}
+                          disabled={isUploadingImage}
+                          style={{
+                            padding: '11px 24px',
+                            borderRadius: '8px',
+                            border: 'none',
+                            background: 'linear-gradient(135deg, #fae182 0%, #d4af37 50%, #b8860b 100%)',
+                            color: '#0d251c',
+                            fontWeight: 800,
+                            fontSize: '0.85rem',
+                            cursor: 'pointer',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '8px',
+                            boxShadow: '0 4px 14px rgba(212, 175, 55, 0.4)'
+                          }}
+                        >
+                          <Upload size={16} />
+                          <span>{isUploadingImage ? 'Uploading...' : 'Upload from Device'}</span>
+                        </button>
+                        <div style={{ width: '100%', maxWidth: '440px', marginTop: '4px' }}>
+                          <input
+                            type="url"
+                            value={formData.image}
+                            onChange={e => setFormData({ ...formData, image: e.target.value })}
+                            placeholder="Or paste direct image URL (https://...)"
+                            style={{ width: '100%', padding: '8px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '0.8rem', background: '#ffffff', textAlign: 'center' }}
+                          />
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Instagram Post Link (Optional) */}
+                  <div style={{ background: '#fdf2f8', border: '1.5px solid #fbcfe8', borderRadius: '12px', padding: '14px 16px', textAlign: 'left' }}>
+                    <label style={{ fontSize: '0.82rem', fontWeight: 800, color: '#9d174d', display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '4px' }}>
+                      <Instagram size={16} color="#E1306C" /> Instagram Post Link (Optional)
+                    </label>
+                    <p style={{ fontSize: '0.74rem', color: '#be185d', margin: '0 0 8px' }}>
+                      Paste the Instagram post URL for this candidate if already published on @nikah_bahrain (e.g. https://www.instagram.com/p/DdUNcFVIYZJ/)
+                    </p>
+                    <input
+                      type="url"
+                      value={formData.instagramPostUrl}
+                      onChange={e => setFormData({ ...formData, instagramPostUrl: e.target.value })}
+                      placeholder="https://www.instagram.com/p/... (Optional)"
+                      style={{ width: '100%', padding: '9px 12px', borderRadius: '8px', border: '1px solid #f472b6', fontSize: '0.84rem', background: '#ffffff' }}
+                    />
+                  </div>
+
+                  {/* Basic Profile Essentials for Picture Mode */}
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
+                    <div>
+                      <label style={{ fontSize: '0.78rem', fontWeight: 700, color: '#475569', display: 'block', marginBottom: '4px' }}>Candidate Type / Gender *</label>
+                      <select
+                        value={formData.gender}
+                        onChange={e => {
+                          const newGender = e.target.value;
+                          let newName = formData.name;
+                          if (newName.includes('Groom') && newGender === 'female') {
+                            newName = newName.replace('Groom', 'Bride');
+                          } else if (newName.includes('Bride') && newGender === 'male') {
+                            newName = newName.replace('Bride', 'Groom');
+                          }
+                          setFormData({ ...formData, gender: newGender, name: newName });
+                        }}
+                        style={{ width: '100%', padding: '9px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '0.85rem' }}
+                      >
+                        <option value="male">Male (Groom)</option>
+                        <option value="female">Female (Bride)</option>
+                      </select>
                     </div>
-                  </div>
 
-                  <div style={{ gridColumn: 'span 2' }}>
-                    <label style={{ fontSize: '0.78rem', fontWeight: 700, color: '#475569', display: 'block', marginBottom: '4px' }}>About Candidate / Family Background</label>
-                    <textarea rows="3" value={formData.about} onChange={e => setFormData({ ...formData, about: e.target.value })} placeholder="Brief summary of candidate background..." style={{ width: '100%', padding: '9px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '0.85rem' }} />
-                  </div>
+                    <div>
+                      <label style={{ fontSize: '0.78rem', fontWeight: 700, color: '#475569', display: 'block', marginBottom: '4px' }}>Profile Title / Code</label>
+                      <input
+                        type="text"
+                        value={formData.name}
+                        onChange={e => setFormData({ ...formData, name: e.target.value })}
+                        placeholder="e.g. NPF-229 (Groom)"
+                        style={{ width: '100%', padding: '9px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '0.85rem' }}
+                      />
+                    </div>
 
-                  <div style={{ gridColumn: 'span 2' }}>
-                    <label style={{ fontSize: '0.78rem', fontWeight: 700, color: '#475569', display: 'block', marginBottom: '4px' }}>Partner Requirements</label>
-                    <textarea rows="2" value={formData.requirements} onChange={e => setFormData({ ...formData, requirements: e.target.value })} placeholder="Preferences for partner..." style={{ width: '100%', padding: '9px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '0.85rem' }} />
+                    <div>
+                      <label style={{ fontSize: '0.78rem', fontWeight: 700, color: '#475569', display: 'block', marginBottom: '4px' }}>Marital Status</label>
+                      <select value={formData.maritalStatus} onChange={e => setFormData({ ...formData, maritalStatus: e.target.value })} style={{ width: '100%', padding: '9px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '0.85rem' }}>
+                        <option value="Never Married">Never Married</option>
+                        <option value="Divorced">Divorced</option>
+                        <option value="2nd Marriage">2nd Marriage</option>
+                        <option value="Widowed">Widowed</option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <label style={{ fontSize: '0.78rem', fontWeight: 700, color: '#475569', display: 'block', marginBottom: '4px' }}>Nationality</label>
+                      <select value={formData.nationality} onChange={e => setFormData({ ...formData, nationality: e.target.value })} style={{ width: '100%', padding: '9px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '0.85rem' }}>
+                        <option value="Pakistani">Pakistani</option>
+                        <option value="Bahraini">Bahraini</option>
+                        <option value="Indian">Indian</option>
+                        <option value="Saudi Arabia">Saudi Arabia</option>
+                        <option value="Emirati">Emirati</option>
+                        <option value="GCC / Other">GCC / Other</option>
+                      </select>
+                    </div>
+
+                    <div style={{ gridColumn: 'span 2' }}>
+                      <label style={{ fontSize: '0.78rem', fontWeight: 700, color: '#475569', display: 'block', marginBottom: '4px' }}>WhatsApp Contact</label>
+                      <input
+                        type="text"
+                        value={formData.contact}
+                        onChange={e => setFormData({ ...formData, contact: e.target.value })}
+                        placeholder="+973 3718 8557"
+                        style={{ width: '100%', padding: '9px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '0.85rem' }}
+                      />
+                    </div>
                   </div>
                 </div>
               )}
@@ -1883,7 +1849,7 @@ export default function AdminPanel({ onBackToPortal, onProfilesChange }) {
                   <span>Save & Post to Instagram</span>
                 </button>
                 <button type="submit" disabled={isSaving} style={{ padding: '9px 24px', borderRadius: '8px', border: 'none', background: 'linear-gradient(135deg, #fae182 0%, #d4af37 50%, #b8860b 100%)', color: '#0d251c', fontWeight: 800, cursor: 'pointer', boxShadow: '0 4px 14px rgba(212, 175, 55, 0.4)' }}>
-                  {isSaving ? 'Saving...' : editingProfile ? 'Update Profile' : creationMode === 'flyer' ? 'Save & Publish Flyer' : 'Save & Publish Profile'}
+                  {isSaving ? 'Saving...' : editingProfile ? 'Update Profile' : creationMode === 'picture' ? 'Save Picture Profile' : 'Save Form Profile'}
                 </button>
               </div>
             </form>
