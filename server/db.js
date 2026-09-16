@@ -7,14 +7,20 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 // Initialize Supabase client
+// Initialize Supabase client
 const SUPABASE_URL = process.env.SUPABASE_URL;
 const SUPABASE_ANON_KEY = process.env.SUPABASE_ANON_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY;
 
 let supabase = null;
+let memoryProfilesCache = null;
 
 function getSupabase() {
   if (!supabase && SUPABASE_URL && SUPABASE_ANON_KEY) {
-    supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    try {
+      supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    } catch (e) {
+      console.warn('[DB] Supabase init error:', e.message);
+    }
   }
   return supabase;
 }
@@ -23,30 +29,44 @@ export function isDbAvailable() {
   return !!(SUPABASE_URL && SUPABASE_ANON_KEY);
 }
 
-// ─── Fallback: read/write local JSON file ─────────────────────────────────────
+// ─── Fallback: read/write local / serverless JSON file ───────────────────────────
 function getLocalProfiles() {
+  if (Array.isArray(memoryProfilesCache) && memoryProfilesCache.length > 0) {
+    return memoryProfilesCache;
+  }
   const candidates = [
+    '/tmp/profiles.json',
     path.join(__dirname, 'data', 'profiles.json'),
     path.join(process.cwd(), 'server', 'data', 'profiles.json'),
     path.join(__dirname, '..', 'client', 'src', 'data', 'profiles.json'),
   ];
   for (const c of candidates) {
     if (fs.existsSync(c)) {
-      try { return JSON.parse(fs.readFileSync(c, 'utf8')); } catch (_) {}
+      try {
+        const parsed = JSON.parse(fs.readFileSync(c, 'utf8'));
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          memoryProfilesCache = parsed;
+          return parsed;
+        }
+      } catch (_) {}
     }
   }
   return [];
 }
 
 function saveLocalProfiles(profiles) {
+  memoryProfilesCache = profiles;
   const jsonStr = JSON.stringify(profiles, null, 2);
   const targets = [
+    '/tmp/profiles.json',
     path.join(__dirname, 'data', 'profiles.json'),
     path.join(__dirname, '..', 'client', 'src', 'data', 'profiles.json'),
   ];
   for (const t of targets) {
     try {
-      if (fs.existsSync(path.dirname(t))) fs.writeFileSync(t, jsonStr, 'utf8');
+      const dir = path.dirname(t);
+      if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+      fs.writeFileSync(t, jsonStr, 'utf8');
     } catch (_) {}
   }
 }
@@ -61,10 +81,14 @@ export async function dbGetProfiles() {
         .from('profiles')
         .select('*')
         .order('created_at', { ascending: false });
-      if (!error && data) return data.map(normalizeFromDb);
-      console.warn('[DB] Supabase read error, using JSON fallback:', error?.message);
+      if (!error && data && data.length > 0) {
+        const normalized = data.map(normalizeFromDb);
+        memoryProfilesCache = normalized;
+        return normalized;
+      }
+      console.warn('[DB] Supabase read error or empty, using local fallback:', error?.message);
     } catch (err) {
-      console.warn('[DB] Supabase unavailable, using JSON fallback:', err.message);
+      console.warn('[DB] Supabase unavailable, using local fallback:', err.message);
     }
   }
   return getLocalProfiles();

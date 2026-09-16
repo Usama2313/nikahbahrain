@@ -180,9 +180,9 @@ function getNextProfileId(profiles) {
   let maxNum = 0;
   for (const p of profiles) {
     if (p.id) {
-      const m = p.id.match(/\d+/);
+      const m = p.id.match(/^NPF-?(\d+)/i);
       if (m) {
-        const n = parseInt(m[0], 10);
+        const n = parseInt(m[1], 10);
         if (n > maxNum && n < 9000) maxNum = n;
       }
     }
@@ -217,13 +217,15 @@ function buildProfileObject(reqBody, profiles) {
   const contact = reqBody.contact || reqBody['WhatsApp Number'] || reqBody['Phone'] || '+973 3718 8557';
   const salary = reqBody.salary || '';
 
-  let category = 'grooms';
-  if (maritalStatus === 'Divorced') {
-    category = gender === 'male' ? 'divorced-grooms' : 'divorced-brides';
-  } else if (maritalStatus === 'Widowed') {
-    category = gender === 'male' ? 'widowed-grooms' : 'widowed-brides';
-  } else {
-    category = gender === 'male' ? 'grooms' : 'brides';
+  let category = reqBody.category || 'grooms';
+  if (!reqBody.category) {
+    if (maritalStatus === 'Divorced') {
+      category = gender === 'male' ? 'divorced-grooms' : 'divorced-brides';
+    } else if (maritalStatus === 'Widowed') {
+      category = gender === 'male' ? 'widowed-grooms' : 'widowed-brides';
+    } else {
+      category = gender === 'male' ? 'grooms' : 'brides';
+    }
   }
 
   const rawFlyerText = reqBody.rawFlyerText || `Profile #${id} Gender ${gender === 'female' ? 'Female' : 'Male'}`;

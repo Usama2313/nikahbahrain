@@ -13,8 +13,9 @@
     "dev": "node -e \"const { spawn } = require('child_process'); spawn('node', ['server/index.js'], { stdio: 'inherit', shell: true }); spawn('npm', ['--prefix', 'client', 'run', 'dev'], { stdio: 'inherit', shell: true });\""
   },
   "dependencies": {
+    "@supabase/supabase-js": "^2.116.0",
     "cors": "^2.8.5",
-    "dotenv": "^16.4.5",
+    "dotenv": "^16.6.1",
     "express": "^4.19.2",
     "morgan": "^1.10.0"
   }
