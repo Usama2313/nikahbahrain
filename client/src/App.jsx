@@ -494,8 +494,8 @@ export default function App() {
                 margin: '24px auto',
                 padding: '0 16px',
                 boxSizing: 'border-box',
-                overflowX: 'hidden'
-              }}
+                overflowX: 'hidden',
+                overflowY: 'auto',              }}
             >
               {loading ? (
                 <div 
@@ -587,7 +587,7 @@ export default function App() {
                       const isFav = favorites.includes(profile.id);
 
                       return (
-                        <animated.div key={profile.id} style={style}>
+                        <animated.div key={`${profile.id}-${index}`} style={style}>
                           <ProfileCard
                             profile={profile}
                             isFavorite={isFav}
