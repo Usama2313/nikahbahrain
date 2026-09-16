@@ -396,6 +396,29 @@ app.delete(['/api/profiles/:id', '/profiles/:id'], (req, res) => {
   res.json({ success: true, message: `Profile ${req.params.id} deleted successfully`, count: profiles.length });
 });
 
+// 5b. POST /api/admin/persist-profiles (Merge custom localStorage profiles into persistent JSON)
+// Called by AdminPanel to ensure admin-added profiles survive across all devices
+app.post(['/api/admin/persist-profiles', '/admin/persist-profiles'], (req, res) => {
+  try {
+    const { profiles: incomingProfiles } = req.body;
+    if (!Array.isArray(incomingProfiles) || incomingProfiles.length === 0) {
+      return res.status(400).json({ success: false, message: 'No profiles array provided' });
+    }
+    const existing = getProfiles();
+    const existingMap = new Map(existing.map(p => [p.id, p]));
+    // Merge: incoming profiles override existing by ID
+    for (const p of incomingProfiles) {
+      if (p && p.id) existingMap.set(p.id, p);
+    }
+    const merged = Array.from(existingMap.values());
+    saveProfiles(merged);
+    res.json({ success: true, message: `Persisted ${incomingProfiles.length} profiles. Total: ${merged.length}`, count: merged.length });
+  } catch (err) {
+    console.error('Persist profiles error:', err);
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
 // 6. GET /api/stats (Admin Dashboard Analytics)
 app.get(['/api/stats', '/stats'], (req, res) => {
   const profiles = getProfiles();

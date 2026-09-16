@@ -365,6 +365,26 @@ export default function AdminPanel({ onBackToPortal, onProfilesChange }) {
     }
   };
 
+  // Persist all custom profiles to server JSON so they appear on ALL devices (including mobile)
+  const persistProfilesToServer = async (allProfiles) => {
+    try {
+      const custom = JSON.parse(localStorage.getItem('nikah_custom_profiles') || '[]');
+      if (!custom.length && !allProfiles?.length) return;
+      const toSync = allProfiles || custom;
+      const res = await fetch(`${API_BASE}/admin/persist-profiles`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ profiles: toSync })
+      });
+      const data = await res.json();
+      if (data.success) {
+        console.log(`[Admin] Persisted ${toSync.length} profiles to server JSON. Total: ${data.count}`);
+      }
+    } catch (err) {
+      console.warn('Could not persist profiles to server:', err.message);
+    }
+  };
+
   const validateProfileForm = () => {
     const errs = {};
 
@@ -524,6 +544,8 @@ export default function AdminPanel({ onBackToPortal, onProfilesChange }) {
         setProfiles((prev) => {
           const next = prev.map((p) => (p.id === updated.id ? updated : p));
           if (onProfilesChange) onProfilesChange(next);
+          // Persist updated profiles to server so mobile/other devices see them
+          persistProfilesToServer(next);
           return next;
         });
         showNotification(`✓ Updated profile ${updated.id} successfully!`);
@@ -585,6 +607,8 @@ export default function AdminPanel({ onBackToPortal, onProfilesChange }) {
         setProfiles((prev) => {
           const next = [newProf, ...prev];
           if (onProfilesChange) onProfilesChange(next);
+          // Persist all custom profiles to server so mobile/other devices see them
+          persistProfilesToServer([newProf, ...prev]);
           return next;
         });
         showNotification(`✓ Published new profile ${newProf.id} successfully!`);
@@ -748,7 +772,22 @@ export default function AdminPanel({ onBackToPortal, onProfilesChange }) {
   };
 
   useEffect(() => {
-    if (isAuthenticated) fetchData();
+    if (isAuthenticated) {
+      fetchData();
+      // Auto-sync any localStorage-only profiles to server on login
+      // This fixes cross-device visibility (mobile won't see localStorage-only profiles)
+      setTimeout(async () => {
+        try {
+          const custom = JSON.parse(localStorage.getItem('nikah_custom_profiles') || '[]');
+          if (custom.length > 0) {
+            await persistProfilesToServer(custom);
+            console.log(`[Admin Auto-Sync] Pushed ${custom.length} custom profiles to server on login`);
+          }
+        } catch (e) {
+          console.warn('Auto-sync failed:', e.message);
+        }
+      }, 1500);
+    }
   }, [isAuthenticated]);
 
   // Reset page when section or search changes
