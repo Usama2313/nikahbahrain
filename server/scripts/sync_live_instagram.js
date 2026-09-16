@@ -146,7 +146,7 @@ export async function syncLiveInstagramPosts(targetCount = 25) {
     // Parse posts into structured profiles
     const parsedProfiles = rawPosts.map(parseProfileFromAltText);
 
-    // Load existing profiles from both server and client
+    // Load existing profiles from server JSON file (local fallback)
     const serverFilePath = path.join(__dirname, '..', 'data', 'profiles.json');
     const clientFilePath = path.join(__dirname, '..', '..', 'client', 'src', 'data', 'profiles.json');
 
@@ -154,48 +154,42 @@ export async function syncLiveInstagramPosts(targetCount = 25) {
     if (fs.existsSync(serverFilePath)) {
       try {
         existing = JSON.parse(fs.readFileSync(serverFilePath, 'utf8'));
-      } catch (e) {
-        existing = [];
-      }
+      } catch (e) { existing = []; }
     } else if (fs.existsSync(clientFilePath)) {
       try {
         existing = JSON.parse(fs.readFileSync(clientFilePath, 'utf8'));
-      } catch (e) {
-        existing = [];
-      }
+      } catch (e) { existing = []; }
     }
 
-    // Index existing by instagramPostId or id
+    // Merge: new IG posts override by instagramPostId/id, keep all existing
     const mergedMap = new Map();
-    // Put newly fetched live Instagram profiles first
     for (const p of parsedProfiles) {
       mergedMap.set(p.instagramPostId || p.id, p);
     }
-    // Keep any existing profiles not replaced
     for (const p of existing) {
       const key = p.instagramPostId || p.id;
-      if (!mergedMap.has(key)) {
-        mergedMap.set(key, p);
-      }
+      if (!mergedMap.has(key)) mergedMap.set(key, p);
     }
 
     const finalProfiles = Array.from(mergedMap.values());
 
-    // Save to BOTH server and client directories
+    // Try to save via Supabase DB first, then fall back to local JSON
     try {
-      fs.writeFileSync(serverFilePath, JSON.stringify(finalProfiles, null, 2), 'utf8');
-      console.log(`[Instagram Sync] Saved ${finalProfiles.length} profiles to ${serverFilePath}`);
-    } catch (e) {
-      console.error('Error writing server profiles.json:', e.message);
-    }
-
-    try {
-      if (fs.existsSync(path.dirname(clientFilePath))) {
-        fs.writeFileSync(clientFilePath, JSON.stringify(finalProfiles, null, 2), 'utf8');
-        console.log(`[Instagram Sync] Saved ${finalProfiles.length} profiles to ${clientFilePath}`);
-      }
-    } catch (e) {
-      console.error('Error writing client profiles.json:', e.message);
+      const { dbUpsertProfiles } = await import('./db.js');
+      await dbUpsertProfiles(finalProfiles);
+      console.log(`[Instagram Sync] Saved ${finalProfiles.length} profiles to Supabase + local JSON`);
+    } catch (dbErr) {
+      console.warn('[Instagram Sync] DB upsert failed, saving to local JSON only:', dbErr.message);
+      try {
+        fs.writeFileSync(serverFilePath, JSON.stringify(finalProfiles, null, 2), 'utf8');
+        console.log(`[Instagram Sync] Saved ${finalProfiles.length} profiles to ${serverFilePath}`);
+      } catch (e) { console.error('Error writing server profiles.json:', e.message); }
+      try {
+        if (fs.existsSync(path.dirname(clientFilePath))) {
+          fs.writeFileSync(clientFilePath, JSON.stringify(finalProfiles, null, 2), 'utf8');
+          console.log(`[Instagram Sync] Saved ${finalProfiles.length} profiles to ${clientFilePath}`);
+        }
+      } catch (e) { console.error('Error writing client profiles.json:', e.message); }
     }
 
     return {
@@ -204,6 +198,7 @@ export async function syncLiveInstagramPosts(targetCount = 25) {
       totalProfiles: finalProfiles.length,
       profiles: parsedProfiles
     };
+
   } finally {
     await browser.close();
   }

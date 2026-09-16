@@ -6,6 +6,15 @@ import morgan from 'morgan';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import {
+  dbGetProfiles,
+  dbGetProfileById,
+  dbInsertProfile,
+  dbUpdateProfile,
+  dbDeleteProfile,
+  dbUpsertProfiles,
+  isDbAvailable
+} from './db.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -108,8 +117,8 @@ function saveFavoritesMap(map) {
 }
 
 // 1. GET /api/profiles
-app.get(['/api/profiles', '/profiles'], (req, res) => {
-  let profiles = getProfiles();
+app.get(['/api/profiles', '/profiles'], async (req, res) => {
+  let profiles = await dbGetProfiles();
   const { category, nationality, maritalStatus, search, visitorId, favoritesOnly } = req.query;
 
   // Filter by category
@@ -117,14 +126,14 @@ app.get(['/api/profiles', '/profiles'], (req, res) => {
     profiles = profiles.filter((p) => p.category === category);
   }
 
-  // Filter by nationality (Pakistani, Indian, etc.)
+  // Filter by nationality
   if (nationality && nationality !== 'all') {
-    profiles = profiles.filter((p) => p.nationality.toLowerCase() === nationality.toLowerCase());
+    profiles = profiles.filter((p) => p.nationality && p.nationality.toLowerCase() === nationality.toLowerCase());
   }
 
   // Filter by maritalStatus
   if (maritalStatus && maritalStatus !== 'all') {
-    profiles = profiles.filter((p) => p.maritalStatus.toLowerCase() === maritalStatus.toLowerCase());
+    profiles = profiles.filter((p) => p.maritalStatus && p.maritalStatus.toLowerCase() === maritalStatus.toLowerCase());
   }
 
   // Filter favorites
@@ -134,7 +143,7 @@ app.get(['/api/profiles', '/profiles'], (req, res) => {
     profiles = profiles.filter((p) => userFavs.includes(p.id));
   }
 
-  // Search filter across all key and labeled fields
+  // Search filter
   if (search) {
     const term = search.toLowerCase();
     profiles = profiles.filter(
@@ -154,17 +163,12 @@ app.get(['/api/profiles', '/profiles'], (req, res) => {
     );
   }
 
-  res.json({
-    success: true,
-    count: profiles.length,
-    profiles
-  });
+  res.json({ success: true, count: profiles.length, profiles, dbActive: isDbAvailable() });
 });
 
 // 2. GET /api/profiles/:id
-app.get('/api/profiles/:id', (req, res) => {
-  const profiles = getProfiles();
-  const profile = profiles.find((p) => p.id === req.params.id);
+app.get('/api/profiles/:id', async (req, res) => {
+  const profile = await dbGetProfileById(req.params.id);
   if (!profile) {
     return res.status(404).json({ success: false, message: 'Profile not found' });
   }
@@ -261,27 +265,23 @@ function buildProfileObject(reqBody, profiles) {
 }
 
 // 3. POST /api/profiles (Add new profile from Form or Admin)
-app.post(['/api/profiles', '/profiles'], (req, res) => {
-  const profiles = getProfiles();
+app.post(['/api/profiles', '/profiles'], async (req, res) => {
+  const profiles = await dbGetProfiles();
   const newProfile = buildProfileObject(req.body, profiles);
-
-  profiles.unshift(newProfile);
-  saveProfiles(profiles);
-
+  const saved = await dbInsertProfile(newProfile);
+  console.log(`[DB] New profile created: ${saved.id}`);
   res.status(201).json({
     success: true,
     message: 'Profile created and added to Qabul Hai successfully!',
-    profile: newProfile
+    profile: saved
   });
 });
 
-// 3b. POST /api/google-form-submission (Google Form Webhook & Response Handler)
-app.post(['/api/google-form-submission', '/google-form-submission', '/api/webhook/google-form', '/webhook/google-form'], (req, res) => {
+// 3b. POST /api/google-form-submission
+app.post(['/api/google-form-submission', '/google-form-submission', '/api/webhook/google-form', '/webhook/google-form'], async (req, res) => {
   try {
-    const profiles = getProfiles();
+    const profiles = await dbGetProfiles();
     const payload = req.body || {};
-    
-    // Normalize possible Google Form keys or flat body
     const normalizedBody = {
       name: payload.name || payload['Full Name'] || payload['Candidate Name'] || payload['Name'],
       gender: payload.gender || payload['Gender'] || (payload['Looking for Groom'] ? 'female' : 'male'),
@@ -305,17 +305,13 @@ app.post(['/api/google-form-submission', '/google-form-submission', '/api/webhoo
       contact: payload.contact || payload['WhatsApp Number'] || payload['Contact Number'] || payload['Phone'],
       image: payload.image || payload['Photo URL'] || payload['Flyer Image URL']
     };
-
     const newProfile = buildProfileObject(normalizedBody, profiles);
-    profiles.unshift(newProfile);
-    saveProfiles(profiles);
-
-    console.log(`[Google Form Sync] Successfully recorded proposal: ${newProfile.id} (${newProfile.name})`);
-
+    const saved = await dbInsertProfile(newProfile);
+    console.log(`[Google Form Sync] Successfully recorded proposal: ${saved.id} (${saved.name})`);
     res.status(201).json({
       success: true,
-      message: `Google Form response received and live profile created with ID ${newProfile.id}! Displayed on Qabul Hai and Instagram feed.`,
-      profile: newProfile
+      message: `Google Form response received and live profile created with ID ${saved.id}! Displayed on Qabul Hai and Instagram feed.`,
+      profile: saved
     });
   } catch (err) {
     console.error('Google Form submission error:', err);
@@ -371,48 +367,31 @@ app.post(['/api/upload', '/upload'], (req, res) => {
 });
 
 // 4. PUT /api/profiles/:id (Admin update)
-app.put(['/api/profiles/:id', '/profiles/:id'], (req, res) => {
-  const profiles = getProfiles();
-  const index = profiles.findIndex((p) => p.id === req.params.id);
-  if (index === -1) {
+app.put(['/api/profiles/:id', '/profiles/:id'], async (req, res) => {
+  const updated = await dbUpdateProfile(req.params.id, req.body);
+  if (!updated) {
     return res.status(404).json({ success: false, message: 'Profile not found' });
   }
-
-  profiles[index] = {
-    ...profiles[index],
-    ...req.body,
-    updatedAt: new Date().toISOString()
-  };
-
-  saveProfiles(profiles);
-  res.json({ success: true, profile: profiles[index] });
+  res.json({ success: true, profile: updated });
 });
 
 // 5. DELETE /api/profiles/:id (Admin delete)
-app.delete(['/api/profiles/:id', '/profiles/:id'], (req, res) => {
-  let profiles = getProfiles();
-  profiles = profiles.filter((p) => p.id !== req.params.id);
-  saveProfiles(profiles);
-  res.json({ success: true, message: `Profile ${req.params.id} deleted successfully`, count: profiles.length });
+app.delete(['/api/profiles/:id', '/profiles/:id'], async (req, res) => {
+  await dbDeleteProfile(req.params.id);
+  const remaining = await dbGetProfiles();
+  res.json({ success: true, message: `Profile ${req.params.id} deleted successfully`, count: remaining.length });
 });
 
-// 5b. POST /api/admin/persist-profiles (Merge custom localStorage profiles into persistent JSON)
-// Called by AdminPanel to ensure admin-added profiles survive across all devices
-app.post(['/api/admin/persist-profiles', '/admin/persist-profiles'], (req, res) => {
+// 5b. POST /api/admin/persist-profiles (Merge custom profiles into persistent DB)
+app.post(['/api/admin/persist-profiles', '/admin/persist-profiles'], async (req, res) => {
   try {
     const { profiles: incomingProfiles } = req.body;
     if (!Array.isArray(incomingProfiles) || incomingProfiles.length === 0) {
       return res.status(400).json({ success: false, message: 'No profiles array provided' });
     }
-    const existing = getProfiles();
-    const existingMap = new Map(existing.map(p => [p.id, p]));
-    // Merge: incoming profiles override existing by ID
-    for (const p of incomingProfiles) {
-      if (p && p.id) existingMap.set(p.id, p);
-    }
-    const merged = Array.from(existingMap.values());
-    saveProfiles(merged);
-    res.json({ success: true, message: `Persisted ${incomingProfiles.length} profiles. Total: ${merged.length}`, count: merged.length });
+    await dbUpsertProfiles(incomingProfiles);
+    const all = await dbGetProfiles();
+    res.json({ success: true, message: `Persisted ${incomingProfiles.length} profiles. Total: ${all.length}`, count: all.length });
   } catch (err) {
     console.error('Persist profiles error:', err);
     res.status(500).json({ success: false, message: err.message });
@@ -420,8 +399,8 @@ app.post(['/api/admin/persist-profiles', '/admin/persist-profiles'], (req, res) 
 });
 
 // 6. GET /api/stats (Admin Dashboard Analytics)
-app.get(['/api/stats', '/stats'], (req, res) => {
-  const profiles = getProfiles();
+app.get(['/api/stats', '/stats'], async (req, res) => {
+  const profiles = await dbGetProfiles();
   
   const stats = {
     total: profiles.length,
