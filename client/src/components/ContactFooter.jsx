@@ -239,6 +239,7 @@ export default function ContactFooter({ onOpenCreateProfile, onOpenAdmin }) {
 
           {/* Dedicated WhatsApp Group Invite Banner */}
           <div
+            className="wa-group-banner"
             style={{
               background: 'linear-gradient(135deg, #f0fdf4 0%, #ecfdf5 50%, #fefce8 100%)',
               border: '1.5px solid #86efac',
@@ -249,10 +250,12 @@ export default function ContactFooter({ onOpenCreateProfile, onOpenAdmin }) {
               justifyContent: 'space-between',
               flexWrap: 'wrap',
               gap: '24px',
-              boxShadow: '0 4px 20px rgba(16, 185, 129, 0.08)'
+              boxShadow: '0 4px 20px rgba(16, 185, 129, 0.08)',
+              overflow: 'hidden',
+              boxSizing: 'border-box'
             }}
           >
-            <div style={{ maxWidth: '480px' }}>
+            <div className="wa-group-banner-content" style={{ maxWidth: '480px', flex: '1 1 280px' }}>
               <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', background: '#dcfce7', color: '#15803d', padding: '3px 10px', borderRadius: '999px', fontSize: '0.74rem', fontWeight: 800, marginBottom: '8px' }}>
                 <MessageCircle size={14} /> Official WhatsApp Group
               </div>
@@ -266,6 +269,7 @@ export default function ContactFooter({ onOpenCreateProfile, onOpenAdmin }) {
                 href="https://chat.whatsapp.com/FCfPkrHUA1b2gpq64IhuNe?s=cl&p=i&mlu=0"
                 target="_blank"
                 rel="noopener noreferrer"
+                className="btn-join-official"
                 style={{
                   display: 'inline-flex',
                   alignItems: 'center',
@@ -289,7 +293,7 @@ export default function ContactFooter({ onOpenCreateProfile, onOpenAdmin }) {
             </div>
 
             {/* Exactly matching WhatsApp Bubble Invite */}
-            <div style={{ display: 'flex', justifyContent: 'center', width: 'auto' }}>
+            <div className="wa-group-banner-invite-container" style={{ display: 'flex', justifyContent: 'center', width: '100%', maxWidth: '360px', flex: '1 1 300px', boxSizing: 'border-box' }}>
               <WhatsAppGroupInvite />
             </div>
           </div>

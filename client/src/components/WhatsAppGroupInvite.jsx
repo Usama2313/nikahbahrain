@@ -3,14 +3,17 @@ import logoImg from '../assets/logo.jpg';
 
 export default function WhatsAppGroupInvite({ style = {}, showForwardBtn = true }) {
   const inviteUrl = 'https://chat.whatsapp.com/FCfPkrHUA1b2gpq64IhuNe?s=cl&p=i&mlu=0';
+  const displayUrl = 'https://chat.whatsapp.com/FCfPkrHUA1b2gpq64IhuNe';
 
   return (
     <div
       className="wa-invite-wrapper"
       style={{
-        display: 'inline-flex',
-        alignItems: 'flex-start',
-        gap: '8px',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: '10px',
+        width: '100%',
         maxWidth: '100%',
         boxSizing: 'border-box',
         ...style
@@ -20,20 +23,22 @@ export default function WhatsAppGroupInvite({ style = {}, showForwardBtn = true 
       <div
         className="wa-invite-bubble"
         style={{
-          width: '320px',
-          maxWidth: '100%',
+          width: '100%',
+          maxWidth: '330px',
+          minWidth: 0,
           boxSizing: 'border-box',
           background: '#ffffff',
-          borderRadius: '10px',
-          boxShadow: '0 2px 10px rgba(11, 20, 26, 0.12), 0 1px 2px rgba(11, 20, 26, 0.08)',
+          borderRadius: '12px',
+          boxShadow: '0 4px 16px rgba(11, 20, 26, 0.12), 0 1px 3px rgba(11, 20, 26, 0.08)',
           border: '1px solid #e2e8f0',
           overflow: 'hidden',
           fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif',
           position: 'relative'
         }}
       >
-        {/* Chat Bubble Top-Left Tail Indicator */}
+        {/* Chat Bubble Top-Left Tail Indicator (hidden on small screens via CSS or small enough) */}
         <div
+          className="wa-bubble-tail"
           style={{
             position: 'absolute',
             top: 0,
@@ -41,7 +46,8 @@ export default function WhatsAppGroupInvite({ style = {}, showForwardBtn = true 
             width: 0,
             height: 0,
             borderTop: '6px solid #ffffff',
-            borderLeft: '6px solid transparent'
+            borderLeft: '6px solid transparent',
+            zIndex: 1
           }}
         />
 
@@ -51,17 +57,18 @@ export default function WhatsAppGroupInvite({ style = {}, showForwardBtn = true 
             margin: '6px 6px 4px 6px',
             background: '#f0f2f5',
             borderRadius: '8px',
-            padding: '10px 12px',
+            padding: '9px 11px',
             display: 'flex',
             alignItems: 'center',
-            gap: '12px'
+            gap: '10px',
+            boxSizing: 'border-box'
           }}
         >
           {/* Round Avatar with Gold Border */}
           <div
             style={{
-              width: '46px',
-              height: '46px',
+              width: '44px',
+              height: '44px',
               borderRadius: '50%',
               overflow: 'hidden',
               flexShrink: 0,
@@ -83,24 +90,30 @@ export default function WhatsAppGroupInvite({ style = {}, showForwardBtn = true 
           </div>
 
           {/* Group Title & Info */}
-          <div style={{ minWidth: 0, flex: 1 }}>
+          <div style={{ minWidth: 0, flex: 1, overflow: 'hidden' }}>
             <div
               style={{
                 fontWeight: 700,
-                fontSize: '0.94rem',
+                fontSize: '0.92rem',
                 color: '#111b21',
                 lineHeight: 1.25,
-                letterSpacing: '-0.1px'
+                letterSpacing: '-0.1px',
+                whiteSpace: 'nowrap',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis'
               }}
             >
               Nikah Bahrain
             </div>
             <div
               style={{
-                fontSize: '0.78rem',
+                fontSize: '0.76rem',
                 color: '#667781',
-                marginTop: '2px',
-                lineHeight: 1.2
+                marginTop: '1px',
+                lineHeight: 1.2,
+                whiteSpace: 'nowrap',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis'
               }}
             >
               Group chat invite
@@ -109,46 +122,53 @@ export default function WhatsAppGroupInvite({ style = {}, showForwardBtn = true 
               style={{
                 fontSize: '0.72rem',
                 color: '#8696a0',
-                marginTop: '2px',
+                marginTop: '1px',
                 whiteSpace: 'nowrap',
                 overflow: 'hidden',
                 textOverflow: 'ellipsis',
                 lineHeight: 1.2
               }}
             >
-              https://chat.whatsapp.com/FCfPkrHUA1b2gpq64IhuNe?s=cl&p=i&mlu=0
+              chat.whatsapp.com
             </div>
           </div>
         </div>
 
         {/* Link Text & Timestamp */}
-        <div style={{ padding: '6px 12px 6px 12px' }}>
+        <div style={{ padding: '6px 12px 6px 12px', boxSizing: 'border-box' }}>
           <a
             href={inviteUrl}
             target="_blank"
             rel="noopener noreferrer"
             style={{
               color: '#027eb5',
-              fontSize: '0.84rem',
+              fontSize: '0.8rem',
               wordBreak: 'break-all',
+              overflowWrap: 'anywhere',
               textDecoration: 'underline',
               lineHeight: 1.35,
               display: 'block'
             }}
           >
-            https://chat.whatsapp.com/FCfPkrHUA1b2gpq64IhuNe?s=cl&p=i&mlu=0
+            {displayUrl}
           </a>
           <div
             style={{
               display: 'flex',
+              alignItems: 'center',
               justifyContent: 'flex-end',
+              gap: '4px',
               fontSize: '0.68rem',
               color: '#667781',
               marginTop: '4px',
               fontWeight: 500
             }}
           >
-            11:21 PM
+            <span>11:21 PM</span>
+            {/* WhatsApp Blue Double Checkmark */}
+            <svg viewBox="0 0 16 11" width="14" height="10" fill="#53bdeb">
+              <path d="M11.07 1.48L6.44 6.11 4.93 4.6a.75.75 0 10-1.06 1.06l2.04 2.04c.3.3.77.3 1.06 0l5.16-5.16a.75.75 0 00-1.06-1.06zm3.5 0l-6.2 6.2a.75.75 0 01-1.06 0l-.53-.53a.75.75 0 10-1.06 1.06l.53.53c.88.88 2.3.88 3.18 0l6.2-6.2a.75.75 0 10-1.06-1.06z" />
+            </svg>
           </div>
         </div>
 
@@ -166,7 +186,7 @@ export default function WhatsAppGroupInvite({ style = {}, showForwardBtn = true 
             textAlign: 'center',
             color: '#00a884',
             fontWeight: 700,
-            fontSize: '0.96rem',
+            fontSize: '0.94rem',
             textDecoration: 'none',
             background: '#ffffff',
             transition: 'background 0.15s ease'
@@ -178,7 +198,7 @@ export default function WhatsAppGroupInvite({ style = {}, showForwardBtn = true 
         </a>
       </div>
 
-      {/* WhatsApp Forward Arrow Action Icon */}
+      {/* WhatsApp Forward Arrow Action Icon (shown on desktop, hidden on mobile via CSS) */}
       {showForwardBtn && (
         <a
           className="wa-invite-forward-btn"
@@ -187,7 +207,6 @@ export default function WhatsAppGroupInvite({ style = {}, showForwardBtn = true 
           rel="noopener noreferrer"
           title="Open WhatsApp Group Invite"
           style={{
-            marginTop: '80px',
             width: '32px',
             height: '32px',
             borderRadius: '50%',
