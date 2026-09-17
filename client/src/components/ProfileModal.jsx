@@ -22,6 +22,17 @@ import {
   Star
 } from '../icons';
 
+const resolveImageUrl = (img) => {
+  if (!img) return '';
+  if (img.startsWith('data:image/')) return img;
+  if (typeof window !== 'undefined' && img.includes('localhost:5000')) {
+    if (window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
+      return img.replace('localhost:5000', `${window.location.hostname}:5000`);
+    }
+  }
+  return img;
+};
+
 export default function ProfileModal({ profile, isFavorite, onToggleFavorite, onClose }) {
   useEffect(() => {
     const handleKeyDown = (e) => {
@@ -191,7 +202,7 @@ Please share requirements & family verification steps.`;
                 overflow: 'hidden',
               }}>
                 <img
-                  src={profile.image}
+                  src={resolveImageUrl(profile.image)}
                   alt={`${profile.id} - ${profile.name}`}
                   style={{
                     width: '100%',

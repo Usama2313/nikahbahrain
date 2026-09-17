@@ -9,9 +9,11 @@ import {
   ExternalLink,
   MapPin,
   Clock,
-  Sparkles
+  Sparkles,
+  Users
 } from '../icons';
 import logoImg from '../assets/logo.jpg';
+import WhatsAppGroupInvite from './WhatsAppGroupInvite';
 
 export default function ContactFooter({ onOpenCreateProfile, onOpenAdmin }) {
   // Gentle floating spring for contact card badges
@@ -72,7 +74,8 @@ export default function ContactFooter({ onOpenCreateProfile, onOpenAdmin }) {
             style={{
               display: 'grid',
               gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
-              gap: '16px'
+              gap: '16px',
+              marginBottom: '28px'
             }}
           >
             {/* Male Coordinator */}
@@ -157,7 +160,7 @@ export default function ContactFooter({ onOpenCreateProfile, onOpenAdmin }) {
                 </div>
 
                 <div style={{ fontSize: '1.45rem', fontWeight: 800, color: '#0f172a', letterSpacing: '0.5px' }}>
-                  +973 3456 0078
+                  +973 3326 4512
                 </div>
 
                 <p style={{ fontSize: '0.82rem', color: '#64748b', marginTop: '4px' }}>
@@ -167,7 +170,7 @@ export default function ContactFooter({ onOpenCreateProfile, onOpenAdmin }) {
 
               <div style={{ display: 'flex', gap: '8px' }}>
                 <a
-                  href="https://wa.me/97334560078"
+                  href="https://wa.me/97333264512"
                   target="_blank"
                   rel="noopener noreferrer"
                   className="btn-whatsapp"
@@ -177,7 +180,7 @@ export default function ContactFooter({ onOpenCreateProfile, onOpenAdmin }) {
                   <span>WhatsApp Female</span>
                 </a>
                 <a
-                  href="tel:+97334560078"
+                  href="tel:+97333264512"
                   className="btn-ghost"
                   style={{ padding: '10px 14px' }}
                   title="Direct Call"
@@ -232,6 +235,63 @@ export default function ContactFooter({ onOpenCreateProfile, onOpenAdmin }) {
                 <span>Visit Instagram @Nikah_Bahrain</span>
               </a>
             </animated.div>
+          </div>
+
+          {/* Dedicated WhatsApp Group Invite Banner */}
+          <div
+            style={{
+              background: 'linear-gradient(135deg, #f0fdf4 0%, #ecfdf5 50%, #fefce8 100%)',
+              border: '1.5px solid #86efac',
+              borderRadius: 'var(--radius-lg)',
+              padding: '24px 20px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              flexWrap: 'wrap',
+              gap: '24px',
+              boxShadow: '0 4px 20px rgba(16, 185, 129, 0.08)'
+            }}
+          >
+            <div style={{ maxWidth: '480px' }}>
+              <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', background: '#dcfce7', color: '#15803d', padding: '3px 10px', borderRadius: '999px', fontSize: '0.74rem', fontWeight: 800, marginBottom: '8px' }}>
+                <MessageCircle size={14} /> Official WhatsApp Group
+              </div>
+              <h3 style={{ fontSize: '1.35rem', fontWeight: 800, color: '#064e3b', margin: '0 0 6px 0' }}>
+                Join Nikah Bahrain Group
+              </h3>
+              <p style={{ fontSize: '0.86rem', color: '#374151', margin: '0 0 14px 0', lineHeight: 1.5 }}>
+                Receive instant new proposal announcements, verified biodatas, and connect with respectful Bahrain & GCC families.
+              </p>
+              <a
+                href="https://chat.whatsapp.com/FCfPkrHUA1b2gpq64IhuNe?s=cl&p=i&mlu=0"
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  background: '#00a884',
+                  color: '#ffffff',
+                  fontWeight: 800,
+                  fontSize: '0.9rem',
+                  padding: '10px 22px',
+                  borderRadius: '8px',
+                  textDecoration: 'none',
+                  boxShadow: '0 4px 14px rgba(0, 168, 132, 0.35)',
+                  transition: 'transform 0.15s ease'
+                }}
+                onMouseEnter={(e) => (e.currentTarget.style.transform = 'translateY(-2px)')}
+                onMouseLeave={(e) => (e.currentTarget.style.transform = 'translateY(0)')}
+              >
+                <MessageCircle size={17} />
+                <span>Join Official Group</span>
+              </a>
+            </div>
+
+            {/* Exactly matching WhatsApp Bubble Invite */}
+            <div style={{ display: 'flex', justifyContent: 'center', width: 'auto' }}>
+              <WhatsAppGroupInvite />
+            </div>
           </div>
         </div>
 

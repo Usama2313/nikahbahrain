@@ -33,6 +33,7 @@ import confetti from 'canvas-confetti';
 import API_BASE from '../api';
 import logoImg from '../assets/logo.jpg';
 import fallbackProfiles from '../data/profiles.json';
+import WhatsAppGroupInvite from './WhatsAppGroupInvite';
 
 // Standard Admin Credentials
 const ADMIN_CREDENTIALS = {
@@ -209,35 +210,70 @@ export default function AdminPanel({ onBackToPortal, onProfilesChange }) {
       `#NikahBahrain #QabulHai #HalalNikah #BahrainMatrimonial #MuslimMatrimony #GCCMuslims #NPF`;
   };
 
-  const handleImageFileUpload = (e) => {
+  // Client-side image compression using HTML5 Canvas
+  const compressImage = (file, maxWidth = 1080, maxHeight = 1080, quality = 0.82) => {
+    return new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const img = new window.Image();
+        img.onload = () => {
+          let { width, height } = img;
+          if (width > maxWidth || height > maxHeight) {
+            if (width / height > maxWidth / maxHeight) {
+              height = Math.round((height * maxWidth) / width);
+              width = maxWidth;
+            } else {
+              width = Math.round((width * maxHeight) / height);
+              height = maxHeight;
+            }
+          }
+          const canvas = document.createElement('canvas');
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext('2d');
+          ctx.drawImage(img, 0, 0, width, height);
+          resolve(canvas.toDataURL('image/jpeg', quality));
+        };
+        img.onerror = () => resolve(e.target.result);
+        img.src = e.target.result;
+      };
+      reader.onerror = () => resolve(null);
+      reader.readAsDataURL(file);
+    });
+  };
+
+  const handleImageFileUpload = async (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
     setIsUploadingImage(true);
-    const reader = new FileReader();
-    reader.onload = async (event) => {
-      const dataUrl = event.target.result;
-      setFormData(prev => ({ ...prev, image: dataUrl }));
-      setFormErrors(prev => {
-        const copy = { ...prev };
-        delete copy.image;
-        return copy;
-      });
-
-      try {
-        const res = await fetch(`${API_BASE}/upload`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ image: dataUrl, filename: file.name })
+    try {
+      const compressedDataUrl = await compressImage(file);
+      if (compressedDataUrl) {
+        setFormData(prev => ({ ...prev, image: compressedDataUrl }));
+        setFormErrors(prev => {
+          const copy = { ...prev };
+          delete copy.image;
+          return copy;
         });
-        const d = await res.json();
-        if (d.success && d.url) {
-          setFormData(prev => ({ ...prev, image: d.url }));
-        }
-      } catch (_) {}
+
+        try {
+          const res = await fetch(`${API_BASE}/upload`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ image: compressedDataUrl, filename: file.name })
+          });
+          const d = await res.json();
+          if (d.success && d.url) {
+            setFormData(prev => ({ ...prev, image: d.url }));
+          }
+        } catch (_) {}
+        showNotification('✓ Picture optimized and uploaded successfully!');
+      }
+    } catch (err) {
+      console.error('Image compression error:', err);
+    } finally {
       setIsUploadingImage(false);
-      showNotification('✓ Picture uploaded successfully from device!');
-    };
-    reader.readAsDataURL(file);
+    }
   };
 
   const handleDownloadFlyer = (p) => {
@@ -503,7 +539,7 @@ export default function AdminPanel({ onBackToPortal, onProfilesChange }) {
           ...formData,
           name: candidateName,
           age: candidateAge,
-          image: creationMode === 'form' ? '' : (formData.image || ''),
+          image: formData.image?.trim() || '',
           instagramPostUrl: formData.instagramPostUrl?.trim() || '',
           instagramPostId: igPostId || editingProfile.instagramPostId || '',
           category: formData.gender === 'male' ? 'grooms' : 'brides',
@@ -581,7 +617,7 @@ export default function AdminPanel({ onBackToPortal, onProfilesChange }) {
           education: formData.education?.trim() || '',
           sect: formData.sect?.trim() || '',
           caste: formData.caste?.trim() || '',
-          image: creationMode === 'form' ? '' : (formData.image || ''),
+          image: formData.image?.trim() || '',
           instagramPostUrl: formData.instagramPostUrl?.trim() || '',
           instagramPostId: igPostId,
           verified: true,
@@ -1972,7 +2008,18 @@ export default function AdminPanel({ onBackToPortal, onProfilesChange }) {
                 <CategorySection title="Coordinator Hotlines" accent="#d4af37">
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '16px' }}>
                     <ContactCard title="Male Family Coordinator" phone="+973 3718 8557" waLink="https://wa.me/97337188557" />
-                    <ContactCard title="Female Family Coordinator" phone="+973 3456 0078" waLink="https://wa.me/97334560078" />
+                    <ContactCard title="Female Family Coordinator" phone="+973 3326 4512" waLink="https://wa.me/97333264512" />
+                  </div>
+                </CategorySection>
+
+                <CategorySection title="Official WhatsApp Community Group" accent="#10b981">
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                    <p style={{ fontSize: '0.84rem', color: '#475569', margin: 0 }}>
+                      Official group chat invite for verified members and prospective candidates:
+                    </p>
+                    <div style={{ display: 'flex', justifyContent: 'flex-start' }}>
+                      <WhatsAppGroupInvite />
+                    </div>
                   </div>
                 </CategorySection>
 

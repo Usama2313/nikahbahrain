@@ -821,3 +821,23 @@ input:focus, textarea:focus, select:focus {
   }
 }
 
+/* Floating button animations */
+@keyframes whatsappPulse {
+  0%   { box-shadow: 0 6px 24px rgba(37, 211, 102, 0.55); transform: scale(1); }
+  50%  { box-shadow: 0 6px 32px rgba(37, 211, 102, 0.85), 0 0 0 6px rgba(37, 211, 102, 0.15); transform: scale(1.03); }
+  100% { box-shadow: 0 6px 24px rgba(37, 211, 102, 0.55); transform: scale(1); }
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+
+/* Mobile: move floating buttons so they don't block content */
+@media (max-width: 480px) {
+  #whatsapp-join-group-btn,
+  #sync-instagram-btn {
+    font-size: 0.78rem !important;
+    padding: 9px 14px !important;
+  }
+}

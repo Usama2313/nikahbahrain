@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { useSpring, animated } from '@react-spring/web';
 import {
   Heart,
@@ -10,6 +10,17 @@ import {
 } from '../icons';
 import confetti from 'canvas-confetti';
 
+const resolveImageUrl = (img) => {
+  if (!img) return '';
+  if (img.startsWith('data:image/')) return img;
+  if (typeof window !== 'undefined' && img.includes('localhost:5000')) {
+    if (window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
+      return img.replace('localhost:5000', `${window.location.hostname}:5000`);
+    }
+  }
+  return img;
+};
+
 export default function ProfileCard({
   profile,
   isFavorite = false,
@@ -19,6 +30,12 @@ export default function ProfileCard({
   const [hovered, setHovered] = useState(false);
   const [imgError, setImgError] = useState(false);
   const cardRef = useRef(null);
+
+  const resolvedImg = resolveImageUrl(profile.image);
+
+  useEffect(() => {
+    setImgError(false);
+  }, [profile.image]);
 
   const hoverSpring = useSpring({
     boxShadow: hovered
@@ -104,15 +121,16 @@ Please provide more details. JazakAllah Khair!`;
     >
       {/* â”€â”€ Image Section â”€â”€ */}
       <div style={{ position: 'relative', width: '100%', aspectRatio: '1 / 1', overflow: 'hidden', background: '#f1f5f9' }}>
-        {profile.image && !imgError ? (
+        {resolvedImg && !imgError ? (
           <animated.img
-            src={profile.image}
+            src={resolvedImg}
             alt={profile.id}
             onError={() => setImgError(true)}
+            loading="lazy"
             style={{
               ...imgSpring,
               width: '100%',
-              height: 'auto',
+              height: '100%',
               objectFit: 'cover',
               display: 'block',
               background: '#000'

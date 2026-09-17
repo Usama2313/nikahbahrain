@@ -381,14 +381,59 @@ export default function App() {
 
   return (
     <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
-      {/* Floating Instagram Sync Button */}
+      {/* Floating Buttons: WhatsApp Join Group + Instagram Sync */}
       {!isAdminActive && (
-        <div style={{ position: 'fixed', bottom: '24px', right: '24px', zIndex: 500, display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '8px' }}>
+        <div style={{ position: 'fixed', bottom: '24px', right: '24px', zIndex: 500, display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '10px' }}>
           {syncMessage && (
             <div style={{ background: 'rgba(16,185,129,0.95)', color: '#fff', padding: '8px 16px', borderRadius: '9999px', fontSize: '0.8rem', fontWeight: 600, boxShadow: '0 4px 20px rgba(0,0,0,0.3)', maxWidth: '260px', textAlign: 'center', backdropFilter: 'blur(8px)' }}>
               {syncMessage}
             </div>
           )}
+
+          {/* Floating WhatsApp Join Group Button */}
+          <a
+            id="whatsapp-join-group-btn"
+            href="https://chat.whatsapp.com/FCfPkrHUA1b2gpq64IhuNe?s=cl&p=i&mlu=0"
+            target="_blank"
+            rel="noopener noreferrer"
+            title="Join our WhatsApp Group"
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '8px',
+              padding: '11px 20px',
+              borderRadius: '9999px',
+              background: 'linear-gradient(135deg, #25d366 0%, #128c7e 100%)',
+              color: '#ffffff',
+              fontSize: '0.86rem',
+              fontWeight: 800,
+              letterSpacing: '0.3px',
+              textDecoration: 'none',
+              boxShadow: '0 6px 24px rgba(37,211,102,0.55)',
+              border: '1.5px solid rgba(255,255,255,0.35)',
+              whiteSpace: 'nowrap',
+              transition: 'transform 0.2s ease, box-shadow 0.2s ease',
+              animation: 'whatsappPulse 2.5s ease-in-out infinite',
+            }}
+            onMouseEnter={e => {
+              e.currentTarget.style.transform = 'translateY(-2px) scale(1.05)';
+              e.currentTarget.style.boxShadow = '0 12px 32px rgba(37,211,102,0.7)';
+              e.currentTarget.style.animation = 'none';
+            }}
+            onMouseLeave={e => {
+              e.currentTarget.style.transform = 'translateY(0) scale(1)';
+              e.currentTarget.style.boxShadow = '0 6px 24px rgba(37,211,102,0.55)';
+              e.currentTarget.style.animation = 'whatsappPulse 2.5s ease-in-out infinite';
+            }}
+          >
+            {/* WhatsApp SVG Icon */}
+            <svg viewBox="0 0 32 32" width="18" height="18" fill="#ffffff" style={{ flexShrink: 0 }}>
+              <path d="M16 2C8.28 2 2 8.28 2 16c0 2.46.65 4.77 1.79 6.77L2 30l7.45-1.75A13.94 13.94 0 0016 30c7.72 0 14-6.28 14-14S23.72 2 16 2zm6.68 19.32c-.28.78-1.62 1.5-2.22 1.56-.57.06-1.1.27-3.72-.78-3.14-1.27-5.16-4.5-5.32-4.7-.16-.2-1.28-1.7-1.28-3.24s.81-2.3 1.1-2.62c.28-.3.62-.38.83-.38.21 0 .41.002.59.01.19.008.45-.072.7.54.27.63.92 2.24.99 2.4.08.16.13.34.02.55-.1.21-.15.34-.3.52-.15.18-.32.4-.46.54-.15.15-.3.31-.13.61.17.3.75 1.24 1.62 2.01 1.11.99 2.04 1.3 2.34 1.44.3.15.47.13.64-.08.18-.21.75-.87 1.05-1.17.3-.3.4-.38.7-.23.3.15 1.87.88 2.19 1.04.32.16.54.24.62.38.08.14.08.78-.2 1.55z"/>
+            </svg>
+            <span>Join Group</span>
+          </a>
+
+          {/* Floating Instagram Sync Button */}
           <button
             id="sync-instagram-btn"
             onClick={() => syncInstagram(false)}

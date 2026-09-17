@@ -419,7 +419,8 @@ app.get(['/api/stats', '/stats'], async (req, res) => {
     verified: profiles.filter((p) => p.verified).length,
     contactInfo: {
       maleWhatsApp: '+97337188557',
-      femaleWhatsApp: '+97334560078',
+      femaleWhatsApp: '+97333264512',
+      whatsappGroup: 'https://chat.whatsapp.com/FCfPkrHUA1b2gpq64IhuNe?s=cl&p=i&mlu=0',
       instagram: 'https://www.instagram.com/nikah_bahrain/',
       googleForm: 'https://docs.google.com/forms/d/e/1FAIpQLSe8p6bnqIMv7sPlDrYdREZHkpmuVb5c5pWrSVWqr70NhvvRCQ/viewform'
     }
