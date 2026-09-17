@@ -134,15 +134,15 @@ export default function WhatsAppGroupInvite({ style = {}, showForwardBtn = true 
           </div>
         </div>
 
-        {/* Link Text & Timestamp */}
-        <div style={{ padding: '6px 12px 6px 12px', boxSizing: 'border-box' }}>
+        {/* Link Text */}
+        <div style={{ padding: '8px 12px 10px 12px', boxSizing: 'border-box' }}>
           <a
             href={inviteUrl}
             target="_blank"
             rel="noopener noreferrer"
             style={{
               color: '#027eb5',
-              fontSize: '0.8rem',
+              fontSize: '0.82rem',
               wordBreak: 'break-all',
               overflowWrap: 'anywhere',
               textDecoration: 'underline',
@@ -152,24 +152,6 @@ export default function WhatsAppGroupInvite({ style = {}, showForwardBtn = true 
           >
             {displayUrl}
           </a>
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'flex-end',
-              gap: '4px',
-              fontSize: '0.68rem',
-              color: '#667781',
-              marginTop: '4px',
-              fontWeight: 500
-            }}
-          >
-            <span>11:21 PM</span>
-            {/* WhatsApp Blue Double Checkmark */}
-            <svg viewBox="0 0 16 11" width="14" height="10" fill="#53bdeb">
-              <path d="M11.07 1.48L6.44 6.11 4.93 4.6a.75.75 0 10-1.06 1.06l2.04 2.04c.3.3.77.3 1.06 0l5.16-5.16a.75.75 0 00-1.06-1.06zm3.5 0l-6.2 6.2a.75.75 0 01-1.06 0l-.53-.53a.75.75 0 10-1.06 1.06l.53.53c.88.88 2.3.88 3.18 0l6.2-6.2a.75.75 0 10-1.06-1.06z" />
-            </svg>
-          </div>
         </div>
 
         {/* Divider */}
