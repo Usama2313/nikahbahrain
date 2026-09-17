@@ -77,16 +77,44 @@ export async function dbGetProfiles() {
   const db = getSupabase();
   if (db) {
     try {
-      const { data, error } = await db
-        .from('profiles')
-        .select('*')
-        .order('created_at', { ascending: false });
-      if (!error && data && data.length > 0) {
-        const normalized = data.map(normalizeFromDb);
+      // Supabase defaults to 1000 rows max per request.
+      // We paginate internally in batches of 1000 to fetch ALL records
+      // regardless of whether there are 200, 10,000, or 1,000,000+ rows.
+      const BATCH_SIZE = 1000;
+      let allRows = [];
+      let from = 0;
+      let hasMore = true;
+
+      while (hasMore) {
+        const { data, error } = await db
+          .from('profiles')
+          .select('*')
+          .order('created_at', { ascending: false })
+          .range(from, from + BATCH_SIZE - 1);
+
+        if (error) {
+          console.warn('[DB] Supabase read error:', error.message);
+          break;
+        }
+
+        if (data && data.length > 0) {
+          allRows = allRows.concat(data);
+          from += BATCH_SIZE;
+          // If we got fewer rows than the batch size, we've reached the end
+          hasMore = data.length === BATCH_SIZE;
+        } else {
+          hasMore = false;
+        }
+      }
+
+      if (allRows.length > 0) {
+        const normalized = allRows.map(normalizeFromDb);
         memoryProfilesCache = normalized;
+        console.log(`[DB] Fetched ${normalized.length} total profiles from Supabase`);
         return normalized;
       }
-      console.warn('[DB] Supabase read error or empty, using local fallback:', error?.message);
+
+      console.warn('[DB] Supabase returned empty results, using local fallback');
     } catch (err) {
       console.warn('[DB] Supabase unavailable, using local fallback:', err.message);
     }

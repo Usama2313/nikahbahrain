@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useSpring, animated } from '@react-spring/web';
 import { ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from '../icons';
 
@@ -10,6 +10,8 @@ export default function Pagination({
   onPageChange,
   onItemsPerPageChange
 }) {
+  const [jumpValue, setJumpValue] = useState('');
+
   if (totalPages <= 1 && totalItems <= itemsPerPage) {
     return null;
   }
@@ -18,43 +20,30 @@ export default function Pagination({
   const startIndex = Math.min((currentPage - 1) * itemsPerPage + 1, totalItems);
   const endIndex = Math.min(currentPage * itemsPerPage, totalItems);
 
-  // Generate page numbers to show
+  // Format large numbers with commas (e.g. 1,000,000)
+  const fmt = (n) => (n || 0).toLocaleString();
+
+  // Generate page numbers to show — smart windowed pagination
   const getPageNumbers = () => {
     const pages = [];
-    const maxVisible = 5;
 
-    if (totalPages <= maxVisible + 2) {
-      for (let i = 1; i <= totalPages; i++) {
-        pages.push(i);
-      }
-    } else {
-      pages.push(1);
-
-      let start = Math.max(2, currentPage - 1);
-      let end = Math.min(totalPages - 1, currentPage + 1);
-
-      if (currentPage <= 3) {
-        start = 2;
-        end = 4;
-      } else if (currentPage >= totalPages - 2) {
-        start = totalPages - 3;
-        end = totalPages - 1;
-      }
-
-      if (start > 2) {
-        pages.push('...');
-      }
-
-      for (let i = start; i <= end; i++) {
-        pages.push(i);
-      }
-
-      if (end < totalPages - 1) {
-        pages.push('...');
-      }
-
-      pages.push(totalPages);
+    if (totalPages <= 9) {
+      for (let i = 1; i <= totalPages; i++) pages.push(i);
+      return pages;
     }
+
+    pages.push(1);
+
+    let start = Math.max(2, currentPage - 2);
+    let end = Math.min(totalPages - 1, currentPage + 2);
+
+    if (currentPage <= 4) { start = 2; end = 6; }
+    else if (currentPage >= totalPages - 3) { start = totalPages - 5; end = totalPages - 1; }
+
+    if (start > 2) pages.push('...');
+    for (let i = start; i <= end; i++) pages.push(i);
+    if (end < totalPages - 1) pages.push('...');
+    pages.push(totalPages);
 
     return pages;
   };
@@ -67,6 +56,31 @@ export default function Pagination({
     }
   };
 
+  const handleJump = (e) => {
+    e.preventDefault();
+    const page = parseInt(jumpValue, 10);
+    if (!isNaN(page) && page >= 1 && page <= totalPages) {
+      onPageChange(page);
+      setJumpValue('');
+    }
+  };
+
+  const btnBase = {
+    display: 'flex', alignItems: 'center', justifyContent: 'center',
+    borderRadius: '9999px', cursor: 'pointer', transition: 'all 0.2s ease',
+    outline: 'none', userSelect: 'none'
+  };
+
+  const navBtn = (disabled) => ({
+    ...btnBase,
+    width: '36px', height: '36px',
+    border: '1.5px solid #235d46',
+    background: 'transparent',
+    color: disabled ? '#cbd5e1' : '#1e5641',
+    cursor: disabled ? 'not-allowed' : 'pointer',
+    opacity: disabled ? 0.4 : 1,
+  });
+
   return (
     <div
       style={{
@@ -75,175 +89,86 @@ export default function Pagination({
         alignItems: 'center',
         gap: '14px',
         margin: '36px 0 20px 0',
-        padding: '18px 20px',
+        padding: '18px 16px',
         background: '#ffffff',
         borderRadius: '16px',
         border: '1.5px solid var(--gold-border)',
         boxShadow: '0 4px 16px rgba(0, 0, 0, 0.05)',
         width: '100%',
-        maxWidth: '100%'
+        maxWidth: '100%',
+        boxSizing: 'border-box'
       }}
     >
-      {/* Upper row: Page navigation buttons */}
-      <div
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: '8px',
-          flexWrap: 'wrap',
-          justifyContent: 'center'
-        }}
-      >
-        {/* First Page Button */}
-        <button
-          onClick={() => handlePageClick(1)}
-          disabled={currentPage === 1}
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            width: '36px',
-            height: '36px',
-            borderRadius: '9999px',
-            border: '1.5px solid #235d46',
-            background: 'transparent',
-            color: currentPage === 1 ? '#cbd5e1' : '#1e5641',
-            cursor: currentPage === 1 ? 'not-allowed' : 'pointer',
-            opacity: currentPage === 1 ? 0.4 : 1,
-            transition: 'all 0.2s ease'
-          }}
-          title="First Page"
-        >
+      {/* Top row: navigation */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap', justifyContent: 'center' }}>
+
+        {/* First Page */}
+        <button onClick={() => handlePageClick(1)} disabled={currentPage === 1} style={navBtn(currentPage === 1)} title="First Page">
           <ChevronsLeft size={16} />
         </button>
 
-        {/* Previous Button */}
+        {/* Previous */}
         <button
           onClick={() => handlePageClick(currentPage - 1)}
           disabled={currentPage === 1}
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '4px',
-            padding: '7px 16px',
-            borderRadius: '9999px',
-            border: '1.5px solid #235d46',
-            background: 'transparent',
-            color: currentPage === 1 ? '#cbd5e1' : '#1e5641',
-            cursor: currentPage === 1 ? 'not-allowed' : 'pointer',
-            fontSize: '0.84rem',
-            fontWeight: 700,
-            opacity: currentPage === 1 ? 0.4 : 1,
-            transition: 'all 0.2s ease'
-          }}
+          style={{ ...navBtn(currentPage === 1), width: 'auto', padding: '7px 14px', gap: '4px', fontSize: '0.84rem', fontWeight: 700 }}
         >
           <ChevronLeft size={16} />
-          <span>Previous</span>
+          <span>Prev</span>
         </button>
 
         {/* Numbered Page Buttons */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap', justifyContent: 'center' }}>
-          {pages.map((p, idx) => {
-            if (p === '...') {
-              return (
-                <span
-                  key={`ellipsis-${idx}`}
-                  style={{
-                    color: '#94a3b8',
-                    padding: '0 4px',
-                    fontSize: '0.9rem',
-                    userSelect: 'none'
-                  }}
-                >
-                  ...
-                </span>
-              );
-            }
-
-            const isActive = p === currentPage;
-
-            return (
-              <PageButton
-                key={`page-${p}`}
-                pageNumber={p}
-                isActive={isActive}
-                onClick={() => handlePageClick(p)}
-              />
-            );
-          })}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '5px', flexWrap: 'wrap', justifyContent: 'center' }}>
+          {pages.map((p, idx) =>
+            p === '...' ? (
+              <span key={`ellipsis-${idx}`} style={{ color: '#94a3b8', padding: '0 4px', fontSize: '0.9rem', userSelect: 'none' }}>…</span>
+            ) : (
+              <PageButton key={`page-${p}`} pageNumber={p} isActive={p === currentPage} onClick={() => handlePageClick(p)} />
+            )
+          )}
         </div>
 
-        {/* Next Button */}
+        {/* Next */}
         <button
           onClick={() => handlePageClick(currentPage + 1)}
           disabled={currentPage === totalPages}
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '4px',
-            padding: '7px 16px',
-            borderRadius: '9999px',
-            border: '1.5px solid #235d46',
-            background: 'transparent',
-            color: currentPage === totalPages ? '#cbd5e1' : '#1e5641',
-            cursor: currentPage === totalPages ? 'not-allowed' : 'pointer',
-            fontSize: '0.84rem',
-            fontWeight: 700,
-            opacity: currentPage === totalPages ? 0.4 : 1,
-            transition: 'all 0.2s ease'
-          }}
+          style={{ ...navBtn(currentPage === totalPages), width: 'auto', padding: '7px 14px', gap: '4px', fontSize: '0.84rem', fontWeight: 700 }}
         >
           <span>Next</span>
           <ChevronRight size={16} />
         </button>
 
-        {/* Last Page Button */}
-        <button
-          onClick={() => handlePageClick(totalPages)}
-          disabled={currentPage === totalPages}
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            width: '36px',
-            height: '36px',
-            borderRadius: '9999px',
-            border: '1.5px solid #235d46',
-            background: 'transparent',
-            color: currentPage === totalPages ? '#cbd5e1' : '#1e5641',
-            cursor: currentPage === totalPages ? 'not-allowed' : 'pointer',
-            opacity: currentPage === totalPages ? 0.4 : 1,
-            transition: 'all 0.2s ease'
-          }}
-          title="Last Page"
-        >
+        {/* Last Page */}
+        <button onClick={() => handlePageClick(totalPages)} disabled={currentPage === totalPages} style={navBtn(currentPage === totalPages)} title="Last Page">
           <ChevronsRight size={16} />
         </button>
       </div>
 
-      {/* Lower row: Details & per page selector */}
+      {/* Bottom row: stats + per-page + jump-to */}
       <div
         style={{
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
           width: '100%',
-          maxWidth: '540px',
+          maxWidth: '640px',
           fontSize: '0.82rem',
           color: '#475569',
-          paddingTop: '8px',
+          paddingTop: '10px',
           borderTop: '1px solid #e2e8f0',
           flexWrap: 'wrap',
-          gap: '8px'
+          gap: '10px'
         }}
       >
-        <div>
-          Showing <strong style={{ color: 'var(--text-gold)' }}>{startIndex}</strong> to <strong style={{ color: 'var(--text-gold)' }}>{endIndex}</strong> of <strong style={{ color: 'var(--text-gold)' }}>{totalItems}</strong> Proposals
+        {/* Showing X–Y of Z */}
+        <div style={{ whiteSpace: 'nowrap' }}>
+          Showing <strong style={{ color: 'var(--text-gold)' }}>{fmt(startIndex)}</strong> – <strong style={{ color: 'var(--text-gold)' }}>{fmt(endIndex)}</strong> of <strong style={{ color: 'var(--text-gold)' }}>{fmt(totalItems)}</strong> proposals
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+        {/* Per-page selector */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '5px', flexWrap: 'wrap' }}>
           <span>Per page:</span>
-          {[12, 24, 48].map((size) => (
+          {[12, 24, 48, 100].map((size) => (
             <button
               key={size}
               onClick={() => onItemsPerPageChange && onItemsPerPageChange(size)}
@@ -263,6 +188,46 @@ export default function Pagination({
             </button>
           ))}
         </div>
+
+        {/* Jump to page — only show when there are many pages */}
+        {totalPages > 10 && (
+          <form onSubmit={handleJump} style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <span style={{ whiteSpace: 'nowrap' }}>Go to:</span>
+            <input
+              type="number"
+              min={1}
+              max={totalPages}
+              value={jumpValue}
+              onChange={e => setJumpValue(e.target.value)}
+              placeholder={`1–${fmt(totalPages)}`}
+              style={{
+                width: '72px',
+                padding: '4px 8px',
+                border: '1.5px solid #cbd5e1',
+                borderRadius: '8px',
+                fontSize: '0.82rem',
+                color: '#334155',
+                outline: 'none',
+                textAlign: 'center'
+              }}
+            />
+            <button
+              type="submit"
+              style={{
+                background: '#235d46',
+                color: '#fff',
+                border: 'none',
+                borderRadius: '8px',
+                padding: '4px 12px',
+                fontSize: '0.78rem',
+                fontWeight: 700,
+                cursor: 'pointer'
+              }}
+            >
+              Go
+            </button>
+          </form>
+        )}
       </div>
     </div>
   );
@@ -273,7 +238,7 @@ function PageButton({ pageNumber, isActive, onClick }) {
     transform: isActive ? 'scale(1.08)' : 'scale(1)',
     backgroundColor: isActive ? '#235d46' : 'transparent',
     borderColor: '#235d46',
-    color: isActive ? '#ffffff' : '#cbd5e1',
+    color: isActive ? '#ffffff' : '#1e5641',
     boxShadow: isActive ? '0 4px 12px rgba(35, 93, 70, 0.4)' : 'none',
     config: { tension: 350, friction: 22 }
   });
