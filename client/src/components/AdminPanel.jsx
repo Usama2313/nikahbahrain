@@ -388,21 +388,25 @@ export default function AdminPanel({ onBackToPortal, onProfilesChange }) {
       const updatedDeleted = deleted.filter(id => id !== profileObj.id);
       localStorage.setItem('nikah_deleted_profiles', JSON.stringify(updatedDeleted));
 
-      // Cache image separately under nikah_img_${id}
+      // Cache image separately under nikah_img_${id} for instant lookup
       if (profileObj.image) {
         try {
           localStorage.setItem(`nikah_img_${profileObj.id}`, profileObj.image);
         } catch (_) {}
       }
 
-      // Avoid localStorage quota crash with large base64 data URLs
-      const isDataUrl = profileObj.image && profileObj.image.startsWith('data:');
-      const profileToStore = isDataUrl ? { ...profileObj, image: '' } : profileObj;
-
       const existing = JSON.parse(localStorage.getItem('nikah_custom_profiles') || '[]');
       const filtered = existing.filter(p => p.id !== profileObj.id);
-      filtered.unshift(profileToStore);
-      localStorage.setItem('nikah_custom_profiles', JSON.stringify(filtered));
+      filtered.unshift(profileObj);
+
+      try {
+        localStorage.setItem('nikah_custom_profiles', JSON.stringify(filtered));
+      } catch (quotaErr) {
+        // If quota exceeded, store with empty image in array but preserve in nikah_img_${id}
+        const fallbackObj = profileObj.image?.startsWith('data:') ? { ...profileObj, image: '' } : profileObj;
+        filtered[0] = fallbackObj;
+        try { localStorage.setItem('nikah_custom_profiles', JSON.stringify(filtered)); } catch (_) {}
+      }
     } catch (e) {
       console.error('saveCustomProfileToStorage error:', e);
     }
@@ -424,8 +428,19 @@ export default function AdminPanel({ onBackToPortal, onProfilesChange }) {
   const persistProfilesToServer = async (allProfiles) => {
     try {
       const custom = JSON.parse(localStorage.getItem('nikah_custom_profiles') || '[]');
-      if (!custom.length && !allProfiles?.length) return;
-      const toSync = allProfiles || custom;
+      const enrichedCustom = custom.map(p => {
+        if (!p.image) {
+          try {
+            const cachedImg = localStorage.getItem(`nikah_img_${p.id}`);
+            if (cachedImg) return { ...p, image: cachedImg };
+          } catch (_) {}
+        }
+        return p;
+      });
+
+      const toSync = allProfiles && allProfiles.length > 0 ? allProfiles : enrichedCustom;
+      if (!toSync.length) return;
+
       const res = await fetch(`${API_BASE}/admin/persist-profiles`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },

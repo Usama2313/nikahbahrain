@@ -25,20 +25,26 @@ function getSupabase() {
   return supabase;
 }
 
+// Export for use in other server modules (e.g. index.js upload handler)
+export function getSupabaseClient() {
+  return getSupabase();
+}
+
 export function isDbAvailable() {
   return !!(SUPABASE_URL && SUPABASE_ANON_KEY);
 }
 
 // ─── Fallback: read/write local / serverless JSON file ───────────────────────────
-function getLocalProfiles() {
+export function getLocalProfiles() {
   if (Array.isArray(memoryProfilesCache) && memoryProfilesCache.length > 0) {
     return memoryProfilesCache;
   }
   const candidates = [
-    '/tmp/profiles.json',
     path.join(__dirname, 'data', 'profiles.json'),
     path.join(process.cwd(), 'server', 'data', 'profiles.json'),
     path.join(__dirname, '..', 'client', 'src', 'data', 'profiles.json'),
+    path.join(process.cwd(), 'client', 'src', 'data', 'profiles.json'),
+    '/tmp/profiles.json',
   ];
   for (const c of candidates) {
     if (fs.existsSync(c)) {
@@ -54,13 +60,15 @@ function getLocalProfiles() {
   return [];
 }
 
-function saveLocalProfiles(profiles) {
+export function saveLocalProfiles(profiles) {
   memoryProfilesCache = profiles;
   const jsonStr = JSON.stringify(profiles, null, 2);
   const targets = [
-    '/tmp/profiles.json',
     path.join(__dirname, 'data', 'profiles.json'),
+    path.join(process.cwd(), 'server', 'data', 'profiles.json'),
     path.join(__dirname, '..', 'client', 'src', 'data', 'profiles.json'),
+    path.join(process.cwd(), 'client', 'src', 'data', 'profiles.json'),
+    '/tmp/profiles.json',
   ];
   for (const t of targets) {
     try {
@@ -232,7 +240,21 @@ export async function dbUpsertProfiles(profiles) {
       console.warn('[DB] Bulk upsert failed:', err.message);
     }
   }
-  saveLocalProfiles(profiles);
+  // Safely merge with existing local profiles instead of overwriting
+  const all = getLocalProfiles();
+  const existingIds = new Set(all.map(p => p.id));
+  const newItems = [];
+  const updatedAll = all.map(p => {
+    const incoming = profiles.find(x => x.id === p.id);
+    return incoming ? { ...p, ...incoming } : p;
+  });
+  for (const p of profiles) {
+    if (p && p.id && !existingIds.has(p.id)) {
+      newItems.push(p);
+    }
+  }
+  const merged = [...newItems, ...updatedAll];
+  saveLocalProfiles(merged);
 }
 
 // ─── Normalizers ──────────────────────────────────────────────────────────────

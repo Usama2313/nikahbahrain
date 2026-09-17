@@ -13,7 +13,8 @@ import {
   dbUpdateProfile,
   dbDeleteProfile,
   dbUpsertProfiles,
-  isDbAvailable
+  isDbAvailable,
+  getSupabaseClient
 } from './db.js';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -29,14 +30,17 @@ app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
 // Static directory for logos and uploads
 const publicDir = path.join(__dirname, 'public');
-if (!process.env.VERCEL && !fs.existsSync(publicDir)) {
+const uploadsDir = path.join(publicDir, 'uploads');
+if (!process.env.VERCEL) {
   try {
-    fs.mkdirSync(publicDir, { recursive: true });
-    fs.mkdirSync(path.join(publicDir, 'uploads'), { recursive: true });
+    if (!fs.existsSync(publicDir)) fs.mkdirSync(publicDir, { recursive: true });
+    if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir, { recursive: true });
   } catch (e) {
     console.error('Could not create public dir:', e);
   }
 }
+app.use('/uploads', express.static(uploadsDir));
+app.use('/public/uploads', express.static(uploadsDir));
 app.use('/public', express.static(publicDir));
 
 // Profiles data file multi-path resolution (works across local and Vercel serverless functions)
@@ -345,9 +349,9 @@ app.post(['/api/upload-image', '/upload-image', '/api/upload', '/upload'], async
           .replace(/[^a-zA-Z0-9._-]/g, '_');
 
         // 1️⃣ Try Supabase Storage if available
-        const db = getSupabase();
-        if (db) {
-          try {
+        try {
+          const db = typeof getSupabaseClient === 'function' ? getSupabaseClient() : null;
+          if (db) {
             const { error: uploadError } = await db.storage
               .from('profile-images')
               .upload(safeName, buffer, { contentType: `image/${matches[1]}`, upsert: true });
@@ -356,8 +360,8 @@ app.post(['/api/upload-image', '/upload-image', '/api/upload', '/upload'], async
               console.log(`[Storage] ✓ Supabase Storage: ${urlData.publicUrl}`);
               return res.json({ success: true, url: urlData.publicUrl, storageType: 'supabase' });
             }
-          } catch (_) {}
-        }
+          }
+        } catch (_) {}
 
         // 2️⃣ Save to local disk: BOTH server/public/uploads AND client/public/uploads
         // This allows Vite (port 5173) and Node (port 5000) to serve the file instantly to mobile & PC
@@ -370,7 +374,7 @@ app.post(['/api/upload-image', '/upload-image', '/api/upload', '/upload'], async
           if (!fs.existsSync(clientUploadsDir)) fs.mkdirSync(clientUploadsDir, { recursive: true });
           fs.writeFileSync(path.join(clientUploadsDir, safeName), buffer);
 
-          const relativeUrl = `/public/uploads/${safeName}`;
+          const relativeUrl = `/uploads/${safeName}`;
           console.log(`[Storage] ✓ Saved locally to server and client: ${relativeUrl}`);
           return res.json({
             success: true,
@@ -385,7 +389,7 @@ app.post(['/api/upload-image', '/upload-image', '/api/upload', '/upload'], async
       }
     }
 
-    // 3️⃣ Fallback — return image
+    // 3️⃣ Fallback — return image as-is (base64)
     res.json({ success: true, url: image, storageType: 'base64' });
   } catch (err) {
     console.error('Upload error:', err);

@@ -107,16 +107,39 @@ export default function App() {
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
       if (data.success && Array.isArray(data.profiles) && data.profiles.length > 0) {
-        // Database is the single source of truth for all devices (Mobile & Desktop)
-        const synced = data.profiles.map(p => {
-          if (!p.image) {
+        // Read locally created custom profiles from Admin Panel
+        let localCustom = [];
+        try {
+          localCustom = JSON.parse(localStorage.getItem('nikah_custom_profiles') || '[]');
+        } catch (_) {}
+
+        const serverIds = new Set(data.profiles.map(p => p.id));
+        const missingLocals = localCustom.filter(p => p && p.id && !serverIds.has(p.id));
+
+        // Combined server profiles with any newly added custom profiles
+        const combined = [...missingLocals, ...data.profiles];
+
+        // Ensure images are preserved (from server or localStorage image cache)
+        const synced = combined.map(p => {
+          let img = p.image;
+          if (!img) {
             try {
               const cached = localStorage.getItem(`nikah_img_${p.id}`);
-              if (cached) return { ...p, image: cached };
+              if (cached) img = cached;
             } catch (_) {}
           }
-          return p;
+          return { ...p, image: img || '' };
         });
+
+        // Automatically sync missing local profiles to server in the background
+        if (missingLocals.length > 0) {
+          fetch(`${API_BASE}/admin/persist-profiles`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ profiles: missingLocals })
+          }).catch(() => {});
+        }
+
         setProfiles(synced);
         return;
       }
@@ -125,8 +148,24 @@ export default function App() {
     } finally {
       setLoading(false);
     }
-    // Fallback: use bundled verified profiles
-    setProfiles(fallbackProfiles || []);
+    // Fallback: use bundled verified profiles + local custom profiles
+    let localCustom = [];
+    try {
+      localCustom = JSON.parse(localStorage.getItem('nikah_custom_profiles') || '[]');
+    } catch (_) {}
+    const fallbackIds = new Set((fallbackProfiles || []).map(p => p.id));
+    const extraLocals = localCustom.filter(p => p && p.id && !fallbackIds.has(p.id));
+    const finalFallback = [...extraLocals, ...(fallbackProfiles || [])].map(p => {
+      let img = p.image;
+      if (!img) {
+        try {
+          const cached = localStorage.getItem(`nikah_img_${p.id}`);
+          if (cached) img = cached;
+        } catch (_) {}
+      }
+      return { ...p, image: img || '' };
+    });
+    setProfiles(finalFallback);
   };
 
 

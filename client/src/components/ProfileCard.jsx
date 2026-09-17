@@ -21,16 +21,42 @@ const resolveImageUrl = (img, profileId) => {
   if (!img) return '';
   // 2. Base64 — use directly
   if (img.startsWith('data:image/')) return img;
-  // 3. Supabase Storage or any HTTPS URL — use directly
-  if (img.startsWith('https://')) return img;
-  // 4. localhost:5000 URL — fix for mobile devices
-  if (typeof window !== 'undefined' && img.includes('localhost:5000')) {
-    if (window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
-      return img.replace('localhost:5000', `${window.location.hostname}:5000`);
+  // 3. Supabase Storage or any HTTPS/HTTP URL — use directly
+  if (img.startsWith('https://') || img.startsWith('http://')) {
+    // localhost:5000 URL — fix for mobile devices on same local network
+    if (typeof window !== 'undefined' && img.includes(':5000')) {
+      if (window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
+        return img.replace(/http:\/\/[^:]+:5000/, `http://${window.location.hostname}:5000`);
+      }
     }
+    return img;
+  }
+  // 4. Normalize relative upload URLs
+  if (img.startsWith('/public/uploads/')) {
+    img = img.replace('/public/uploads/', '/uploads/');
+  }
+  if (img.startsWith('/uploads/')) {
+    // On mobile devices (not localhost), Vite proxy won't work — use direct server URL
+    if (typeof window !== 'undefined' &&
+        window.location.hostname !== 'localhost' &&
+        window.location.hostname !== '127.0.0.1') {
+      return `http://${window.location.hostname}:5000${img}`;
+    }
+    return img;
+  }
+  if (img.includes('.') && !img.includes('/')) {
+    // Bare filename — resolve as upload
+    const uploadPath = `/uploads/${img}`;
+    if (typeof window !== 'undefined' &&
+        window.location.hostname !== 'localhost' &&
+        window.location.hostname !== '127.0.0.1') {
+      return `http://${window.location.hostname}:5000${uploadPath}`;
+    }
+    return uploadPath;
   }
   return img;
 };
+
 
 export default function ProfileCard({
   profile,

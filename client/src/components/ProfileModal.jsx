@@ -31,14 +31,38 @@ const resolveImageUrl = (img, profileId) => {
   }
   if (!img) return '';
   if (img.startsWith('data:image/')) return img;
-  if (img.startsWith('https://')) return img;
-  if (typeof window !== 'undefined' && img.includes('localhost:5000')) {
-    if (window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
-      return img.replace('localhost:5000', `${window.location.hostname}:5000`);
+  if (img.startsWith('https://') || img.startsWith('http://')) {
+    if (typeof window !== 'undefined' && img.includes(':5000')) {
+      if (window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
+        return img.replace(/http:\/\/[^:]+:5000/, `http://${window.location.hostname}:5000`);
+      }
     }
+    return img;
+  }
+  if (img.startsWith('/public/uploads/')) {
+    img = img.replace('/public/uploads/', '/uploads/');
+  }
+  if (img.startsWith('/uploads/')) {
+    // On mobile devices (not localhost), Vite proxy won't work — use direct server URL
+    if (typeof window !== 'undefined' &&
+        window.location.hostname !== 'localhost' &&
+        window.location.hostname !== '127.0.0.1') {
+      return `http://${window.location.hostname}:5000${img}`;
+    }
+    return img;
+  }
+  if (img.includes('.') && !img.includes('/')) {
+    const uploadPath = `/uploads/${img}`;
+    if (typeof window !== 'undefined' &&
+        window.location.hostname !== 'localhost' &&
+        window.location.hostname !== '127.0.0.1') {
+      return `http://${window.location.hostname}:5000${uploadPath}`;
+    }
+    return uploadPath;
   }
   return img;
 };
+
 
 
 export default function ProfileModal({ profile, isFavorite, onToggleFavorite, onClose }) {
