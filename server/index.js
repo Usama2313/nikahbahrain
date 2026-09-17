@@ -31,12 +31,33 @@ app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 // Static directory for logos and uploads
 const publicDir = path.join(__dirname, 'public');
 const uploadsDir = path.join(publicDir, 'uploads');
+const clientUploadsDir = path.join(__dirname, '..', 'client', 'public', 'uploads');
+
 if (!process.env.VERCEL) {
   try {
     if (!fs.existsSync(publicDir)) fs.mkdirSync(publicDir, { recursive: true });
     if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir, { recursive: true });
+    if (!fs.existsSync(clientUploadsDir)) fs.mkdirSync(clientUploadsDir, { recursive: true });
+
+    // Bidirectional sync between server uploads and client public uploads
+    const serverFiles = fs.readdirSync(uploadsDir);
+    for (const f of serverFiles) {
+      const src = path.join(uploadsDir, f);
+      const dest = path.join(clientUploadsDir, f);
+      if (fs.existsSync(src) && !fs.existsSync(dest)) {
+        try { fs.copyFileSync(src, dest); } catch (_) {}
+      }
+    }
+    const clientFiles = fs.readdirSync(clientUploadsDir);
+    for (const f of clientFiles) {
+      const src = path.join(clientUploadsDir, f);
+      const dest = path.join(uploadsDir, f);
+      if (fs.existsSync(src) && !fs.existsSync(dest)) {
+        try { fs.copyFileSync(src, dest); } catch (_) {}
+      }
+    }
   } catch (e) {
-    console.error('Could not create public dir:', e);
+    console.error('Uploads sync error:', e);
   }
 }
 app.use('/uploads', express.static(uploadsDir));

@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useSpring, useTrail, animated } from '@react-spring/web';
 import { 
   X, 
@@ -12,63 +12,101 @@ import {
   CheckCircle2, 
   Sparkles, 
   User, 
-  Users,
+  Users, 
   Home, 
-  FileText,
-  PhoneCall,
-  Calendar,
-  Ruler,
-  BookOpen,
-  Star
+  FileText, 
+  PhoneCall, 
+  Calendar, 
+  Ruler, 
+  BookOpen, 
+  Star,
+  Maximize2,
+  ZoomIn
 } from '../icons';
 
 const resolveImageUrl = (img, profileId) => {
-  if (!img && profileId) {
+  // 1. If direct base64 image data, use directly
+  if (img && typeof img === 'string' && img.startsWith('data:image/')) {
+    return img;
+  }
+
+  // 2. If full external URL (Supabase storage, CDN, etc.), use directly
+  if (img && typeof img === 'string' && (img.startsWith('https://') || img.startsWith('http://'))) {
+    // If it contains a legacy :5000/uploads/ reference, normalize to relative /uploads/
+    if (img.includes(':5000/uploads/')) {
+      return img.substring(img.indexOf('/uploads/'));
+    }
+    return img;
+  }
+
+  // 3. Normalize relative upload URLs — always return clean relative /uploads/...
+  if (img && typeof img === 'string') {
+    let clean = img.trim();
+    if (clean.startsWith('/public/uploads/')) clean = clean.replace('/public/uploads/', '/uploads/');
+    if (clean.startsWith('public/uploads/')) clean = clean.replace('public/uploads/', '/uploads/');
+    if (clean.startsWith('uploads/')) clean = `/${clean}`;
+    if (clean.startsWith('/uploads/')) return clean;
+    if (clean.includes('.') && !clean.includes('/')) return `/uploads/${clean}`;
+  }
+
+  // 4. Fallback to localStorage image cache if available
+  if (profileId) {
     try {
       const cached = localStorage.getItem(`nikah_img_${profileId}`);
       if (cached) return cached;
     } catch (_) {}
   }
-  if (!img) return '';
-  if (img.startsWith('data:image/')) return img;
-  if (img.startsWith('https://') || img.startsWith('http://')) {
-    if (typeof window !== 'undefined' && img.includes(':5000')) {
-      if (window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
-        return img.replace(/http:\/\/[^:]+:5000/, `http://${window.location.hostname}:5000`);
-      }
-    }
-    return img;
-  }
-  if (img.startsWith('/public/uploads/')) {
-    img = img.replace('/public/uploads/', '/uploads/');
-  }
-  if (img.startsWith('/uploads/')) {
-    // On mobile devices (not localhost), Vite proxy won't work — use direct server URL
-    if (typeof window !== 'undefined' &&
-        window.location.hostname !== 'localhost' &&
-        window.location.hostname !== '127.0.0.1') {
-      return `http://${window.location.hostname}:5000${img}`;
-    }
-    return img;
-  }
-  if (img.includes('.') && !img.includes('/')) {
-    const uploadPath = `/uploads/${img}`;
-    if (typeof window !== 'undefined' &&
-        window.location.hostname !== 'localhost' &&
-        window.location.hostname !== '127.0.0.1') {
-      return `http://${window.location.hostname}:5000${uploadPath}`;
-    }
-    return uploadPath;
-  }
-  return img;
+
+  return img || '';
 };
 
-
-
 export default function ProfileModal({ profile, isFavorite, onToggleFavorite, onClose }) {
+  const [isFullscreen, setIsFullscreen] = useState(false);
+  const initialImg = resolveImageUrl(profile?.image, profile?.id);
+  const [modalImgSrc, setModalImgSrc] = useState(initialImg);
+  const [modalImgError, setModalImgError] = useState(!initialImg);
+  const [hasFallbackTried, setHasFallbackTried] = useState(false);
+
+  useEffect(() => {
+    const nextImg = resolveImageUrl(profile?.image, profile?.id);
+    setModalImgSrc(nextImg);
+    setModalImgError(!nextImg);
+    setHasFallbackTried(false);
+  }, [profile?.image, profile?.id]);
+
+  const handleModalImgError = () => {
+    if (!hasFallbackTried && profile?.id) {
+      setHasFallbackTried(true);
+      try {
+        const cached = localStorage.getItem(`nikah_img_${profile.id}`);
+        if (cached && cached !== modalImgSrc) {
+          setModalImgSrc(cached);
+          setModalImgError(false);
+          return;
+        }
+      } catch (_) {}
+    }
+    setModalImgError(true);
+  };
+
+  const handleModalImgLoad = () => {
+    setModalImgError(false);
+    if (profile?.id && modalImgSrc && modalImgSrc.startsWith('data:image/')) {
+      try {
+        localStorage.setItem(`nikah_img_${profile.id}`, modalImgSrc);
+      } catch (_) {}
+    }
+  };
+
   useEffect(() => {
     const handleKeyDown = (e) => {
-      if (e.key === 'Escape') onClose();
+      if (e.key === 'Escape') {
+        if (isFullscreen) {
+          setIsFullscreen(false);
+        } else {
+          onClose();
+        }
+      }
     };
     document.body.style.overflow = 'hidden';
     window.addEventListener('keydown', handleKeyDown);
@@ -76,7 +114,7 @@ export default function ProfileModal({ profile, isFavorite, onToggleFavorite, on
       document.body.style.overflow = '';
       window.removeEventListener('keydown', handleKeyDown);
     };
-  }, [onClose]);
+  }, [onClose, isFullscreen]);
 
   // Spring animation for modal entrance with elastic effect
   const modalSpring = useSpring({
@@ -221,29 +259,63 @@ Please share requirements & family verification steps.`;
             overflow: 'hidden'
           }}
         >
-          {/* Full Profile / Flyer Image */}
-          {resolveImageUrl(profile.image, profile.id) && (
+          {/* Full Complete Profile / Flyer Image */}
+          {modalImgSrc && !modalImgError && (
             <animated.div style={avatarSpring}>
-              <div style={{
-                width: '100%',
-                maxHeight: '500px',
-                background: '#000',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                overflow: 'hidden',
-              }}>
+              <div 
+                style={{
+                  width: '100%',
+                  position: 'relative',
+                  background: '#f8fafc',
+                  borderBottom: '1.5px solid var(--gold-border)',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  overflow: 'hidden',
+                }}
+              >
                 <img
-                  src={resolveImageUrl(profile.image, profile.id)}
+                  src={modalImgSrc}
                   alt={`${profile.id} - ${profile.name}`}
                   style={{
                     width: '100%',
-                    maxHeight: '500px',
-                    objectFit: 'contain',
+                    height: 'auto',
                     display: 'block',
+                    objectFit: 'contain',
+                    cursor: 'zoom-in',
                   }}
-                  onError={(e) => { e.target.style.display = 'none'; }}
+                  onClick={() => setIsFullscreen(true)}
+                  onError={handleModalImgError}
+                  onLoad={handleModalImgLoad}
+                  title="Click to view full image in high resolution"
                 />
+                <button
+                  type="button"
+                  onClick={() => setIsFullscreen(true)}
+                  style={{
+                    position: 'absolute',
+                    bottom: '12px',
+                    right: '12px',
+                    background: 'rgba(15, 23, 42, 0.82)',
+                    backdropFilter: 'blur(8px)',
+                    WebkitBackdropFilter: 'blur(8px)',
+                    color: '#f59e0b',
+                    border: '1px solid rgba(212, 175, 55, 0.5)',
+                    borderRadius: '20px',
+                    padding: '6px 14px',
+                    fontSize: '0.78rem',
+                    fontWeight: 700,
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    cursor: 'pointer',
+                    boxShadow: '0 4px 12px rgba(0,0,0,0.25)',
+                    transition: 'all 0.2s ease',
+                  }}
+                >
+                  <Maximize2 size={13} /> View Full Image
+                </button>
               </div>
             </animated.div>
           )}
@@ -557,6 +629,65 @@ Please share requirements & family verification steps.`;
           </animated.div>
         </div>
       </animated.div>
+
+      {/* Fullscreen Lightbox for Complete Flyer Viewing */}
+      {isFullscreen && modalImgSrc && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            zIndex: 9999,
+            backgroundColor: 'rgba(0, 0, 0, 0.94)',
+            backdropFilter: 'blur(8px)',
+            WebkitBackdropFilter: 'blur(8px)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '12px',
+            cursor: 'zoom-out',
+          }}
+          onClick={() => setIsFullscreen(false)}
+        >
+          <button
+            onClick={() => setIsFullscreen(false)}
+            style={{
+              position: 'fixed',
+              top: '18px',
+              right: '18px',
+              background: 'rgba(255, 255, 255, 0.25)',
+              border: '1px solid rgba(255, 255, 255, 0.4)',
+              borderRadius: '50%',
+              width: '42px',
+              height: '42px',
+              color: '#ffffff',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              cursor: 'pointer',
+              zIndex: 10001,
+              boxShadow: '0 4px 16px rgba(0,0,0,0.5)',
+            }}
+            title="Close full screen"
+          >
+            <X size={22} />
+          </button>
+          <img
+            src={modalImgSrc}
+            alt={`${profile.id} - ${profile.name}`}
+            style={{
+              maxWidth: '96vw',
+              maxHeight: '94vh',
+              width: 'auto',
+              height: 'auto',
+              objectFit: 'contain',
+              borderRadius: '8px',
+              boxShadow: '0 10px 40px rgba(0, 0, 0, 0.6)',
+              cursor: 'default',
+            }}
+            onClick={(e) => e.stopPropagation()}
+          />
+        </div>
+      )}
     </animated.div>
   );
 }
