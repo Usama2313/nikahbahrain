@@ -58,7 +58,19 @@ export function extractFieldFromText(text, keyPattern) {
 }
 
 export function parseProfileFromAltText(post) {
-  const text = post.alt || post.rawFlyerText || '';
+  // Combine alt text + caption + rawFlyerText for maximum data extraction
+  // Instagram newer posts use captions for all the flyer details
+  const altText = post.alt || '';
+  const captionText = post.caption || '';
+  const rawFlyer = post.rawFlyerText || '';
+  
+  // Use whichever source has the most data
+  const textSources = [captionText, altText, rawFlyer].filter(Boolean);
+  const text = textSources.length > 0
+    ? textSources.reduce((a, b) => (b.length > a.length ? b : a))  // longest source first
+    + '\n' + textSources.filter((t, i) => i !== textSources.indexOf(textSources.reduce((a, b) => (b.length > a.length ? b : a)))).join('\n')
+    : '';
+
 
   // 1. Profile ID
   const idMatch = text.match(/NPF\s*[-_#]?\s*(\d+)/i);

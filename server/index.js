@@ -460,22 +460,25 @@ app.get(['/api/stats', '/stats'], async (req, res) => {
 app.post(['/api/sync-instagram', '/sync-instagram'], async (req, res) => {
   try {
     const { syncLiveInstagramPosts } = await import('./scripts/sync_live_instagram.js');
-    const limit = Number(req.query.limit) || 25;
+    // Use 60 posts by default — scrolls grid until it finds all posts
+    const limit = Number(req.query.limit) || 60;
     const result = await syncLiveInstagramPosts(limit);
     res.json({
       success: true,
-      message: `Successfully synchronized live feed from @nikah_bahrain! Loaded ${result.freshlyFetched} fresh Instagram flyers. Total database: ${result.totalProfiles} profiles.`,
+      message: `✓ Synced @nikah_bahrain! ${result.freshlyFetched} fresh Instagram profiles loaded. Total in database: ${result.totalProfiles}.`,
       freshlyFetched: result.freshlyFetched,
       totalPosts: result.totalProfiles
     });
   } catch (err) {
-    console.warn('Instagram live sync fallback used:', err.message);
-    const profiles = getProfiles();
+    console.warn('Instagram live sync error:', err.message);
+    // Return current DB profiles count so client can still refresh
+    const profiles = await dbGetProfiles();
     res.json({
       success: true,
-      message: `Feed Refreshed! ${profiles.length} active Instagram profiles synced & loaded cleanly.`,
+      message: `Instagram sync encountered an issue. Showing ${profiles.length} profiles from database. Error: ${err.message}`,
       freshlyFetched: 0,
-      totalPosts: profiles.length
+      totalPosts: profiles.length,
+      error: err.message
     });
   }
 });
