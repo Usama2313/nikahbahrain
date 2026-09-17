@@ -322,51 +322,78 @@ app.post(['/api/google-form-submission', '/google-form-submission', '/api/webhoo
 });
 
 
-// 3c. POST /api/upload (Admin Photo & Flyer Upload Handler)
-app.post(['/api/upload', '/upload'], (req, res) => {
+// 3c. POST /api/upload-image — saves to Supabase Storage (cross-device URL) or local disk
+app.post(['/api/upload-image', '/upload-image', '/api/upload', '/upload'], async (req, res) => {
   try {
     const { image, filename } = req.body || {};
     if (!image) {
       return res.status(400).json({ success: false, message: 'No image data provided' });
     }
 
-    // If it's already an external URL
+    // Already an external URL — return as-is
     if (image.startsWith('http://') || image.startsWith('https://')) {
-      return res.json({ success: true, url: image, dataUrl: image });
+      return res.json({ success: true, url: image });
     }
 
-    // If it's a base64 Data URL
     if (image.startsWith('data:image/')) {
       const matches = image.match(/^data:image\/([a-zA-Z0-9+]+);base64,(.+)$/);
       if (matches) {
-        const ext = matches[1] === 'jpeg' ? 'jpg' : matches[1];
+        const mimeExt = matches[1] === 'jpeg' ? 'jpg' : matches[1];
         const base64Data = matches[2];
-        const fname = filename || `flyer_${Date.now()}_${Math.floor(Math.random() * 1000)}.${ext}`;
-        const uploadsDir = path.join(publicDir, 'uploads');
-        if (!process.env.VERCEL) {
+        const buffer = Buffer.from(base64Data, 'base64');
+        const safeName = (filename || `profile_${Date.now()}.${mimeExt}`)
+          .replace(/[^a-zA-Z0-9._-]/g, '_');
+
+        // 1️⃣ Try Supabase Storage if available
+        const db = getSupabase();
+        if (db) {
           try {
-            if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir, { recursive: true });
-            fs.writeFileSync(path.join(uploadsDir, fname), Buffer.from(base64Data, 'base64'));
-          } catch (writeErr) {
-            console.warn('Could not write image to disk (using dataUrl):', writeErr.message);
-          }
+            const { error: uploadError } = await db.storage
+              .from('profile-images')
+              .upload(safeName, buffer, { contentType: `image/${matches[1]}`, upsert: true });
+            if (!uploadError) {
+              const { data: urlData } = db.storage.from('profile-images').getPublicUrl(safeName);
+              console.log(`[Storage] ✓ Supabase Storage: ${urlData.publicUrl}`);
+              return res.json({ success: true, url: urlData.publicUrl, storageType: 'supabase' });
+            }
+          } catch (_) {}
         }
-        // Return both relative public URL and dataUrl so it renders on both localhost and Vercel
-        return res.json({
-          success: true,
-          url: image, // Use dataUrl for guaranteed persistence across serverless & static builds
-          publicUrl: `/public/uploads/${fname}`,
-          filename: fname
-        });
+
+        // 2️⃣ Save to local disk: BOTH server/public/uploads AND client/public/uploads
+        // This allows Vite (port 5173) and Node (port 5000) to serve the file instantly to mobile & PC
+        try {
+          const serverUploadsDir = path.join(__dirname, 'public', 'uploads');
+          if (!fs.existsSync(serverUploadsDir)) fs.mkdirSync(serverUploadsDir, { recursive: true });
+          fs.writeFileSync(path.join(serverUploadsDir, safeName), buffer);
+
+          const clientUploadsDir = path.join(__dirname, '..', 'client', 'public', 'uploads');
+          if (!fs.existsSync(clientUploadsDir)) fs.mkdirSync(clientUploadsDir, { recursive: true });
+          fs.writeFileSync(path.join(clientUploadsDir, safeName), buffer);
+
+          const relativeUrl = `/public/uploads/${safeName}`;
+          console.log(`[Storage] ✓ Saved locally to server and client: ${relativeUrl}`);
+          return res.json({
+            success: true,
+            url: relativeUrl,
+            publicUrl: relativeUrl,
+            filename: safeName,
+            storageType: 'local'
+          });
+        } catch (diskErr) {
+          console.warn('[Storage] Disk save error:', diskErr.message);
+        }
       }
     }
 
-    res.json({ success: true, url: image });
+    // 3️⃣ Fallback — return image
+    res.json({ success: true, url: image, storageType: 'base64' });
   } catch (err) {
     console.error('Upload error:', err);
-    res.status(500).json({ success: false, message: `Failed to upload image: ${err.message}` });
+    res.status(500).json({ success: false, message: `Upload failed: ${err.message}` });
   }
 });
+
+
 
 // 4. PUT /api/profiles/:id (Admin update)
 app.put(['/api/profiles/:id', '/profiles/:id'], async (req, res) => {

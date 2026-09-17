@@ -6,19 +6,23 @@ export default function WhatsAppGroupInvite({ style = {}, showForwardBtn = true 
 
   return (
     <div
+      className="wa-invite-wrapper"
       style={{
         display: 'inline-flex',
         alignItems: 'flex-start',
         gap: '8px',
         maxWidth: '100%',
+        boxSizing: 'border-box',
         ...style
       }}
     >
       {/* WhatsApp Message Bubble */}
       <div
+        className="wa-invite-bubble"
         style={{
-          width: '310px',
+          width: '320px',
           maxWidth: '100%',
+          boxSizing: 'border-box',
           background: '#ffffff',
           borderRadius: '10px',
           boxShadow: '0 2px 10px rgba(11, 20, 26, 0.12), 0 1px 2px rgba(11, 20, 26, 0.08)',
@@ -177,6 +181,7 @@ export default function WhatsAppGroupInvite({ style = {}, showForwardBtn = true 
       {/* WhatsApp Forward Arrow Action Icon */}
       {showForwardBtn && (
         <a
+          className="wa-invite-forward-btn"
           href={inviteUrl}
           target="_blank"
           rel="noopener noreferrer"

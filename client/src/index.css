@@ -833,11 +833,151 @@ input:focus, textarea:focus, select:focus {
   to   { transform: rotate(360deg); }
 }
 
-/* Mobile: move floating buttons so they don't block content */
-@media (max-width: 480px) {
-  #whatsapp-join-group-btn,
-  #sync-instagram-btn {
-    font-size: 0.78rem !important;
+/* ============================================================
+   RESPONSIVE FLOATING ACTIONS & WHATSAPP GROUP INVITE
+   ============================================================ */
+
+.floating-actions-container {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  z-index: 500;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 10px;
+}
+
+.floating-sync-toast {
+  background: rgba(16, 185, 129, 0.95);
+  color: #fff;
+  padding: 8px 16px;
+  border-radius: 9999px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+  max-width: 260px;
+  text-align: center;
+  backdrop-filter: blur(8px);
+}
+
+.floating-wa-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 11px 20px;
+  border-radius: 9999px;
+  background: linear-gradient(135deg, #25d366 0%, #128c7e 100%);
+  color: #ffffff;
+  font-size: 0.86rem;
+  font-weight: 800;
+  letter-spacing: 0.3px;
+  text-decoration: none;
+  box-shadow: 0 6px 24px rgba(37, 211, 102, 0.55);
+  border: 1.5px solid rgba(255, 255, 255, 0.35);
+  white-space: nowrap;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  animation: whatsappPulse 2.5s ease-in-out infinite;
+}
+
+.floating-wa-btn:hover {
+  transform: translateY(-2px) scale(1.05);
+  box-shadow: 0 12px 32px rgba(37, 211, 102, 0.7);
+  animation: none;
+}
+
+.floating-ig-btn {
+  padding: 10px 18px;
+  border-radius: 9999px;
+  background: linear-gradient(135deg, #f09433 0%, #e6683c 25%, #dc2743 50%, #cc2366 75%, #bc1888 100%);
+  border: 1.5px solid rgba(255, 255, 255, 0.4);
+  color: #fff;
+  font-size: 0.84rem;
+  font-weight: 800;
+  letter-spacing: 0.3px;
+  cursor: pointer;
+  box-shadow: 0 6px 24px rgba(220, 39, 67, 0.5);
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  white-space: nowrap;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.floating-ig-btn:disabled {
+  background: linear-gradient(135deg, #94a3b8, #64748b);
+  cursor: not-allowed;
+}
+
+.floating-ig-btn:hover:not(:disabled) {
+  transform: translateY(-2px) scale(1.04);
+  box-shadow: 0 10px 28px rgba(220, 39, 67, 0.7);
+}
+
+/* Mobile Responsiveness for Floating Actions */
+@media (max-width: 640px) {
+  .floating-actions-container {
+    bottom: 16px;
+    right: 14px;
+    gap: 8px;
+  }
+  .floating-wa-btn {
     padding: 9px 14px !important;
+    font-size: 0.78rem !important;
+  }
+  .floating-ig-btn {
+    padding: 8px 12px !important;
+    font-size: 0.76rem !important;
   }
 }
+
+@media (max-width: 400px) {
+  .floating-actions-container {
+    bottom: 12px;
+    right: 10px;
+  }
+  .floating-wa-btn {
+    padding: 8px 12px !important;
+    font-size: 0.74rem !important;
+  }
+  .floating-ig-btn {
+    padding: 7px 10px !important;
+    font-size: 0.72rem !important;
+  }
+}
+
+/* WhatsApp Group Invite Card Responsiveness */
+.wa-invite-wrapper {
+  display: inline-flex;
+  align-items: flex-start;
+  gap: 8px;
+  max-width: 100%;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.wa-invite-bubble {
+  width: 320px;
+  max-width: 100%;
+  box-sizing: border-box;
+  background: #ffffff;
+  border-radius: 10px;
+  box-shadow: 0 2px 10px rgba(11, 20, 26, 0.12), 0 1px 2px rgba(11, 20, 26, 0.08);
+  border: 1px solid #e2e8f0;
+  overflow: hidden;
+  position: relative;
+}
+
+@media (max-width: 500px) {
+  .wa-invite-wrapper {
+    flex-direction: column;
+    align-items: center;
+  }
+  .wa-invite-forward-btn {
+    display: none !important;
+  }
+  .wa-invite-bubble {
+    width: 100% !important;
+  }
+}
+

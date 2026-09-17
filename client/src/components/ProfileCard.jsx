@@ -10,9 +10,20 @@ import {
 } from '../icons';
 import confetti from 'canvas-confetti';
 
-const resolveImageUrl = (img) => {
+const resolveImageUrl = (img, profileId) => {
+  // 1. If no image on profile, check localStorage image cache first
+  if (!img && profileId) {
+    try {
+      const cached = localStorage.getItem(`nikah_img_${profileId}`);
+      if (cached) return cached;
+    } catch (_) {}
+  }
   if (!img) return '';
+  // 2. Base64 — use directly
   if (img.startsWith('data:image/')) return img;
+  // 3. Supabase Storage or any HTTPS URL — use directly
+  if (img.startsWith('https://')) return img;
+  // 4. localhost:5000 URL — fix for mobile devices
   if (typeof window !== 'undefined' && img.includes('localhost:5000')) {
     if (window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
       return img.replace('localhost:5000', `${window.location.hostname}:5000`);
@@ -31,11 +42,12 @@ export default function ProfileCard({
   const [imgError, setImgError] = useState(false);
   const cardRef = useRef(null);
 
-  const resolvedImg = resolveImageUrl(profile.image);
+  const resolvedImg = resolveImageUrl(profile.image, profile.id);
 
   useEffect(() => {
     setImgError(false);
   }, [profile.image]);
+
 
   const hoverSpring = useSpring({
     boxShadow: hovered

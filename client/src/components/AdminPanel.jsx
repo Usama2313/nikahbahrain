@@ -249,28 +249,35 @@ export default function AdminPanel({ onBackToPortal, onProfilesChange }) {
     try {
       const compressedDataUrl = await compressImage(file);
       if (compressedDataUrl) {
+        // Show preview immediately with base64
         setFormData(prev => ({ ...prev, image: compressedDataUrl }));
-        setFormErrors(prev => {
-          const copy = { ...prev };
-          delete copy.image;
-          return copy;
-        });
+        setFormErrors(prev => { const copy = { ...prev }; delete copy.image; return copy; });
 
         try {
-          const res = await fetch(`${API_BASE}/upload`, {
+          // Try to get a permanent URL via Supabase Storage / local disk
+          const safeName = `${Date.now()}_${file.name.replace(/[^a-zA-Z0-9._-]/g, '_')}`;
+          const res = await fetch(`${API_BASE}/upload-image`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ image: compressedDataUrl, filename: file.name })
+            body: JSON.stringify({ image: compressedDataUrl, filename: safeName })
           });
           const d = await res.json();
           if (d.success && d.url) {
+            // Prefer permanent URL over base64 — works on mobile/all devices
             setFormData(prev => ({ ...prev, image: d.url }));
+            showNotification(d.storageType === 'supabase'
+              ? '✓ Picture uploaded to cloud — works on all devices!'
+              : '✓ Picture optimized and ready!');
+          } else {
+            showNotification('✓ Picture ready (stored locally).');
           }
-        } catch (_) {}
-        showNotification('✓ Picture optimized and uploaded successfully!');
+        } catch (_) {
+          showNotification('✓ Picture ready.');
+        }
       }
     } catch (err) {
-      console.error('Image compression error:', err);
+      console.error('Image upload error:', err);
+      showNotification('⚠️ Image upload failed. Please try again.');
     } finally {
       setIsUploadingImage(false);
     }
@@ -381,14 +388,26 @@ export default function AdminPanel({ onBackToPortal, onProfilesChange }) {
       const updatedDeleted = deleted.filter(id => id !== profileObj.id);
       localStorage.setItem('nikah_deleted_profiles', JSON.stringify(updatedDeleted));
 
+      // Cache image separately under nikah_img_${id}
+      if (profileObj.image) {
+        try {
+          localStorage.setItem(`nikah_img_${profileObj.id}`, profileObj.image);
+        } catch (_) {}
+      }
+
+      // Avoid localStorage quota crash with large base64 data URLs
+      const isDataUrl = profileObj.image && profileObj.image.startsWith('data:');
+      const profileToStore = isDataUrl ? { ...profileObj, image: '' } : profileObj;
+
       const existing = JSON.parse(localStorage.getItem('nikah_custom_profiles') || '[]');
       const filtered = existing.filter(p => p.id !== profileObj.id);
-      filtered.unshift(profileObj);
+      filtered.unshift(profileToStore);
       localStorage.setItem('nikah_custom_profiles', JSON.stringify(filtered));
     } catch (e) {
-      console.error(e);
+      console.error('saveCustomProfileToStorage error:', e);
     }
   };
+
 
   const removeCustomProfileFromStorage = (profileId) => {
     try {
@@ -570,10 +589,19 @@ export default function AdminPanel({ onBackToPortal, onProfilesChange }) {
           });
           const data = await res.json();
           if (data.success && data.profile) {
-            updated = data.profile;
+            updated = {
+              ...data.profile,
+              // Preserve image from local formData if server/DB lost it
+              image: data.profile.image || formData.image || '',
+            };
           }
         } catch (apiErr) {
           console.warn('API update fallback:', apiErr.message);
+        }
+
+        // Cache image in localStorage by profile ID
+        if (updated.image) {
+          try { localStorage.setItem(`nikah_img_${updated.id}`, updated.image); } catch (_) {}
         }
 
         saveCustomProfileToStorage(updated);
@@ -595,13 +623,21 @@ export default function AdminPanel({ onBackToPortal, onProfilesChange }) {
           nextCustomId = `NPF-${npfMatch[1]}`;
         }
 
+        const marital = formData.maritalStatus?.trim() || 'Never Married';
+        let profCat = formData.gender === 'male' ? 'grooms' : 'brides';
+        if (marital === 'Divorced') profCat = formData.gender === 'male' ? 'divorced-grooms' : 'divorced-brides';
+        else if (marital === 'Widowed') profCat = formData.gender === 'male' ? 'widowed-grooms' : 'widowed-brides';
+
         let newProf = {
           ...formData,
           id: nextCustomId,
           name: candidateName,
           age: candidateAge,
-          category: formData.gender === 'male' ? 'grooms' : 'brides',
+          maritalStatus: marital,
+          nationality: formData.nationality?.trim() || 'Pakistani',
+          category: profCat,
           salary: formData.salary?.trim() || '',
+
           location: formData.location?.trim() || '',
           residence: formData.residence?.trim() || '',
           siblings: formData.siblings?.trim() || '',
@@ -633,10 +669,20 @@ export default function AdminPanel({ onBackToPortal, onProfilesChange }) {
           });
           const data = await res.json();
           if (data.success && data.profile) {
-            newProf = data.profile;
+            newProf = {
+              ...data.profile,
+              // Preserve image from local formData if server/DB lost it (large base64 can be dropped)
+              image: data.profile.image || formData.image || '',
+            };
           }
         } catch (apiErr) {
           console.warn('API create fallback:', apiErr.message);
+        }
+
+        // Cache the image separately in localStorage keyed by profile ID
+        // This ensures it displays even if the DB entry loses the image field
+        if (newProf.image) {
+          try { localStorage.setItem(`nikah_img_${newProf.id}`, newProf.image); } catch (_) {}
         }
 
         saveCustomProfileToStorage(newProf);
@@ -757,11 +803,20 @@ export default function AdminPanel({ onBackToPortal, onProfilesChange }) {
           if (!map.has(b.id)) map.set(b.id, b);
         }
       }
-      return Array.from(map.values());
+      return Array.from(map.values()).map(p => {
+        if (!p.image) {
+          try {
+            const cached = localStorage.getItem(`nikah_img_${p.id}`);
+            if (cached) return { ...p, image: cached };
+          } catch (_) {}
+        }
+        return p;
+      });
     } catch (e) {
       return baseList || [];
     }
   };
+
 
   const fetchData = async () => {
     try {

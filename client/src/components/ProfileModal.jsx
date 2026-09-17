@@ -22,9 +22,16 @@ import {
   Star
 } from '../icons';
 
-const resolveImageUrl = (img) => {
+const resolveImageUrl = (img, profileId) => {
+  if (!img && profileId) {
+    try {
+      const cached = localStorage.getItem(`nikah_img_${profileId}`);
+      if (cached) return cached;
+    } catch (_) {}
+  }
   if (!img) return '';
   if (img.startsWith('data:image/')) return img;
+  if (img.startsWith('https://')) return img;
   if (typeof window !== 'undefined' && img.includes('localhost:5000')) {
     if (window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
       return img.replace('localhost:5000', `${window.location.hostname}:5000`);
@@ -32,6 +39,7 @@ const resolveImageUrl = (img) => {
   }
   return img;
 };
+
 
 export default function ProfileModal({ profile, isFavorite, onToggleFavorite, onClose }) {
   useEffect(() => {
@@ -190,7 +198,7 @@ Please share requirements & family verification steps.`;
           }}
         >
           {/* Full Profile / Flyer Image */}
-          {profile.image && (
+          {resolveImageUrl(profile.image, profile.id) && (
             <animated.div style={avatarSpring}>
               <div style={{
                 width: '100%',
@@ -202,7 +210,7 @@ Please share requirements & family verification steps.`;
                 overflow: 'hidden',
               }}>
                 <img
-                  src={resolveImageUrl(profile.image)}
+                  src={resolveImageUrl(profile.image, profile.id)}
                   alt={`${profile.id} - ${profile.name}`}
                   style={{
                     width: '100%',
@@ -215,6 +223,7 @@ Please share requirements & family verification steps.`;
               </div>
             </animated.div>
           )}
+
 
           {/* Name & Basic Info below image */}
           <div style={{

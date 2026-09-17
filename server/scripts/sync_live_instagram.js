@@ -161,11 +161,19 @@ export async function syncLiveInstagramPosts(targetCount = 25) {
       } catch (e) { existing = []; }
     }
 
-    // Merge: new IG posts override by instagramPostId/id, keep all existing
+    // Merge: Preserve all custom/admin created profiles at the top, then add Instagram posts
     const mergedMap = new Map();
+    // 1. Keep all custom profiles (ones without instagramPostId or with NPF- id)
+    for (const p of existing) {
+      if (!p.instagramPostId) {
+        mergedMap.set(p.id, p);
+      }
+    }
+    // 2. Add freshly scraped Instagram posts
     for (const p of parsedProfiles) {
       mergedMap.set(p.instagramPostId || p.id, p);
     }
+    // 3. Keep any existing Instagram posts not scraped this run
     for (const p of existing) {
       const key = p.instagramPostId || p.id;
       if (!mergedMap.has(key)) mergedMap.set(key, p);
