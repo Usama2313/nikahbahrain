@@ -92,48 +92,12 @@ export default function App() {
     };
   }, []);
 
-  // Helper to read locally added/edited admin profiles
-  const getLocalCustomProfiles = () => {
+  // Clear any legacy device-specific deleted profiles cache on startup
+  useEffect(() => {
     try {
-      const custom = JSON.parse(localStorage.getItem('nikah_custom_profiles') || '[]');
-      return Array.isArray(custom) ? custom : [];
-    } catch (_) {
-      return [];
-    }
-  };
-
-  // Safe merge of server profiles with any locally created custom admin profiles
-  const mergeProfiles = (baseList, customList) => {
-    try {
-      const deletedIds = new Set(JSON.parse(localStorage.getItem('nikah_deleted_profiles') || '[]'));
-      const map = new Map();
-      // 1. Locally added/edited admin profiles take priority so they display instantly on upload
-      for (const c of (customList || [])) {
-        if (c && c.id && !deletedIds.has(c.id)) {
-          map.set(c.id, c);
-        }
-      }
-      // 2. Add base server / database profiles
-      for (const b of (baseList || [])) {
-        if (b && b.id && !deletedIds.has(b.id)) {
-          if (!map.has(b.id)) {
-            map.set(b.id, b);
-          }
-        }
-      }
-      return Array.from(map.values()).map(p => {
-        if (!p.image) {
-          try {
-            const cached = localStorage.getItem(`nikah_img_${p.id}`);
-            if (cached) return { ...p, image: cached };
-          } catch (_) {}
-        }
-        return p;
-      });
-    } catch (_) {
-      return baseList || [];
-    }
-  };
+      localStorage.removeItem('nikah_deleted_profiles');
+    } catch (_) {}
+  }, []);
 
   // Fetch profiles from server — single source of truth for ALL devices (PC, mobile, etc.)
   const fetchProfiles = async () => {
@@ -143,9 +107,17 @@ export default function App() {
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
       if (data.success && Array.isArray(data.profiles) && data.profiles.length > 0) {
-        const localCustom = getLocalCustomProfiles();
-        const merged = mergeProfiles(data.profiles, localCustom);
-        setProfiles(merged);
+        // Database is the single source of truth for all devices (Mobile & Desktop)
+        const synced = data.profiles.map(p => {
+          if (!p.image) {
+            try {
+              const cached = localStorage.getItem(`nikah_img_${p.id}`);
+              if (cached) return { ...p, image: cached };
+            } catch (_) {}
+          }
+          return p;
+        });
+        setProfiles(synced);
         return;
       }
     } catch (err) {
@@ -153,10 +125,10 @@ export default function App() {
     } finally {
       setLoading(false);
     }
-    // Fallback: use bundled profiles.json merged with local custom profiles
-    const localCustom = getLocalCustomProfiles();
-    setProfiles(mergeProfiles(fallbackProfiles || [], localCustom));
+    // Fallback: use bundled verified profiles
+    setProfiles(fallbackProfiles || []);
   };
+
 
   // Trigger Instagram sync — works on all environments with clean fallback
   const syncInstagram = async (silent = false) => {

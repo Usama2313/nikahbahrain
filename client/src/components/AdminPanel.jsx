@@ -832,17 +832,33 @@ export default function AdminPanel({ onBackToPortal, onProfilesChange }) {
       if (profilesRes && profilesRes.ok) {
         const profilesData = await profilesRes.json();
         if (profilesData.success && Array.isArray(profilesData.profiles)) {
-          const merged = getMergedProfiles(profilesData.profiles);
-          setProfiles(merged);
-          if (onProfilesChange) onProfilesChange(merged);
+          const synced = profilesData.profiles.map(p => {
+            if (!p.image) {
+              try {
+                const cached = localStorage.getItem(`nikah_img_${p.id}`);
+                if (cached) return { ...p, image: cached };
+              } catch (_) {}
+            }
+            return p;
+          });
+          setProfiles(synced);
+          if (onProfilesChange) onProfilesChange(synced);
           return;
         }
       }
       // Fallback if API is offline
-      const mergedFallback = getMergedProfiles(fallbackProfiles || []);
-      setProfiles(mergedFallback);
-      if (onProfilesChange) onProfilesChange(mergedFallback);
-      const pList = mergedFallback;
+      const fallbackList = (fallbackProfiles || []).map(p => {
+        if (!p.image) {
+          try {
+            const cached = localStorage.getItem(`nikah_img_${p.id}`);
+            if (cached) return { ...p, image: cached };
+          } catch (_) {}
+        }
+        return p;
+      });
+      setProfiles(fallbackList);
+      if (onProfilesChange) onProfilesChange(fallbackList);
+      const pList = fallbackList;
       setStats((prev) => prev || {
         total: pList.length,
         grooms: pList.filter(p => p.gender === 'male').length,
@@ -854,9 +870,8 @@ export default function AdminPanel({ onBackToPortal, onProfilesChange }) {
       });
     } catch (err) {
       console.warn('Admin fetch API fallback used:', err.message);
-      const mergedFallback = getMergedProfiles(fallbackProfiles || []);
-      setProfiles(mergedFallback);
-      if (onProfilesChange) onProfilesChange(mergedFallback);
+      setProfiles(fallbackProfiles || []);
+      if (onProfilesChange) onProfilesChange(fallbackProfiles || []);
     } finally {
       setLoading(false);
     }
@@ -864,9 +879,9 @@ export default function AdminPanel({ onBackToPortal, onProfilesChange }) {
 
   useEffect(() => {
     if (isAuthenticated) {
+      try { localStorage.removeItem('nikah_deleted_profiles'); } catch (_) {}
       fetchData();
       // Auto-sync any localStorage-only profiles to server on login
-      // This fixes cross-device visibility (mobile won't see localStorage-only profiles)
       setTimeout(async () => {
         try {
           const custom = JSON.parse(localStorage.getItem('nikah_custom_profiles') || '[]');
@@ -888,7 +903,6 @@ export default function AdminPanel({ onBackToPortal, onProfilesChange }) {
 
   const handleDeleteProfile = async (id) => {
     if (!window.confirm(`Remove profile ${id}?`)) return;
-    removeCustomProfileFromStorage(id);
     setProfiles((prev) => {
       const next = prev.filter(p => p.id !== id);
       if (onProfilesChange) onProfilesChange(next);
@@ -899,6 +913,7 @@ export default function AdminPanel({ onBackToPortal, onProfilesChange }) {
       await fetch(`${API_BASE}/profiles/${id}`, { method: 'DELETE' });
     } catch (err) { console.error(err); }
   };
+
 
   const handleToggleVerified = async (profile) => {
     try {
