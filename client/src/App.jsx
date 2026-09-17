@@ -284,19 +284,21 @@ export default function App() {
       result = result.filter((p) => p.nationality && p.nationality.toLowerCase().includes(activeNationality.toLowerCase()));
     }
 
-    // 4. Search query
+    // 4. Search query — use optional chaining to prevent TypeError crashes
+    // when any field is null/undefined (e.g. from legacy local JSON or Supabase nulls)
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase();
       result = result.filter(
         (p) =>
-          p.name.toLowerCase().includes(q) ||
-          p.profession.toLowerCase().includes(q) ||
-          p.education.toLowerCase().includes(q) ||
-          p.location.toLowerCase().includes(q) ||
-          (p.sect && p.sect.toLowerCase().includes(q)) ||
-          (p.caste && p.caste.toLowerCase().includes(q)) ||
-          (p.about && p.about.toLowerCase().includes(q)) ||
-          p.id.toLowerCase().includes(q)
+          (p.name?.toLowerCase() || '').includes(q) ||
+          (p.profession?.toLowerCase() || '').includes(q) ||
+          (p.education?.toLowerCase() || '').includes(q) ||
+          (p.location?.toLowerCase() || '').includes(q) ||
+          (p.sect?.toLowerCase() || '').includes(q) ||
+          (p.caste?.toLowerCase() || '').includes(q) ||
+          (p.about?.toLowerCase() || '').includes(q) ||
+          (p.nationality?.toLowerCase() || '').includes(q) ||
+          (p.id?.toLowerCase() || '').includes(q)
       );
     }
 
