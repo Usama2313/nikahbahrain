@@ -849,30 +849,14 @@ export default function AdminPanel({ onBackToPortal, onProfilesChange }) {
       if (profilesRes && profilesRes.ok) {
         const profilesData = await profilesRes.json();
         if (profilesData.success && Array.isArray(profilesData.profiles)) {
-          const synced = profilesData.profiles.map(p => {
-            if (!p.image) {
-              try {
-                const cached = localStorage.getItem(`nikah_img_${p.id}`);
-                if (cached) return { ...p, image: cached };
-              } catch (_) {}
-            }
-            return p;
-          });
+          const synced = getMergedProfiles(profilesData.profiles);
           setProfiles(synced);
           if (onProfilesChange) onProfilesChange(synced);
           return;
         }
       }
       // Fallback if API is offline
-      const fallbackList = (fallbackProfiles || []).map(p => {
-        if (!p.image) {
-          try {
-            const cached = localStorage.getItem(`nikah_img_${p.id}`);
-            if (cached) return { ...p, image: cached };
-          } catch (_) {}
-        }
-        return p;
-      });
+      const fallbackList = getMergedProfiles(fallbackProfiles || []);
       setProfiles(fallbackList);
       if (onProfilesChange) onProfilesChange(fallbackList);
       const pList = fallbackList;
