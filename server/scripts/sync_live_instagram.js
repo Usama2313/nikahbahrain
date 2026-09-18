@@ -1,9 +1,14 @@
-import puppeteer from 'puppeteer-core';
+import { addExtra } from 'puppeteer-extra';
+import puppeteerCore from 'puppeteer-core';
+import StealthPlugin from 'puppeteer-extra-plugin-stealth';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import dotenv from 'dotenv';
 import { parseProfileFromAltText } from './parse_profile.js';
+
+const puppeteer = addExtra(puppeteerCore);
+puppeteer.use(StealthPlugin());
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -136,6 +141,23 @@ export async function syncLiveInstagramPosts(targetCount = 20) {
       await dismissModals(page);
       await sleep(2500);
       console.log('[Instagram Sync] Fallback URL:', page.url());
+      
+      const fallbackUrl = page.url();
+      if (
+        fallbackUrl.includes('/accounts/') ||
+        fallbackUrl.includes('scraping_warning') ||
+        fallbackUrl.includes('challenge') ||
+        fallbackUrl.includes('login')
+      ) {
+        console.warn('[Instagram Sync] Instagram permanently blocked this request. Aborting gracefully to avoid further flags.');
+        return { 
+          success: false, 
+          freshlyFetched: 0,
+          totalProfiles: 0,
+          newProfiles: [],
+          message: 'Instagram blocked this request. Agent will try again later.'
+        };
+      }
     }
 
     // ── STEP 1: Fast Grid Extraction ────────────────────────────────────────
@@ -163,8 +185,11 @@ export async function syncLiveInstagramPosts(targetCount = 20) {
 
       if (postsMap.size >= targetCount) break;
 
-      await page.evaluate(() => window.scrollBy(0, 1000));
-      await sleep(1200);
+      const scrollOffset = 1000 + (Math.random() * 300 - 150);
+      await page.evaluate((y) => window.scrollBy(0, y), scrollOffset);
+      
+      const randomDelay = 1200 + Math.random() * 1000;
+      await sleep(randomDelay);
       scrollAttempts++;
     }
 

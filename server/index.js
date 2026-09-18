@@ -590,7 +590,7 @@ if (!process.env.VERCEL) {
     console.log(`Qabul Hai Server running on http://localhost:${PORT}`);
     // Start automated background Instagram Agent (checks @nikah_bahrain every 15 minutes)
     import('./scripts/instagram_agent.js')
-      .then(m => m.startInstagramAgent({ intervalMinutes: 15 }))
+      .then(m => m.startInstagramAgent({ intervalMinutes: 60 }))
       .catch(err => console.warn('[Instagram Agent] Auto-start note:', err.message));
   });
 }

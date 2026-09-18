@@ -55,7 +55,7 @@ export async function runAgentCycle() {
 }
 
 export function startInstagramAgent(options = {}) {
-  const intervalMinutes = Number(options.intervalMinutes) || 15;
+  const intervalMinutes = Number(options.intervalMinutes) || 60;
   const intervalMs = intervalMinutes * 60 * 1000;
 
   console.log(`[Instagram Agent] 🚀 Background agent started. Checking @nikah_bahrain every ${intervalMinutes} minutes.`);
@@ -67,7 +67,12 @@ export function startInstagramAgent(options = {}) {
 
   if (agentInterval) clearInterval(agentInterval);
   agentInterval = setInterval(() => {
-    runAgentCycle().catch(() => {});
+    // Jitter: Wait a random amount of time (0 to 5 minutes) before running to mimic human behavior
+    const jitterMs = Math.floor(Math.random() * 5 * 60 * 1000);
+    console.log(`[Instagram Agent] Jittering cycle start by ${Math.round(jitterMs / 1000)} seconds...`);
+    setTimeout(() => {
+      runAgentCycle().catch(() => {});
+    }, jitterMs);
   }, intervalMs);
 
   return {
@@ -96,5 +101,5 @@ export function getAgentStatus() {
 // ─── CLI Entry ────────────────────────────────────────────────────────────────
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
   console.log('Starting standalone Instagram Agent process...');
-  startInstagramAgent({ intervalMinutes: 15 });
+  startInstagramAgent({ intervalMinutes: 60 });
 }
