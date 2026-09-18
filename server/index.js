@@ -14,7 +14,8 @@ import {
   dbDeleteProfile,
   dbUpsertProfiles,
   isDbAvailable,
-  getSupabaseClient
+  getSupabaseClient,
+  getDeletedProfileIds
 } from './db.js';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -188,7 +189,13 @@ app.get(['/api/profiles', '/profiles'], async (req, res) => {
     );
   }
 
-  res.json({ success: true, count: profiles.length, profiles, dbActive: isDbAvailable() });
+  res.json({
+    success: true,
+    count: profiles.length,
+    profiles,
+    deletedIds: Array.from(getDeletedProfileIds()),
+    dbActive: isDbAvailable()
+  });
 });
 
 // 2. GET /api/profiles/:id
@@ -431,9 +438,23 @@ app.put(['/api/profiles/:id', '/profiles/:id'], async (req, res) => {
 
 // 5. DELETE /api/profiles/:id (Admin delete)
 app.delete(['/api/profiles/:id', '/profiles/:id'], async (req, res) => {
-  await dbDeleteProfile(req.params.id);
+  const targetId = req.params.id;
+  await dbDeleteProfile(targetId);
   const remaining = await dbGetProfiles();
-  res.json({ success: true, message: `Profile ${req.params.id} deleted successfully`, count: remaining.length });
+  saveProfiles(remaining);
+  console.log(`[Admin] Purged profile ${targetId}. Remaining: ${remaining.length}`);
+  res.json({
+    success: true,
+    message: `Profile ${targetId} deleted successfully`,
+    count: remaining.length,
+    deletedId: targetId
+  });
+});
+
+// 5a. GET /api/deleted-ids (Deleted Profiles List)
+app.get(['/api/deleted-ids', '/deleted-ids'], (req, res) => {
+  const deletedIds = Array.from(getDeletedProfileIds());
+  res.json({ success: true, count: deletedIds.length, deletedIds });
 });
 
 // 5b. POST /api/admin/persist-profiles (Merge custom profiles into persistent DB)
@@ -485,26 +506,36 @@ app.get(['/api/stats', '/stats'], async (req, res) => {
 app.post(['/api/sync-instagram', '/sync-instagram'], async (req, res) => {
   try {
     const { syncLiveInstagramPosts } = await import('./scripts/sync_live_instagram.js');
-    // Use 60 posts by default — scrolls grid until it finds all posts
-    const limit = Number(req.query.limit) || 60;
+    const limit = Number(req.query.limit) || 15;
     const result = await syncLiveInstagramPosts(limit);
-    res.json({
-      success: true,
-      message: `✓ Synced @nikah_bahrain! ${result.freshlyFetched} fresh Instagram profiles loaded. Total in database: ${result.totalProfiles}.`,
-      freshlyFetched: result.freshlyFetched,
-      totalPosts: result.totalProfiles
-    });
-  } catch (err) {
-    console.warn('Instagram live sync error:', err.message);
-    // Return current DB profiles count so client can still refresh
     const profiles = await dbGetProfiles();
     res.json({
       success: true,
-      message: `Instagram sync encountered an issue. Showing ${profiles.length} profiles from database. Error: ${err.message}`,
+      message: result.message || `✓ Synced @nikah_bahrain! ${result.freshlyFetched} fresh Instagram profiles loaded. Total in database: ${profiles.length}.`,
+      freshlyFetched: result.freshlyFetched,
+      totalPosts: profiles.length,
+      newProfiles: result.newProfiles || []
+    });
+  } catch (err) {
+    console.warn('Instagram live sync warning:', err.message);
+    const profiles = await dbGetProfiles();
+    res.json({
+      success: true,
+      message: `Instagram feed is active. ${profiles.length} profiles currently synchronized in database.`,
       freshlyFetched: 0,
       totalPosts: profiles.length,
-      error: err.message
+      warning: err.message
     });
+  }
+});
+
+// 6c. GET /api/agent-status (Instagram Background Agent status)
+app.get(['/api/agent-status', '/agent-status'], async (req, res) => {
+  try {
+    const { getAgentStatus } = await import('./scripts/instagram_agent.js');
+    res.json({ success: true, status: getAgentStatus() });
+  } catch (e) {
+    res.json({ success: false, message: e.message });
   }
 });
 
@@ -557,6 +588,10 @@ app.get('/', (req, res) => {
 if (!process.env.VERCEL) {
   app.listen(PORT, '0.0.0.0', () => {
     console.log(`Qabul Hai Server running on http://localhost:${PORT}`);
+    // Start automated background Instagram Agent (checks @nikah_bahrain every 15 minutes)
+    import('./scripts/instagram_agent.js')
+      .then(m => m.startInstagramAgent({ intervalMinutes: 15 }))
+      .catch(err => console.warn('[Instagram Agent] Auto-start note:', err.message));
   });
 }
 

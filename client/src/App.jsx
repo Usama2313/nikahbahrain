@@ -92,11 +92,20 @@ export default function App() {
     };
   }, []);
 
-  // Clear any legacy device-specific deleted profiles cache on startup
+  // Sync deleted profiles registry from server so all devices permanently respect deletions
   useEffect(() => {
-    try {
-      localStorage.removeItem('nikah_deleted_profiles');
-    } catch (_) {}
+    fetch(`${API_BASE}/deleted-ids`)
+      .then(res => res.json())
+      .then(data => {
+        if (data.success && Array.isArray(data.deletedIds)) {
+          try {
+            const local = JSON.parse(localStorage.getItem('nikah_deleted_profiles') || '[]');
+            const merged = Array.from(new Set([...local, ...data.deletedIds]));
+            localStorage.setItem('nikah_deleted_profiles', JSON.stringify(merged));
+          } catch (_) {}
+        }
+      })
+      .catch(() => {});
   }, []);
 
   // Fetch profiles from server — single source of truth for ALL devices (PC, mobile, etc.)
@@ -107,17 +116,31 @@ export default function App() {
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
       if (data.success && Array.isArray(data.profiles) && data.profiles.length > 0) {
-        // Read locally created custom profiles from Admin Panel
+        // Collect all deleted IDs from server and client
+        let localDeleted = [];
+        try {
+          localDeleted = JSON.parse(localStorage.getItem('nikah_deleted_profiles') || '[]');
+        } catch (_) {}
+        const serverDeleted = Array.isArray(data.deletedIds) ? data.deletedIds : [];
+        const deletedIds = new Set([...localDeleted, ...serverDeleted]);
+
+        // Clean up locally created custom profiles from Admin Panel (remove any deleted ones)
         let localCustom = [];
         try {
-          localCustom = JSON.parse(localStorage.getItem('nikah_custom_profiles') || '[]');
+          const raw = JSON.parse(localStorage.getItem('nikah_custom_profiles') || '[]');
+          localCustom = raw.filter(p => p && p.id && !deletedIds.has(p.id));
+          if (localCustom.length !== raw.length) {
+            localStorage.setItem('nikah_custom_profiles', JSON.stringify(localCustom));
+          }
         } catch (_) {}
 
-        const serverIds = new Set(data.profiles.map(p => p.id));
-        const missingLocals = localCustom.filter(p => p && p.id && !serverIds.has(p.id));
+        // Filter server profiles against deleted IDs
+        const validServerProfiles = data.profiles.filter(p => p && p.id && !deletedIds.has(p.id));
+        const serverIds = new Set(validServerProfiles.map(p => p.id));
+        const missingLocals = localCustom.filter(p => p && p.id && !serverIds.has(p.id) && !deletedIds.has(p.id));
 
         // Combined server profiles with any newly added custom profiles
-        const combined = [...missingLocals, ...data.profiles];
+        const combined = [...missingLocals, ...validServerProfiles];
 
         // Ensure images are preserved (from server or localStorage image cache)
         const synced = combined.map(p => {
@@ -131,7 +154,7 @@ export default function App() {
           return { ...p, image: img || '' };
         });
 
-        // Automatically sync missing local profiles to server in the background
+        // Sync truly new, valid custom profiles to server in the background
         if (missingLocals.length > 0) {
           fetch(`${API_BASE}/admin/persist-profiles`, {
             method: 'POST',
@@ -144,7 +167,7 @@ export default function App() {
         return;
       }
     } catch (err) {
-      console.warn('Live API sync unavailable, displaying bundled verified profile registry:', err.message);
+      console.warn('Live API sync note, displaying verified profile registry:', err.message);
     } finally {
       setLoading(false);
     }

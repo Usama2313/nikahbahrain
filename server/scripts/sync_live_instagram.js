@@ -2,25 +2,74 @@ import puppeteer from 'puppeteer-core';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import dotenv from 'dotenv';
 import { parseProfileFromAltText } from './parse_profile.js';
-
-export { parseProfileFromAltText };
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-const CHROME_PATH = process.env.CHROME_PATH || 'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe';
+// Load environment variables from server/.env or project root .env
+const envPaths = [
+  path.join(__dirname, '..', '.env'),
+  path.join(__dirname, '..', '..', '.env'),
+  path.join(process.cwd(), '.env'),
+  path.join(process.cwd(), 'server', '.env')
+];
+for (const envPath of envPaths) {
+  if (fs.existsSync(envPath)) {
+    dotenv.config({ path: envPath });
+    break;
+  }
+}
 
-// ─── Main Export ──────────────────────────────────────────────────────────────
-export async function syncLiveInstagramPosts(targetCount = 50) {
-  if (!fs.existsSync(CHROME_PATH)) {
-    throw new Error(`Chrome not found at ${CHROME_PATH}. Set CHROME_PATH env var or run on local machine.`);
+export { parseProfileFromAltText };
+
+export function findChromeExecutable() {
+  const candidates = [
+    process.env.CHROME_PATH,
+    'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe',
+    'C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe',
+    process.env.LOCALAPPDATA ? path.join(process.env.LOCALAPPDATA, 'Google\\Chrome\\Application\\chrome.exe') : null,
+    'C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe',
+    'C:\\Program Files\\Microsoft\\Edge\\Application\\msedge.exe',
+    '/usr/bin/google-chrome',
+    '/usr/bin/google-chrome-stable',
+    '/usr/bin/chromium-browser',
+    '/usr/bin/chromium',
+  ].filter(Boolean);
+
+  for (const c of candidates) {
+    if (fs.existsSync(c)) return c;
+  }
+  return null;
+}
+
+// Helper to determine next NPF ID
+function getNextProfileId(profiles) {
+  let maxNum = 0;
+  for (const p of profiles) {
+    if (p && p.id) {
+      const m = p.id.match(/^NPF-?(\d+)/i);
+      if (m) {
+        const n = parseInt(m[1], 10);
+        if (n > maxNum && n < 9000) maxNum = n;
+      }
+    }
+  }
+  return `NPF-${String(maxNum + 1).padStart(3, '0')}`;
+}
+
+// ─── Main Instagram Sync Function ─────────────────────────────────────────────
+export async function syncLiveInstagramPosts(targetCount = 20) {
+  const chromePath = findChromeExecutable();
+  if (!chromePath) {
+    throw new Error('Chrome/Chromium/Edge browser executable not found on this machine.');
   }
 
-  console.log(`[Instagram Sync] Launching Chrome to scrape @nikah_bahrain (target: ${targetCount} posts)...`);
+  console.log(`[Instagram Sync] Launching browser (${chromePath}) to inspect @nikah_bahrain...`);
 
   const browser = await puppeteer.launch({
-    executablePath: CHROME_PATH,
+    executablePath: chromePath,
     headless: 'new',
     args: [
       '--no-sandbox',
@@ -41,37 +90,62 @@ export async function syncLiveInstagramPosts(targetCount = 50) {
       'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36'
     );
 
-    // ── Set Instagram session cookie if available (allows seeing ALL posts) ──
+    // Instagram session cookie if provided (allows reading deep feed if needed)
     const sessionId = process.env.INSTAGRAM_SESSION_ID;
     if (sessionId) {
-      console.log('[Instagram Sync] Using Instagram session cookie for authenticated access...');
+      console.log('[Instagram Sync] Applying Instagram session credentials...');
       await page.setCookie(
         { name: 'sessionid', value: sessionId, domain: '.instagram.com', path: '/', httpOnly: true, secure: true },
         { name: 'ig_did', value: process.env.INSTAGRAM_DID || '', domain: '.instagram.com', path: '/', secure: true },
         { name: 'csrftoken', value: process.env.INSTAGRAM_CSRF || '', domain: '.instagram.com', path: '/', secure: true }
       );
-    } else {
-      console.log('[Instagram Sync] No session cookie — scraping public feed (limited to ~12 posts visible)');
     }
 
-    console.log('[Instagram Sync] Navigating to https://www.instagram.com/nikah_bahrain/ ...');
-    await page.goto('https://www.instagram.com/nikah_bahrain/', {
-      waitUntil: 'networkidle2',
-      timeout: 45000
-    });
+    console.log('[Instagram Sync] Loading https://www.instagram.com/nikah_bahrain/ ...');
+    try {
+      await page.goto('https://www.instagram.com/nikah_bahrain/', {
+        waitUntil: 'domcontentloaded',
+        timeout: 25000
+      });
+    } catch (navErr) {
+      console.warn('[Instagram Sync] Navigation warning (continuing):', navErr.message);
+    }
 
-    // Dismiss popups / login wall
     await dismissModals(page);
-    await sleep(2000);
+    await sleep(2500);
 
-    // ── STEP 1: Scroll the grid to collect all post shortcodes ──────────────
+    let currentUrl = page.url();
+    if (
+      currentUrl.includes('/accounts/') ||
+      currentUrl.includes('scraping_warning') ||
+      currentUrl.includes('challenge') ||
+      currentUrl.includes('checkpoint') ||
+      currentUrl.includes('login')
+    ) {
+      console.warn('[Instagram Sync] Instagram session cookie expired or forced login wall. Clearing cookies to load public feed...');
+      try {
+        const client = await page.target().createCDPSession();
+        await client.send('Network.clearBrowserCookies');
+      } catch (_) {}
+      try {
+        await page.goto('https://www.instagram.com/nikah_bahrain/', {
+          waitUntil: 'domcontentloaded',
+          timeout: 25000
+        });
+      } catch (_) {}
+      await dismissModals(page);
+      await sleep(2500);
+      console.log('[Instagram Sync] Fallback URL:', page.url());
+    }
+
+    // ── STEP 1: Fast Grid Extraction ────────────────────────────────────────
     const postsMap = new Map();
     let scrollAttempts = 0;
-    const maxScrolls = 30;
+    const maxScrolls = 4; // Fast inspection of the latest posts
     let noNewStreak = 0;
 
-    console.log('[Instagram Sync] Scrolling grid to collect all posts...');
-    while (scrollAttempts < maxScrolls && noNewStreak < 5) {
+    console.log('[Instagram Sync] Checking latest grid posts...');
+    while (scrollAttempts < maxScrolls && noNewStreak < 2) {
       const found = await extractGridPosts(page);
       const prevSize = postsMap.size;
 
@@ -87,94 +161,101 @@ export async function syncLiveInstagramPosts(targetCount = 50) {
         noNewStreak = 0;
       }
 
-      console.log(`[Instagram Sync] Grid scroll ${scrollAttempts + 1}: ${postsMap.size} posts found so far...`);
-
       if (postsMap.size >= targetCount) break;
 
-      await page.evaluate(() => window.scrollBy(0, 1200));
-      await sleep(2000);
+      await page.evaluate(() => window.scrollBy(0, 1000));
+      await sleep(1200);
       scrollAttempts++;
     }
 
-    console.log(`[Instagram Sync] ✓ Collected ${postsMap.size} unique posts from grid.`);
+    console.log(`[Instagram Sync] Discovered ${postsMap.size} posts in feed grid.`);
 
-    // ── STEP 2: Enrich each post by visiting post page to read caption ───────
-    const postsList = Array.from(postsMap.values());
-    let enriched = 0;
+    // ── STEP 2: Smart Diffing with Database ─────────────────────────────────
+    const existing = loadExistingProfiles();
+    let deletedIds = new Set();
+    try {
+      const { getDeletedProfileIds } = await import('../db.js');
+      deletedIds = getDeletedProfileIds();
+    } catch (_) {}
 
-    for (const post of postsList) {
+    const knownShortcodes = new Set();
+    const knownUrls = new Set();
+    for (const p of existing) {
+      if (p.instagramPostId) knownShortcodes.add(p.instagramPostId);
+      if (p.instagramPostUrl) {
+        knownUrls.add(p.instagramPostUrl);
+        const m = p.instagramPostUrl.match(/\/p\/([^\/]+)/);
+        if (m) knownShortcodes.add(m[1]);
+      }
+    }
+
+    // Filter to only posts that are NEW (not in database) and NOT deleted by admin
+    const gridPosts = Array.from(postsMap.values());
+    const newPostsToEnrich = gridPosts.filter(p => {
+      if (deletedIds.has(`NB-${p.shortcode}`)) return false;
+      if (deletedIds.has(p.shortcode)) return false;
+      return !knownShortcodes.has(p.shortcode) && !knownUrls.has(p.url);
+    });
+
+    console.log(`[Instagram Sync] Diff analysis: ${newPostsToEnrich.length} new post(s) found to ingest.`);
+
+    // ── STEP 3: Enrich only the NEW posts ───────────────────────────────────
+    const freshParsedProfiles = [];
+    for (const post of newPostsToEnrich) {
       try {
+        console.log(`[Instagram Sync] Fetching full flyer details for new post ${post.shortcode}...`);
         const captionData = await fetchPostCaption(page, post.url);
 
-        // Use caption if it's more informative than alt text
-        if (captionData.caption && captionData.caption.length > 80) {
-          const combined = captionData.caption + '\n' + post.alt;
-          post.alt = combined;
+        if (captionData.caption && captionData.caption.length > 50) {
+          post.alt = captionData.caption + '\n' + (post.alt || '');
         } else if (captionData.imgAlt && captionData.imgAlt.length > (post.alt?.length || 0)) {
           post.alt = captionData.imgAlt + '\n' + (captionData.caption || '');
         }
 
-        // Use better quality image from post page if found
         if (captionData.imageUrl && captionData.imageUrl.length > 10) {
           post.imageUrl = captionData.imageUrl;
         }
 
-        enriched++;
-        console.log(`[Instagram Sync] ✓ [${enriched}/${postsList.length}] Enriched ${post.shortcode} (${post.alt.length} chars)`);
+        const parsed = parseProfileFromAltText(post);
+        // Ensure ID is populated
+        if (!parsed.id || parsed.id.startsWith('NB-')) {
+          parsed.id = getNextProfileId([...freshParsedProfiles, ...existing]);
+        }
+
+        // Check again against deleted IDs
+        if (!deletedIds.has(parsed.id)) {
+          freshParsedProfiles.push(parsed);
+          console.log(`[Instagram Sync] ✓ Successfully parsed new proposal: ${parsed.id} (${parsed.gender})`);
+        }
       } catch (err) {
-        console.warn(`[Instagram Sync] Could not enrich ${post.shortcode}: ${err.message}`);
+        console.warn(`[Instagram Sync] Could not enrich post ${post.shortcode}:`, err.message);
       }
     }
 
-    // ── STEP 3: Parse posts into structured profile objects ──────────────────
-    const parsedProfiles = postsList.map(parseProfileFromAltText);
-    console.log(`[Instagram Sync] ✓ Parsed ${parsedProfiles.length} profiles from Instagram posts.`);
-
-    // ── STEP 4: Load existing profiles and merge ─────────────────────────────
-    const existing = loadExistingProfiles();
-
-    // Merge strategy:
-    // 1. Keep admin-created profiles (no instagramPostId, or NPF- IDs without shortcode)
-    // 2. Update existing IG profiles with fresh data
-    // 3. Add brand new IG profiles
-    const mergedMap = new Map();
-
-    // Preserve admin/manual profiles first
-    for (const p of existing) {
-      if (!p.instagramPostId || (p.id && p.id.startsWith('NPF-') && !p.instagramPostId.match(/^[A-Za-z0-9_-]{8,}$/))) {
-        mergedMap.set(p.id, p);
-      }
+    // ── STEP 4: Merge & Persist ─────────────────────────────────────────────
+    let finalProfiles = existing;
+    if (freshParsedProfiles.length > 0) {
+      finalProfiles = [...freshParsedProfiles, ...existing];
+      await saveProfiles(finalProfiles);
+      console.log(`[Instagram Sync] ✓ Added ${freshParsedProfiles.length} new profiles. Total in database: ${finalProfiles.length}`);
+    } else {
+      console.log('[Instagram Sync] All Instagram feed posts are already up-to-date.');
     }
-
-    // Add/update with fresh Instagram data
-    for (const p of parsedProfiles) {
-      const key = p.instagramPostId || p.id;
-      mergedMap.set(key, p);
-    }
-
-    // Preserve any existing Instagram profiles NOT scraped this run (older posts)
-    for (const p of existing) {
-      const key = p.instagramPostId || p.id;
-      if (p.instagramPostId && !mergedMap.has(key)) {
-        mergedMap.set(key, p);
-      }
-    }
-
-    const finalProfiles = Array.from(mergedMap.values());
-    console.log(`[Instagram Sync] ✓ Merged: ${finalProfiles.length} total profiles (${parsedProfiles.length} fresh IG + preserved existing).`);
-
-    // ── STEP 5: Save to Supabase DB + local JSON ─────────────────────────────
-    await saveProfiles(finalProfiles);
 
     return {
       success: true,
-      freshlyFetched: parsedProfiles.length,
+      freshlyFetched: freshParsedProfiles.length,
       totalProfiles: finalProfiles.length,
-      profiles: parsedProfiles
+      newProfiles: freshParsedProfiles,
+      message: freshParsedProfiles.length > 0
+        ? `✓ Successfully synced ${freshParsedProfiles.length} new profile(s) from @nikah_bahrain! Total: ${finalProfiles.length}`
+        : `✓ Instagram feed is fully synced. All ${finalProfiles.length} proposals are up to date.`
     };
 
   } finally {
-    await browser.close();
+    try {
+      await browser.close();
+    } catch (_) {}
   }
 }
 
@@ -187,19 +268,15 @@ function sleep(ms) {
 async function dismissModals(page) {
   try {
     await page.evaluate(() => {
-      // Click any close / "Not Now" / "Cancel" buttons
       const candidates = Array.from(document.querySelectorAll('button, div[role="button"]'));
       for (const btn of candidates) {
         const txt = (btn.innerText || '').toLowerCase();
         if (txt.includes('not now') || txt.includes('cancel') || txt.includes('close')) {
           btn.click();
         }
-        // SVG close icon
         if (btn.querySelector('svg[aria-label="Close"]')) btn.click();
       }
-      // Remove dialog backdrops
       document.querySelectorAll('div[role="dialog"]').forEach(d => d.remove());
-      // Allow scrolling
       document.body.style.overflow = 'auto';
       document.documentElement.style.overflow = 'auto';
     });
@@ -210,10 +287,10 @@ async function extractGridPosts(page) {
   return page.evaluate(() => {
     const results = [];
     const seen = new Set();
-    const links = document.querySelectorAll('a[href*="/p/"]');
+    const links = document.querySelectorAll('a[href*="/p/"], a[href*="/reel/"]');
     links.forEach(a => {
       const href = a.getAttribute('href') || '';
-      const m = href.match(/\/p\/([^\/]+)/);
+      const m = href.match(/\/(?:p|reel)\/([^\/?#]+)/);
       if (!m) return;
       const shortcode = m[1];
       if (seen.has(shortcode)) return;
@@ -223,14 +300,12 @@ async function extractGridPosts(page) {
       const src = img ? (img.getAttribute('src') || img.src || '') : '';
       const alt = img ? (img.getAttribute('alt') || '') : '';
 
-      if (src) {
-        results.push({
-          shortcode,
-          url: `https://www.instagram.com/p/${shortcode}/`,
-          imageUrl: src,
-          alt
-        });
-      }
+      results.push({
+        shortcode,
+        url: `https://www.instagram.com/p/${shortcode}/`,
+        imageUrl: src,
+        alt
+      });
     });
     return results;
   });
@@ -238,12 +313,13 @@ async function extractGridPosts(page) {
 
 async function fetchPostCaption(page, postUrl) {
   try {
-    await page.goto(postUrl, { waitUntil: 'networkidle2', timeout: 30000 });
-    await sleep(2000);
+    try {
+      await page.goto(postUrl, { waitUntil: 'domcontentloaded', timeout: 15000 });
+    } catch (_) {}
+    await sleep(1500);
     await dismissModals(page);
 
     return await page.evaluate(() => {
-      // Get caption text — Instagram puts it in h1 or article span
       const captionEl =
         document.querySelector('article h1') ||
         document.querySelector('article span[dir="auto"]') ||
@@ -251,12 +327,10 @@ async function fetchPostCaption(page, postUrl) {
         document.querySelector('span[dir="auto"]');
       const caption = captionEl ? (captionEl.innerText || '').trim() : '';
 
-      // Get best flyer image — look for image with rich alt text
       const imgs = Array.from(document.querySelectorAll('article img, div[role="main"] img'))
         .map(i => ({ src: i.src || i.getAttribute('src') || '', alt: i.getAttribute('alt') || '' }))
         .filter(i => i.src && !i.alt.toLowerCase().includes('profile picture'));
 
-      // Prefer image with longest alt text (flyer image)
       let best = imgs.reduce((a, b) => (b.alt.length > a.alt.length ? b : a), { src: '', alt: '' });
 
       return {
@@ -273,7 +347,9 @@ async function fetchPostCaption(page, postUrl) {
 function loadExistingProfiles() {
   const candidates = [
     path.join(__dirname, '..', 'data', 'profiles.json'),
+    path.join(process.cwd(), 'server', 'data', 'profiles.json'),
     path.join(__dirname, '..', '..', 'client', 'src', 'data', 'profiles.json'),
+    path.join(process.cwd(), 'client', 'src', 'data', 'profiles.json'),
     '/tmp/profiles.json'
   ];
   for (const c of candidates) {
@@ -281,7 +357,6 @@ function loadExistingProfiles() {
       try {
         const parsed = JSON.parse(fs.readFileSync(c, 'utf8'));
         if (Array.isArray(parsed) && parsed.length > 0) {
-          console.log(`[Instagram Sync] Loaded ${parsed.length} existing profiles from ${c}`);
           return parsed;
         }
       } catch (_) {}
@@ -291,20 +366,19 @@ function loadExistingProfiles() {
 }
 
 async function saveProfiles(profiles) {
-  // Try Supabase first
   try {
     const { dbUpsertProfiles } = await import('../db.js');
     await dbUpsertProfiles(profiles);
-    console.log(`[Instagram Sync] ✓ Saved ${profiles.length} profiles to Supabase DB + local JSON`);
     return;
   } catch (dbErr) {
-    console.warn('[Instagram Sync] Supabase upsert failed, falling back to JSON files:', dbErr.message);
+    console.warn('[Instagram Sync] Supabase upsert failed, saving to local JSON:', dbErr.message);
   }
 
-  // Fallback: save to JSON files
   const targets = [
     path.join(__dirname, '..', 'data', 'profiles.json'),
+    path.join(process.cwd(), 'server', 'data', 'profiles.json'),
     path.join(__dirname, '..', '..', 'client', 'src', 'data', 'profiles.json'),
+    path.join(process.cwd(), 'client', 'src', 'data', 'profiles.json'),
   ];
   const jsonStr = JSON.stringify(profiles, null, 2);
   for (const t of targets) {
@@ -312,24 +386,23 @@ async function saveProfiles(profiles) {
       const dir = path.dirname(t);
       if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
       fs.writeFileSync(t, jsonStr, 'utf8');
-      console.log(`[Instagram Sync] ✓ Saved to ${t}`);
-    } catch (e) {
-      console.error(`[Instagram Sync] Could not save to ${t}:`, e.message);
-    }
+    } catch (_) {}
   }
 }
 
 // ─── CLI Entry ────────────────────────────────────────────────────────────────
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
-  const count = parseInt(process.argv[2], 10) || 50;
+  const count = parseInt(process.argv[2], 10) || 20;
   syncLiveInstagramPosts(count).then(res => {
     console.log('\n=============================================');
     console.log(`🎉 Instagram Sync Complete!`);
-    console.log(`   Fresh IG posts scraped : ${res.freshlyFetched}`);
-    console.log(`   Total profiles in DB   : ${res.totalProfiles}`);
+    console.log(`   Result: ${res.message}`);
+    console.log(`   Fresh posts added: ${res.freshlyFetched}`);
+    console.log(`   Total profiles in DB: ${res.totalProfiles}`);
     console.log('=============================================\n');
+    process.exit(0);
   }).catch(err => {
-    console.error('Fatal sync error:', err);
+    console.error('Fatal sync error:', err.message);
     process.exit(1);
   });
 }

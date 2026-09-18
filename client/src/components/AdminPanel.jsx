@@ -438,7 +438,9 @@ export default function AdminPanel({ onBackToPortal, onProfilesChange }) {
         return p;
       });
 
-      const toSync = allProfiles && allProfiles.length > 0 ? allProfiles : enrichedCustom;
+      const deletedIds = new Set(JSON.parse(localStorage.getItem('nikah_deleted_profiles') || '[]'));
+      const rawList = allProfiles && allProfiles.length > 0 ? allProfiles : enrichedCustom;
+      const toSync = rawList.filter(p => p && p.id && !deletedIds.has(p.id));
       if (!toSync.length) return;
 
       const res = await fetch(`${API_BASE}/admin/persist-profiles`, {
@@ -894,18 +896,18 @@ export default function AdminPanel({ onBackToPortal, onProfilesChange }) {
 
   useEffect(() => {
     if (isAuthenticated) {
-      try { localStorage.removeItem('nikah_deleted_profiles'); } catch (_) {}
       fetchData();
-      // Auto-sync any localStorage-only profiles to server on login
+      // Auto-sync any unsaved custom profiles to server on login (excluding deleted)
       setTimeout(async () => {
         try {
+          const deletedIds = new Set(JSON.parse(localStorage.getItem('nikah_deleted_profiles') || '[]'));
           const custom = JSON.parse(localStorage.getItem('nikah_custom_profiles') || '[]');
-          if (custom.length > 0) {
-            await persistProfilesToServer(custom);
-            console.log(`[Admin Auto-Sync] Pushed ${custom.length} custom profiles to server on login`);
+          const validCustom = custom.filter(p => p && p.id && !deletedIds.has(p.id));
+          if (validCustom.length > 0) {
+            await persistProfilesToServer(validCustom);
           }
         } catch (e) {
-          console.warn('Auto-sync failed:', e.message);
+          console.warn('Auto-sync note:', e.message);
         }
       }, 1500);
     }
@@ -917,16 +919,34 @@ export default function AdminPanel({ onBackToPortal, onProfilesChange }) {
   }, [activeSection, searchQuery]);
 
   const handleDeleteProfile = async (id) => {
-    if (!window.confirm(`Remove profile ${id}?`)) return;
+    if (!window.confirm(`Permanently delete profile ${id}?`)) return;
+
+    // 1. Clean up from all client caches
+    removeCustomProfileFromStorage(id);
+    addDeletedProfileToStorage(id);
+    try {
+      localStorage.removeItem(`nikah_img_${id}`);
+    } catch (_) {}
+
+    // 2. Remove immediately from Admin UI state
     setProfiles((prev) => {
       const next = prev.filter(p => p.id !== id);
       if (onProfilesChange) onProfilesChange(next);
       return next;
     });
-    showNotification(`Profile ${id} removed.`);
+
+    showNotification(`Profile ${id} deleted.`);
+
+    // 3. Delete from backend server
     try {
-      await fetch(`${API_BASE}/profiles/${id}`, { method: 'DELETE' });
-    } catch (err) { console.error(err); }
+      const res = await fetch(`${API_BASE}/profiles/${id}`, { method: 'DELETE' });
+      const data = await res.json();
+      if (data.success) {
+        showNotification(`Profile ${id} deleted successfully.`);
+      }
+    } catch (err) {
+      console.error('Delete server error:', err);
+    }
   };
 
 

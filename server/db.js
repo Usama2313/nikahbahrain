@@ -6,16 +6,25 @@ import { fileURLToPath } from 'url';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// Initialize Supabase client
-// Initialize Supabase client
+// Initialize Supabase client with real configuration check
 const SUPABASE_URL = process.env.SUPABASE_URL;
 const SUPABASE_ANON_KEY = process.env.SUPABASE_ANON_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+function isConfiguredSupabase(url, key) {
+  return (
+    !!url &&
+    !!key &&
+    !url.includes('your-project') &&
+    !key.includes('your_supabase') &&
+    url.startsWith('https://')
+  );
+}
 
 let supabase = null;
 let memoryProfilesCache = null;
 
 function getSupabase() {
-  if (!supabase && SUPABASE_URL && SUPABASE_ANON_KEY) {
+  if (!supabase && isConfiguredSupabase(SUPABASE_URL, SUPABASE_ANON_KEY)) {
     try {
       supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
     } catch (e) {
@@ -31,13 +40,62 @@ export function getSupabaseClient() {
 }
 
 export function isDbAvailable() {
-  return !!(SUPABASE_URL && SUPABASE_ANON_KEY);
+  return isConfiguredSupabase(SUPABASE_URL, SUPABASE_ANON_KEY);
+}
+
+// ─── Deleted Profiles Persistent Registry ─────────────────────────────────────
+function getDeletedIdsFilePath() {
+  const candidates = [
+    path.join(__dirname, 'data', 'deleted_ids.json'),
+    path.join(process.cwd(), 'server', 'data', 'deleted_ids.json'),
+    path.join(process.cwd(), 'data', 'deleted_ids.json'),
+  ];
+  for (const c of candidates) {
+    if (fs.existsSync(c)) return c;
+  }
+  return path.join(__dirname, 'data', 'deleted_ids.json');
+}
+
+export function getDeletedProfileIds() {
+  try {
+    const file = getDeletedIdsFilePath();
+    if (fs.existsSync(file)) {
+      const data = JSON.parse(fs.readFileSync(file, 'utf8'));
+      if (Array.isArray(data)) return new Set(data.map(String));
+    }
+  } catch (_) {}
+  return new Set();
+}
+
+export function addDeletedProfileId(id) {
+  if (!id) return;
+  try {
+    const current = getDeletedProfileIds();
+    current.add(String(id));
+    const arr = Array.from(current);
+    const file = getDeletedIdsFilePath();
+    const dir = path.dirname(file);
+    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+    fs.writeFileSync(file, JSON.stringify(arr, null, 2), 'utf8');
+
+    // Also sync to client bundle if present
+    const clientFile = path.join(__dirname, '..', 'client', 'src', 'data', 'deleted_ids.json');
+    try {
+      const cdir = path.dirname(clientFile);
+      if (fs.existsSync(cdir)) {
+        fs.writeFileSync(clientFile, JSON.stringify(arr, null, 2), 'utf8');
+      }
+    } catch (_) {}
+  } catch (err) {
+    console.warn('[DB] Could not record deleted ID:', err.message);
+  }
 }
 
 // ─── Fallback: read/write local / serverless JSON file ───────────────────────────
 export function getLocalProfiles() {
+  const deletedIds = getDeletedProfileIds();
   if (Array.isArray(memoryProfilesCache) && memoryProfilesCache.length > 0) {
-    return memoryProfilesCache;
+    return memoryProfilesCache.filter(p => p && p.id && !deletedIds.has(String(p.id)));
   }
   const candidates = [
     path.join(__dirname, 'data', 'profiles.json'),
@@ -61,8 +119,10 @@ export function getLocalProfiles() {
 }
 
 export function saveLocalProfiles(profiles) {
-  memoryProfilesCache = profiles;
-  const jsonStr = JSON.stringify(profiles, null, 2);
+  const deletedIds = getDeletedProfileIds();
+  const safeList = (profiles || []).filter(p => p && p.id && !deletedIds.has(String(p.id)));
+  memoryProfilesCache = safeList;
+  const jsonStr = JSON.stringify(safeList, null, 2);
   const targets = [
     path.join(__dirname, 'data', 'profiles.json'),
     path.join(process.cwd(), 'server', 'data', 'profiles.json'),
@@ -82,12 +142,11 @@ export function saveLocalProfiles(profiles) {
 // ─── Database Operations ───────────────────────────────────────────────────────
 
 export async function dbGetProfiles() {
+  const deletedIds = getDeletedProfileIds();
   const db = getSupabase();
   if (db) {
     try {
       // Supabase defaults to 1000 rows max per request.
-      // We paginate internally in batches of 1000 to fetch ALL records
-      // regardless of whether there are 200, 10,000, or 1,000,000+ rows.
       const BATCH_SIZE = 1000;
       let allRows = [];
       let from = 0;
@@ -108,7 +167,6 @@ export async function dbGetProfiles() {
         if (data && data.length > 0) {
           allRows = allRows.concat(data);
           from += BATCH_SIZE;
-          // If we got fewer rows than the batch size, we've reached the end
           hasMore = data.length === BATCH_SIZE;
         } else {
           hasMore = false;
@@ -116,9 +174,11 @@ export async function dbGetProfiles() {
       }
 
       if (allRows.length > 0) {
-        const normalized = allRows.map(normalizeFromDb);
+        const normalized = allRows
+          .map(normalizeFromDb)
+          .filter(p => p && p.id && !deletedIds.has(String(p.id)));
         memoryProfilesCache = normalized;
-        console.log(`[DB] Fetched ${normalized.length} total profiles from Supabase`);
+        console.log(`[DB] Fetched ${normalized.length} total profiles from Supabase (filtered deletions)`);
         return normalized;
       }
 
@@ -131,6 +191,10 @@ export async function dbGetProfiles() {
 }
 
 export async function dbGetProfileById(id) {
+  if (!id) return null;
+  const deletedIds = getDeletedProfileIds();
+  if (deletedIds.has(String(id))) return null;
+
   const db = getSupabase();
   if (db) {
     try {
@@ -142,6 +206,13 @@ export async function dbGetProfileById(id) {
 }
 
 export async function dbInsertProfile(profile) {
+  if (!profile || !profile.id) return profile;
+  const deletedIds = getDeletedProfileIds();
+  if (deletedIds.has(String(profile.id))) {
+    console.log(`[DB] Skipping insertion of previously deleted profile ${profile.id}`);
+    return profile;
+  }
+
   const db = getSupabase();
   const row = normalizeForDb(profile);
   if (db) {
@@ -172,6 +243,13 @@ export async function dbInsertProfile(profile) {
 }
 
 export async function dbUpdateProfile(id, updates) {
+  if (!id) return null;
+  const deletedIds = getDeletedProfileIds();
+  if (deletedIds.has(String(id))) {
+    console.warn(`[DB] Cannot update deleted profile ${id}`);
+    return null;
+  }
+
   const db = getSupabase();
   const row = normalizeForDb({ ...updates, id, updatedAt: new Date().toISOString() });
   if (db) {
@@ -205,29 +283,43 @@ export async function dbUpdateProfile(id, updates) {
 }
 
 export async function dbDeleteProfile(id) {
+  if (!id) return false;
+  // Permanently record deletion in deleted_ids.json
+  addDeletedProfileId(id);
+
   const db = getSupabase();
   if (db) {
     try {
       const { error } = await db.from('profiles').delete().eq('id', id);
       if (!error) {
         console.log(`[DB] Deleted profile ${id} from Supabase`);
-        saveLocalProfiles(getLocalProfiles().filter(p => p.id !== id));
-        return true;
+      } else {
+        console.warn('[DB] Supabase delete warning:', error?.message);
       }
-      console.warn('[DB] Supabase delete error:', error?.message);
     } catch (err) {
-      console.warn('[DB] Supabase delete failed:', err.message);
+      console.warn('[DB] Supabase delete warning:', err.message);
     }
   }
-  saveLocalProfiles(getLocalProfiles().filter(p => p.id !== id));
+
+  // Remove from memory and file stores
+  const current = getLocalProfiles().filter(p => p.id !== id);
+  memoryProfilesCache = current;
+  saveLocalProfiles(current);
+  console.log(`[DB] Successfully purged profile ${id}. Remaining: ${current.length}`);
   return true;
 }
 
 export async function dbUpsertProfiles(profiles) {
+  if (!Array.isArray(profiles) || profiles.length === 0) return;
+  const deletedIds = getDeletedProfileIds();
+  // Filter out any incoming profile that has been deleted
+  const safeProfiles = profiles.filter(p => p && p.id && !deletedIds.has(String(p.id)));
+  if (safeProfiles.length === 0) return;
+
   const db = getSupabase();
   if (db) {
     try {
-      const rows = profiles.map(normalizeForDb);
+      const rows = safeProfiles.map(normalizeForDb);
       const BATCH = 100;
       for (let i = 0; i < rows.length; i += BATCH) {
         const { error } = await db
@@ -235,20 +327,21 @@ export async function dbUpsertProfiles(profiles) {
           .upsert(rows.slice(i, i + BATCH), { onConflict: 'id' });
         if (error) console.warn(`[DB] Batch ${i} upsert error:`, error.message);
       }
-      console.log(`[DB] Upserted ${profiles.length} profiles into Supabase`);
+      console.log(`[DB] Upserted ${safeProfiles.length} profiles into Supabase`);
     } catch (err) {
       console.warn('[DB] Bulk upsert failed:', err.message);
     }
   }
-  // Safely merge with existing local profiles instead of overwriting
+
+  // Safely merge with existing local profiles, excluding deleted
   const all = getLocalProfiles();
   const existingIds = new Set(all.map(p => p.id));
   const newItems = [];
   const updatedAll = all.map(p => {
-    const incoming = profiles.find(x => x.id === p.id);
+    const incoming = safeProfiles.find(x => x.id === p.id);
     return incoming ? { ...p, ...incoming } : p;
   });
-  for (const p of profiles) {
+  for (const p of safeProfiles) {
     if (p && p.id && !existingIds.has(p.id)) {
       newItems.push(p);
     }
