@@ -502,36 +502,51 @@ app.get(['/api/stats', '/stats'], async (req, res) => {
   res.json({ success: true, stats });
 });
 
-// 6b. POST /api/sync-instagram (Instagram API Fetch — no Puppeteer)
-// Query param: ?mode=replace  → replaces all profiles with fresh data from Instagram
+// 6b. POST /api/sync-instagram (Puppeteer-based Instagram scraper)
+// Uses headless Chrome with stealth to browse Instagram as a real logged-in user.
+// Intercepts Instagram's internal API network responses to capture post captions.
+// Query param: ?mode=replace  → clears DB and replaces all profiles with fresh data
 // Query param: ?mode=incremental (default) → only adds new posts not already in database
 app.post(['/api/sync-instagram', '/sync-instagram'], async (req, res) => {
   try {
-    const { fetchAndSyncInstagramPosts } = await import('./scripts/fetch_instagram_api.js');
     const replaceAll = req.query.mode === 'replace';
-    const maxPosts = Number(req.query.limit) || 300;
+    console.log(`[Server] Instagram Puppeteer sync triggered. Mode: ${replaceAll ? 'replace-all' : 'incremental'}`);
 
-    console.log(`[Server] Instagram API sync triggered. Mode: ${replaceAll ? 'replace-all' : 'incremental'}`);
-    const result = await fetchAndSyncInstagramPosts({ replaceAll, maxPosts });
+    // Run the Puppeteer scraper as a child process to avoid blocking the server
+    const { execFile } = await import('child_process');
+    const { promisify } = await import('util');
+    const execFileAsync = promisify(execFile);
+    const scriptPath = path.join(__dirname, 'scripts', 'puppeteer_caption_scraper.js');
+    const args = replaceAll ? ['--replace-all'] : [];
+
+    const { stdout, stderr } = await execFileAsync('node', [scriptPath, ...args], {
+      timeout: 5 * 60 * 1000, // 5 minute timeout
+      cwd: __dirname
+    });
+
+    console.log('[Puppeteer scraper stdout]:', stdout.slice(-1000));
+    if (stderr) console.error('[Puppeteer scraper stderr]:', stderr.slice(-500));
+
     const profiles = await dbGetProfiles();
+    const savedMatch = stdout.match(/(\d+) saved/);
+    const freshlyFetched = savedMatch ? parseInt(savedMatch[1]) : 0;
 
     res.json({
-      success: result.success !== false,
-      message: result.message || `✓ Fetched ${result.totalPosts || 0} posts from @nikah_bahrain. ${result.freshlyFetched} new profiles. Total: ${profiles.length}.`,
-      freshlyFetched: result.freshlyFetched || 0,
-      totalPosts: result.totalPosts || profiles.length,
+      success: true,
+      message: `✓ Instagram sync complete. ${freshlyFetched} profiles updated. Total: ${profiles.length}.`,
+      freshlyFetched,
       totalProfiles: profiles.length,
-      newProfiles: result.newProfiles || []
+      newProfiles: []
     });
   } catch (err) {
     console.error('[Server] Instagram sync error:', err.message);
-    const profiles = await dbGetProfiles();
+    const profiles = await dbGetProfiles().catch(() => []);
     res.status(500).json({
       success: false,
       message: `Instagram sync failed: ${err.message}`,
       freshlyFetched: 0,
       totalProfiles: profiles.length,
-      hint: 'Make sure INSTAGRAM_SESSION_ID is set in server/.env'
+      hint: 'Make sure INSTAGRAM_SESSION_ID is set in server/.env and Chrome is installed'
     });
   }
 });
