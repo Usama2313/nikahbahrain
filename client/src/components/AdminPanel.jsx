@@ -946,24 +946,59 @@ export default function AdminPanel({ onBackToPortal, onProfilesChange }) {
     } catch (err) { console.error(err); }
   };
 
+  // Incremental sync — only fetches NEW posts not already in the database
   const handleSyncToInstagram = async () => {
     setSyncingInstagram(true);
     try {
-      showNotification('Connecting to @nikah_bahrain Instagram feed…');
-      const res = await fetch(`${API_BASE}/sync-instagram`, { method: 'POST' });
+      showNotification('📡 Fetching new posts from @nikah_bahrain via Instagram API…');
+      const res = await fetch(`${API_BASE}/sync-instagram?mode=incremental`, { method: 'POST' });
       const data = await res.json();
       if (data.success) {
-        showNotification(data.message || 'Synced with @nikah_bahrain!');
-        confetti({ particleCount: 70, spread: 70, origin: { y: 0.4 } });
+        const newCount = data.freshlyFetched || 0;
+        const total = data.totalProfiles || data.totalPosts || 0;
+        if (newCount > 0) {
+          showNotification(`🎉 ${newCount} new profile(s) added from @nikah_bahrain! Total: ${total}`);
+          confetti({ particleCount: 80, spread: 70, origin: { y: 0.4 } });
+        } else {
+          showNotification(`✅ Already up to date. ${total} profiles in database.`);
+        }
         await fetchData();
       } else {
-        showNotification('✓ Instagram feed refreshed! Active profiles updated.');
-        await fetchData();
+        // Real error from the API
+        const hint = data.hint ? ` Tip: ${data.hint}` : '';
+        showNotification(`⚠️ ${data.message || 'Sync failed.'}${hint}`);
       }
     } catch (err) {
-      await fetchData();
-      showNotification('✓ Instagram feed refreshed! Active profiles loaded.');
-      confetti({ particleCount: 50, spread: 60, origin: { y: 0.4 } });
+      showNotification(`❌ Network error: ${err.message}`);
+    } finally {
+      setSyncingInstagram(false);
+    }
+  };
+
+  // Full replace sync — re-fetches ALL Instagram posts and replaces database profiles
+  const handleReplaceAllFromInstagram = async () => {
+    const confirmed = window.confirm(
+      '⚠️ REPLACE ALL PROFILES?\n\nThis will fetch ALL posts from @nikah_bahrain Instagram and completely replace the current profile data.\n\nManually added profiles will be preserved.\n\nProceed?'
+    );
+    if (!confirmed) return;
+
+    setSyncingInstagram(true);
+    try {
+      showNotification('🔄 Fetching ALL posts from @nikah_bahrain… This may take 30–60 seconds.');
+      const res = await fetch(`${API_BASE}/sync-instagram?mode=replace&limit=300`, { method: 'POST' });
+      const data = await res.json();
+      if (data.success) {
+        const total = data.totalProfiles || 0;
+        const fetched = data.freshlyFetched || 0;
+        showNotification(`✅ Replaced! ${fetched} profiles refreshed from Instagram. Total: ${total}`);
+        confetti({ particleCount: 120, spread: 90, origin: { y: 0.3 } });
+        await fetchData();
+      } else {
+        const hint = data.hint ? `\n\nTip: ${data.hint}` : '';
+        showNotification(`⚠️ ${data.message || 'Replace failed.'}${hint}`);
+      }
+    } catch (err) {
+      showNotification(`❌ Network error: ${err.message}`);
     } finally {
       setSyncingInstagram(false);
     }
@@ -1205,9 +1240,13 @@ export default function AdminPanel({ onBackToPortal, onProfilesChange }) {
 
         {/* Right: actions */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-          <button onClick={handleSyncToInstagram} disabled={syncingInstagram} className="btn-gold" style={{ fontSize: '0.8rem', padding: '8px 14px' }}>
+          <button onClick={handleSyncToInstagram} disabled={syncingInstagram} className="btn-gold" style={{ fontSize: '0.8rem', padding: '8px 14px' }} title="Fetch new posts only (incremental)">
             <Instagram size={14} />
-            <span>{syncingInstagram ? 'Syncing…' : 'Sync Instagram'}</span>
+            <span>{syncingInstagram ? 'Fetching…' : 'Sync New Posts'}</span>
+          </button>
+          <button onClick={handleReplaceAllFromInstagram} disabled={syncingInstagram} className="btn-ghost" style={{ fontSize: '0.78rem', padding: '7px 11px', border: '1px solid rgba(212,175,55,0.4)' }} title="Fetch ALL posts from Instagram and replace all profiles">
+            <RefreshCw size={13} />
+            <span>{syncingInstagram ? '…' : 'Replace All'}</span>
           </button>
           <button onClick={fetchData} className="btn-ghost" style={{ padding: '8px 10px' }} title="Refresh">
             <RefreshCw size={15} />
@@ -1225,7 +1264,15 @@ export default function AdminPanel({ onBackToPortal, onProfilesChange }) {
 
       {/* ── Toast Notification ── */}
       {notification && (
-        <div style={{ position: 'fixed', top: '70px', left: '50%', transform: 'translateX(-50%)', zIndex: 999, background: 'rgba(16,185,129,0.95)', border: '1px solid #10b981', color: '#fff', padding: '10px 20px', borderRadius: 'var(--radius-full)', fontSize: '0.88rem', display: 'flex', alignItems: 'center', gap: '8px', boxShadow: '0 4px 20px rgba(0,0,0,0.4)', whiteSpace: 'nowrap', maxWidth: '90vw' }}>
+        <div style={{
+          position: 'fixed', top: '70px', left: '50%', transform: 'translateX(-50%)',
+          zIndex: 999,
+          background: notification.startsWith('❌') ? 'rgba(239,68,68,0.95)' : notification.startsWith('⚠️') ? 'rgba(245,158,11,0.95)' : 'rgba(16,185,129,0.95)',
+          border: `1px solid ${notification.startsWith('❌') ? '#ef4444' : notification.startsWith('⚠️') ? '#f59e0b' : '#10b981'}`,
+          color: '#fff', padding: '10px 20px', borderRadius: 'var(--radius-full)',
+          fontSize: '0.88rem', display: 'flex', alignItems: 'center', gap: '8px',
+          boxShadow: '0 4px 20px rgba(0,0,0,0.4)', whiteSpace: 'nowrap', maxWidth: '90vw'
+        }}>
           <CheckCircle size={16} />
           <span>{notification}</span>
         </div>
@@ -1428,7 +1475,10 @@ export default function AdminPanel({ onBackToPortal, onProfilesChange }) {
                       <Users size={15} /> View All Candidates
                     </button>
                     <button onClick={handleSyncToInstagram} disabled={syncingInstagram} className="btn-ghost" style={{ fontSize: '0.85rem', display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
-                      <Instagram size={15} /> {syncingInstagram ? 'Syncing…' : 'Sync Instagram Feed'}
+                      <Instagram size={15} /> {syncingInstagram ? 'Fetching…' : 'Sync New Posts'}
+                    </button>
+                    <button onClick={handleReplaceAllFromInstagram} disabled={syncingInstagram} className="btn-ghost" style={{ fontSize: '0.85rem', display: 'inline-flex', alignItems: 'center', gap: '6px', border: '1px solid rgba(212,175,55,0.35)' }}>
+                      <RefreshCw size={15} /> {syncingInstagram ? '…' : 'Replace All from Instagram'}
                     </button>
                   </div>
                 </CategorySection>
@@ -2119,7 +2169,10 @@ export default function AdminPanel({ onBackToPortal, onProfilesChange }) {
                       <span>Open @nikah_bahrain</span>
                     </a>
                     <button onClick={handleSyncToInstagram} disabled={syncingInstagram} className="btn-ghost" style={{ fontSize: '0.85rem' }}>
-                      <RefreshCw size={15} /> {syncingInstagram ? 'Syncing…' : 'Sync Feed Now'}
+                      <Instagram size={15} /> {syncingInstagram ? 'Fetching…' : 'Sync New Posts'}
+                    </button>
+                    <button onClick={handleReplaceAllFromInstagram} disabled={syncingInstagram} className="btn-ghost" style={{ fontSize: '0.85rem', border: '1px solid rgba(212,175,55,0.35)' }}>
+                      <RefreshCw size={15} /> {syncingInstagram ? '…' : 'Replace All'}
                     </button>
                   </div>
                 </CategorySection>

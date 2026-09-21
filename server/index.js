@@ -502,29 +502,36 @@ app.get(['/api/stats', '/stats'], async (req, res) => {
   res.json({ success: true, stats });
 });
 
-// 6b. POST /api/sync-instagram (Instagram Sync Agent)
+// 6b. POST /api/sync-instagram (Instagram API Fetch — no Puppeteer)
+// Query param: ?mode=replace  → replaces all profiles with fresh data from Instagram
+// Query param: ?mode=incremental (default) → only adds new posts not already in database
 app.post(['/api/sync-instagram', '/sync-instagram'], async (req, res) => {
   try {
-    const { syncLiveInstagramPosts } = await import('./scripts/sync_live_instagram.js');
-    const limit = Number(req.query.limit) || 15;
-    const result = await syncLiveInstagramPosts(limit);
+    const { fetchAndSyncInstagramPosts } = await import('./scripts/fetch_instagram_api.js');
+    const replaceAll = req.query.mode === 'replace';
+    const maxPosts = Number(req.query.limit) || 300;
+
+    console.log(`[Server] Instagram API sync triggered. Mode: ${replaceAll ? 'replace-all' : 'incremental'}`);
+    const result = await fetchAndSyncInstagramPosts({ replaceAll, maxPosts });
     const profiles = await dbGetProfiles();
+
     res.json({
-      success: true,
-      message: result.message || `✓ Synced @nikah_bahrain! ${result.freshlyFetched} fresh Instagram profiles loaded. Total in database: ${profiles.length}.`,
-      freshlyFetched: result.freshlyFetched,
-      totalPosts: profiles.length,
+      success: result.success !== false,
+      message: result.message || `✓ Fetched ${result.totalPosts || 0} posts from @nikah_bahrain. ${result.freshlyFetched} new profiles. Total: ${profiles.length}.`,
+      freshlyFetched: result.freshlyFetched || 0,
+      totalPosts: result.totalPosts || profiles.length,
+      totalProfiles: profiles.length,
       newProfiles: result.newProfiles || []
     });
   } catch (err) {
-    console.warn('Instagram live sync warning:', err.message);
+    console.error('[Server] Instagram sync error:', err.message);
     const profiles = await dbGetProfiles();
-    res.json({
-      success: true,
-      message: `Instagram feed is active. ${profiles.length} profiles currently synchronized in database.`,
+    res.status(500).json({
+      success: false,
+      message: `Instagram sync failed: ${err.message}`,
       freshlyFetched: 0,
-      totalPosts: profiles.length,
-      warning: err.message
+      totalProfiles: profiles.length,
+      hint: 'Make sure INSTAGRAM_SESSION_ID is set in server/.env'
     });
   }
 });
@@ -588,10 +595,8 @@ app.get('/', (req, res) => {
 if (!process.env.VERCEL) {
   app.listen(PORT, '0.0.0.0', () => {
     console.log(`Qabul Hai Server running on http://localhost:${PORT}`);
-    // Start automated background Instagram Agent (checks @nikah_bahrain every 15 minutes)
-    import('./scripts/instagram_agent.js')
-      .then(m => m.startInstagramAgent({ intervalMinutes: 60 }))
-      .catch(err => console.warn('[Instagram Agent] Auto-start note:', err.message));
+    console.log(`[Server] Instagram sync available at POST /api/sync-instagram`);
+    console.log(`[Server] Add ?mode=replace to fetch fresh data for ALL profiles`);
   });
 }
 
