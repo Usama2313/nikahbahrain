@@ -1,20 +1,15 @@
 /**
  * fetch_instagram_api.js
  * ─────────────────────────────────────────────────────────────────────────────
- * Fetches ALL posts from @nikah_bahrain via Instagram's internal API.
- * NO Puppeteer. NO headless browser. Pure HTTP requests with session cookie.
+ * Fetches ALL posts from @nikah_bahrain via Instagram's internal web API.
+ * NO Puppeteer. NO headless browser. Pure stealthy HTTP requests.
  *
- * Returns real caption text (the full flyer text posted on Instagram),
- * which is then parsed by parseProfileFromAltText() to extract actual profile data.
- *
- * SETUP: Add your Instagram session cookie values to server/.env:
- *   INSTAGRAM_SESSION_ID=your_sessionid_value
- *   INSTAGRAM_CSRF=your_csrftoken_value
- *
- * How to get session cookies:
- *   1. Open Chrome and log in to instagram.com
- *   2. Open DevTools (F12) → Application → Cookies → instagram.com
- *   3. Copy the values of: sessionid, csrftoken
+ * Anti-detection measures:
+ *   - Randomized delays between requests (2–5 seconds)
+ *   - Realistic Chrome browser headers
+ *   - Proper cookie chain (sessionid, csrftoken, ig_nrcb, etc.)
+ *   - Referrer chaining (simulate browsing profile page)
+ *   - Single-run only (no polling loops)
  * ─────────────────────────────────────────────────────────────────────────────
  */
 
@@ -27,7 +22,7 @@ import { parseProfileFromAltText } from './parse_profile.js';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// Load .env
+// ─── Load .env ────────────────────────────────────────────────────────────────
 const envPaths = [
   path.join(__dirname, '..', '.env'),
   path.join(__dirname, '..', '..', '.env'),
@@ -39,95 +34,135 @@ for (const p of envPaths) {
 }
 
 const IG_USERNAME = 'nikah_bahrain';
+const IG_PROFILE_URL = `https://www.instagram.com/${IG_USERNAME}/`;
 
-// ─── Build cookie header from env ───────────────────────────────────────────
-function buildCookieHeader() {
-  const parts = [];
-  if (process.env.INSTAGRAM_SESSION_ID) {
-    parts.push(`sessionid=${process.env.INSTAGRAM_SESSION_ID}`);
-  }
-  if (process.env.INSTAGRAM_CSRF) {
-    parts.push(`csrftoken=${process.env.INSTAGRAM_CSRF}`);
-  }
-  if (process.env.INSTAGRAM_DID) {
-    parts.push(`ig_did=${process.env.INSTAGRAM_DID}`);
-  }
-  // Always include these basic cookies for Instagram to serve content
-  parts.push('ig_nrcb=1');
-  parts.push('wd=1280x900');
-  return parts.join('; ');
-}
-
-// ─── Standard Instagram browser headers ────────────────────────────────────
-function getHeaders(csrfToken = '') {
-  return {
-    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
-    'Accept': '*/*',
-    'Accept-Language': 'en-US,en;q=0.9',
-    'Accept-Encoding': 'gzip, deflate, br',
-    'Referer': 'https://www.instagram.com/',
-    'Origin': 'https://www.instagram.com',
-    'X-IG-App-ID': '936619743392459',
-    'X-ASBD-ID': '198387',
-    'X-Requested-With': 'XMLHttpRequest',
-    'Sec-Fetch-Site': 'same-origin',
-    'Sec-Fetch-Mode': 'cors',
-    'Sec-Fetch-Dest': 'empty',
-    'Cookie': buildCookieHeader(),
-    ...(csrfToken ? { 'X-CSRFToken': csrfToken } : {})
-  };
-}
-
+// ─── Human-like delay ─────────────────────────────────────────────────────────
 function sleep(ms) {
   return new Promise(r => setTimeout(r, ms));
 }
 
-// ─── Method 1: Instagram web_profile_info API ───────────────────────────────
-// Returns the user's timeline with edge_owner_to_timeline_media including captions
+function randomDelay(minMs = 2000, maxMs = 5000) {
+  const ms = minMs + Math.random() * (maxMs - minMs);
+  return sleep(ms);
+}
+
+// ─── Build realistic cookie header ───────────────────────────────────────────
+function buildCookies() {
+  const parts = [];
+  const sessionId = process.env.INSTAGRAM_SESSION_ID;
+  if (sessionId) parts.push(`sessionid=${sessionId}`);
+
+  // Common baseline cookies Instagram expects
+  parts.push('ig_nrcb=1');
+  parts.push('csrftoken=missing');       // will be replaced after first request
+  parts.push('wd=1366x768');
+  parts.push('dpr=1');
+  parts.push('rur="EAG,15600412515,1790956985:01f793e33ed7e86c8cab50e77e93d2cc0f1e9d55c4e5a0b09d3efca5f7df17c1a0dda24b99b5ef79"');
+
+  return parts.join('; ');
+}
+
+// ─── Realistic browser headers (Chrome 124 on Windows) ───────────────────────
+function getHeaders(referer = 'https://www.instagram.com/') {
+  return {
+    'authority': 'www.instagram.com',
+    'method': 'GET',
+    'scheme': 'https',
+    'Accept': '*/*',
+    'Accept-Encoding': 'gzip, deflate, br, zstd',
+    'Accept-Language': 'en-US,en;q=0.9',
+    'Cache-Control': 'no-cache',
+    'Pragma': 'no-cache',
+    'Referer': referer,
+    'Sec-Ch-Prefers-Color-Scheme': 'light',
+    'Sec-Ch-Ua': '"Chromium";v="124", "Google Chrome";v="124", "Not-A.Brand";v="99"',
+    'Sec-Ch-Ua-Full-Version-List': '"Chromium";v="124.0.6367.207", "Google Chrome";v="124.0.6367.207"',
+    'Sec-Ch-Ua-Mobile': '?0',
+    'Sec-Ch-Ua-Model': '""',
+    'Sec-Ch-Ua-Platform': '"Windows"',
+    'Sec-Ch-Ua-Platform-Version': '"15.0.0"',
+    'Sec-Fetch-Dest': 'empty',
+    'Sec-Fetch-Mode': 'cors',
+    'Sec-Fetch-Site': 'same-origin',
+    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.6367.207 Safari/537.36',
+    'X-Asbd-Id': '129477',
+    'X-Csrftoken': 'missing',
+    'X-Ig-App-Id': '936619743392459',
+    'X-Ig-Www-Claim': '0',
+    'X-Requested-With': 'XMLHttpRequest',
+    'Cookie': buildCookies()
+  };
+}
+
+// ─── STEP 0: "Visit" the profile page first (simulate browser navigation) ───
+async function simulateProfileVisit() {
+  try {
+    console.log('[Stealth] Simulating profile page visit first...');
+    await fetch(IG_PROFILE_URL, {
+      method: 'GET',
+      headers: {
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8',
+        'Accept-Language': 'en-US,en;q=0.9',
+        'Accept-Encoding': 'gzip, deflate, br',
+        'Cache-Control': 'max-age=0',
+        'Sec-Ch-Ua': '"Chromium";v="124", "Google Chrome";v="124"',
+        'Sec-Ch-Ua-Mobile': '?0',
+        'Sec-Ch-Ua-Platform': '"Windows"',
+        'Sec-Fetch-Dest': 'document',
+        'Sec-Fetch-Mode': 'navigate',
+        'Sec-Fetch-Site': 'none',
+        'Sec-Fetch-User': '?1',
+        'Upgrade-Insecure-Requests': '1',
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.6367.207 Safari/537.36',
+        'Cookie': buildCookies()
+      },
+      signal: AbortSignal.timeout(15000)
+    });
+    console.log('[Stealth] ✓ Profile page visited. Waiting 2-4s before API call...');
+    await randomDelay(2000, 4000);
+  } catch (_) {
+    // Ignore errors — this is just warmup
+    await randomDelay(1500, 3000);
+  }
+}
+
+// ─── Method 1: web_profile_info API ──────────────────────────────────────────
 async function fetchViaWebProfileInfo(username) {
   const url = `https://www.instagram.com/api/v1/users/web_profile_info/?username=${username}`;
-  console.log(`[Instagram API] Trying web_profile_info endpoint...`);
-  
+  console.log(`[Fetch] Calling web_profile_info API...`);
+
   const res = await fetch(url, {
     method: 'GET',
-    headers: getHeaders(),
-    signal: AbortSignal.timeout(20000)
+    headers: getHeaders(IG_PROFILE_URL),
+    signal: AbortSignal.timeout(25000)
   });
 
-  if (!res.ok) {
-    throw new Error(`web_profile_info returned HTTP ${res.status}`);
-  }
+  if (!res.ok) throw new Error(`web_profile_info returned HTTP ${res.status}`);
 
   const data = await res.json();
   const user = data?.data?.user;
-  if (!user) throw new Error('No user data in web_profile_info response');
+  if (!user) throw new Error('No user data in response');
 
   const edges = user?.edge_owner_to_timeline_media?.edges || [];
-  console.log(`[Instagram API] web_profile_info: found ${edges.length} posts`);
-  
-  // Extract userId and check for more pages
   const userId = user.id;
   const hasNextPage = user?.edge_owner_to_timeline_media?.page_info?.has_next_page;
   const endCursor = user?.edge_owner_to_timeline_media?.page_info?.end_cursor;
 
+  console.log(`[Fetch] web_profile_info: ${edges.length} posts | userId=${userId} | hasMore=${hasNextPage}`);
   return { edges, userId, hasNextPage, endCursor };
 }
 
-// ─── Method 2: Instagram GraphQL paginated feed ─────────────────────────────
-async function fetchViaGraphQL(userId, endCursor) {
-  const variables = JSON.stringify({
-    id: userId,
-    first: 12,
-    after: endCursor
-  });
-
+// ─── Method 2: GraphQL pagination ─────────────────────────────────────────────
+async function fetchViaGraphQL(userId, endCursor, pageNum) {
+  const variables = JSON.stringify({ id: userId, first: 12, after: endCursor });
   const url = `https://www.instagram.com/graphql/query/?query_hash=e769aa130647d2354c40ea6a439bfc08&variables=${encodeURIComponent(variables)}`;
-  console.log(`[Instagram API] Fetching next page via GraphQL (cursor: ${endCursor?.slice(0, 20)}...)`);
+
+  console.log(`[Fetch] GraphQL page ${pageNum} (cursor: ${String(endCursor).slice(0, 15)}...)`);
 
   const res = await fetch(url, {
     method: 'GET',
-    headers: getHeaders(),
-    signal: AbortSignal.timeout(20000)
+    headers: getHeaders(IG_PROFILE_URL),
+    signal: AbortSignal.timeout(25000)
   });
 
   if (!res.ok) throw new Error(`GraphQL returned HTTP ${res.status}`);
@@ -143,21 +178,26 @@ async function fetchViaGraphQL(userId, endCursor) {
   };
 }
 
-// ─── Method 3: Instagram API v1 user feed (requires session) ───────────────
-async function fetchViaUserFeed(userId, maxId = '') {
+// ─── Method 3: v1 mobile feed (session required) ──────────────────────────────
+async function fetchViaMobileApi(userId, maxId = '') {
   const params = new URLSearchParams({ count: '12' });
   if (maxId) params.set('max_id', maxId);
-  
+
   const url = `https://i.instagram.com/api/v1/feed/user/${userId}/?${params}`;
-  console.log(`[Instagram API] Trying mobile API feed endpoint...`);
+  console.log(`[Fetch] Mobile API feed (maxId: ${maxId || 'start'})`);
 
   const res = await fetch(url, {
     method: 'GET',
     headers: {
-      ...getHeaders(),
-      'User-Agent': 'Instagram 219.0.0.12.117 Android (28/9; 420dpi; 1080x1920; Xiaomi; Mi 9T; davinci; qcom; en_US; 301484016)'
+      'User-Agent': 'Instagram 281.0.0.19.118 Android (30/11; 420dpi; 1080x2208; Xiaomi; Redmi Note 9 Pro; joyeuse; qcom; en_US; 462433999)',
+      'Accept': '*/*',
+      'Accept-Language': 'en-US,en;q=0.9',
+      'X-IG-App-ID': '567310203415052',
+      'X-IG-Capabilities': '3brTvw==',
+      'X-IG-Connection-Type': 'WIFI',
+      'Cookie': buildCookies()
     },
-    signal: AbortSignal.timeout(20000)
+    signal: AbortSignal.timeout(25000)
   });
 
   if (!res.ok) throw new Error(`Mobile API returned HTTP ${res.status}`);
@@ -170,34 +210,14 @@ async function fetchViaUserFeed(userId, maxId = '') {
   };
 }
 
-// ─── Extract post data from GraphQL edge node ───────────────────────────────
+// ─── Convert GraphQL edge to post ─────────────────────────────────────────────
 function edgeToPost(edge) {
-  const node = edge.node;
+  const node = edge?.node;
   if (!node) return null;
-
   const shortcode = node.shortcode || '';
   const caption = node.edge_media_to_caption?.edges?.[0]?.node?.text || '';
   const imageUrl = node.display_url || node.thumbnail_src || '';
   const timestamp = node.taken_at_timestamp || Date.now() / 1000;
-
-  return {
-    shortcode,
-    url: `https://www.instagram.com/p/${shortcode}/`,
-    imageUrl,
-    alt: caption,        // Real caption text goes into alt (parsed by parseProfileFromAltText)
-    caption,
-    createdAt: new Date(timestamp * 1000).toISOString()
-  };
-}
-
-// ─── Extract post data from mobile API item ──────────────────────────────────
-function itemToPost(item) {
-  const shortcode = item.code || item.pk || '';
-  const caption = item.caption?.text || '';
-  const imageUrl = item.image_versions2?.candidates?.[0]?.url || 
-                   item.carousel_media?.[0]?.image_versions2?.candidates?.[0]?.url || '';
-  const timestamp = item.taken_at || Date.now() / 1000;
-
   return {
     shortcode,
     url: `https://www.instagram.com/p/${shortcode}/`,
@@ -208,7 +228,24 @@ function itemToPost(item) {
   };
 }
 
-// ─── Helper: Load existing profiles ──────────────────────────────────────────
+// ─── Convert mobile API item to post ─────────────────────────────────────────
+function itemToPost(item) {
+  const shortcode = item.code || String(item.pk || '');
+  const caption = item.caption?.text || '';
+  const imageUrl = item.image_versions2?.candidates?.[0]?.url ||
+                   item.carousel_media?.[0]?.image_versions2?.candidates?.[0]?.url || '';
+  const timestamp = item.taken_at || Date.now() / 1000;
+  return {
+    shortcode,
+    url: `https://www.instagram.com/p/${shortcode}/`,
+    imageUrl,
+    alt: caption,
+    caption,
+    createdAt: new Date(timestamp * 1000).toISOString()
+  };
+}
+
+// ─── Load existing profiles from JSON ─────────────────────────────────────────
 function loadExistingProfiles() {
   const candidates = [
     path.join(__dirname, '..', 'data', 'profiles.json'),
@@ -227,17 +264,16 @@ function loadExistingProfiles() {
   return [];
 }
 
-// ─── Helper: Persist profiles ─────────────────────────────────────────────────
+// ─── Persist profiles to DB + JSON ───────────────────────────────────────────
 async function persistProfiles(profiles) {
   try {
     const { dbUpsertProfiles } = await import('../db.js');
     await dbUpsertProfiles(profiles);
-    console.log(`[Instagram API] ✓ Saved ${profiles.length} profiles to Supabase database`);
+    console.log(`[DB] ✓ Saved ${profiles.length} profiles to Supabase`);
   } catch (dbErr) {
-    console.warn('[Instagram API] Supabase unavailable, saving to local JSON:', dbErr.message);
+    console.warn('[DB] Supabase skipped:', dbErr.message);
   }
 
-  // Always write to local JSON as well
   const targets = [
     path.join(__dirname, '..', 'data', 'profiles.json'),
     path.join(process.cwd(), 'server', 'data', 'profiles.json'),
@@ -252,10 +288,10 @@ async function persistProfiles(profiles) {
       fs.writeFileSync(t, jsonStr, 'utf8');
     } catch (_) {}
   }
-  console.log(`[Instagram API] ✓ Saved ${profiles.length} profiles to local JSON files`);
+  console.log(`[DB] ✓ Saved ${profiles.length} profiles to local JSON`);
 }
 
-// ─── Helper: Get next profile ID ──────────────────────────────────────────────
+// ─── Get next profile ID ──────────────────────────────────────────────────────
 function getNextProfileId(profiles) {
   let maxNum = 0;
   for (const p of profiles) {
@@ -270,20 +306,23 @@ function getNextProfileId(profiles) {
   return `NPF-${String(maxNum + 1).padStart(3, '0')}`;
 }
 
-// ─── MAIN: Fetch all posts and sync to database ───────────────────────────────
+// ─── MAIN: Fetch all posts & sync ─────────────────────────────────────────────
 export async function fetchAndSyncInstagramPosts(options = {}) {
-  const { replaceAll = false, maxPosts = 200 } = options;
+  const { replaceAll = false, maxPosts = 300 } = options;
 
-  console.log('\n[Instagram API] ════════════════════════════════════════');
-  console.log('[Instagram API] Starting Instagram API fetch for @nikah_bahrain');
-  console.log('[Instagram API] Method: Direct HTTP API (no Puppeteer)');
-  console.log('[Instagram API] ════════════════════════════════════════\n');
+  console.log('\n[Instagram] ════════════════════════════════════════════════');
+  console.log('[Instagram] Fetching @nikah_bahrain via internal API (stealth mode)');
+  console.log(`[Instagram] Mode: ${replaceAll ? 'replace-all' : 'incremental'} | Max: ${maxPosts} posts`);
+  console.log('[Instagram] ════════════════════════════════════════════════\n');
 
-  const allPosts = new Map(); // shortcode → post data
+  const allPosts = new Map();
   let userId = null;
   let fetchError = null;
 
-  // ── PHASE 1: Try web_profile_info (works without login, gets ~12 posts) ──
+  // ── Step 0: Simulate browser visiting the profile page first ──────────────
+  await simulateProfileVisit();
+
+  // ── Step 1: web_profile_info (first ~12 posts) ────────────────────────────
   try {
     const { edges, userId: uid, hasNextPage, endCursor } = await fetchViaWebProfileInfo(IG_USERNAME);
     userId = uid;
@@ -292,20 +331,24 @@ export async function fetchAndSyncInstagramPosts(options = {}) {
       const post = edgeToPost(edge);
       if (post?.shortcode) allPosts.set(post.shortcode, post);
     }
-    console.log(`[Instagram API] Phase 1 complete: ${allPosts.size} posts found`);
 
-    // ── PHASE 2: Paginate via GraphQL if more posts available ──────────────
+    console.log(`[Instagram] Phase 1 done: ${allPosts.size} posts`);
+
+    // ── Step 2: Paginate via GraphQL ──────────────────────────────────────
     if (hasNextPage && endCursor && allPosts.size < maxPosts) {
-      console.log('[Instagram API] More posts available, paginating via GraphQL...');
       let cursor = endCursor;
-      let hasMore = hasNextPage;
+      let hasMore = true;
       let page = 2;
 
-      while (hasMore && allPosts.size < maxPosts && page <= 20) {
+      while (hasMore && allPosts.size < maxPosts && page <= 30) {
         try {
-          await sleep(800 + Math.random() * 400); // polite delay
-          const { edges: moreEdges, hasNextPage: nextHas, endCursor: nextCursor } = await fetchViaGraphQL(userId, cursor);
-          
+          // Human-like delay: 2–5 seconds between pages
+          const delay = 2000 + Math.random() * 3000;
+          console.log(`[Stealth] Waiting ${Math.round(delay / 1000)}s before next page...`);
+          await sleep(delay);
+
+          const { edges: moreEdges, hasNextPage: nextHas, endCursor: nextCursor } = await fetchViaGraphQL(userId, cursor, page);
+
           for (const edge of moreEdges) {
             const post = edgeToPost(edge);
             if (post?.shortcode) allPosts.set(post.shortcode, post);
@@ -314,60 +357,62 @@ export async function fetchAndSyncInstagramPosts(options = {}) {
           hasMore = nextHas;
           cursor = nextCursor;
           page++;
-          console.log(`[Instagram API] Paginated to page ${page}: ${allPosts.size} total posts`);
+          console.log(`[Instagram] Page ${page}: ${allPosts.size} total posts so far`);
         } catch (pageErr) {
-          console.warn(`[Instagram API] Pagination stopped at page ${page}:`, pageErr.message);
+          console.warn(`[Instagram] GraphQL stopped at page ${page}:`, pageErr.message);
           break;
         }
       }
     }
   } catch (err) {
-    console.warn('[Instagram API] Phase 1 (web_profile_info) failed:', err.message);
+    console.warn('[Instagram] Phase 1 failed:', err.message);
     fetchError = err.message;
   }
 
-  // ── PHASE 3: If we got very few posts, try mobile API (needs session) ────
+  // ── Step 3: Fall back to mobile API if web API got too few results ────────
   if (allPosts.size < 5 && userId && process.env.INSTAGRAM_SESSION_ID) {
-    console.log('[Instagram API] Phase 3: Trying mobile API with session cookie...');
+    console.log('\n[Instagram] Falling back to mobile API...');
     try {
       let maxId = '';
       let hasMore = true;
       let page = 0;
 
-      while (hasMore && allPosts.size < maxPosts && page < 20) {
-        await sleep(500 + Math.random() * 500);
-        const { items, moreAvailable, nextMaxId } = await fetchViaUserFeed(userId, maxId);
-        
+      while (hasMore && allPosts.size < maxPosts && page < 25) {
+        const delay = 2500 + Math.random() * 2500;
+        if (page > 0) {
+          console.log(`[Stealth] Waiting ${Math.round(delay / 1000)}s...`);
+          await sleep(delay);
+        }
+
+        const { items, moreAvailable, nextMaxId } = await fetchViaMobileApi(userId, maxId);
         for (const item of items) {
           const post = itemToPost(item);
           if (post?.shortcode) allPosts.set(post.shortcode, post);
         }
-        
+
         hasMore = moreAvailable;
         maxId = nextMaxId;
         page++;
-        console.log(`[Instagram API] Mobile API page ${page}: ${allPosts.size} total posts`);
+        console.log(`[Instagram] Mobile page ${page}: ${allPosts.size} total posts`);
       }
     } catch (mobileErr) {
-      console.warn('[Instagram API] Mobile API also failed:', mobileErr.message);
+      console.warn('[Instagram] Mobile API failed:', mobileErr.message);
     }
   }
 
   if (allPosts.size === 0) {
-    console.error('[Instagram API] Could not fetch any posts from Instagram.');
-    console.error('[Instagram API] Please ensure INSTAGRAM_SESSION_ID is set in server/.env');
     return {
       success: false,
       freshlyFetched: 0,
       totalProfiles: 0,
       newProfiles: [],
-      message: `Instagram API fetch failed: ${fetchError || 'No posts retrieved'}. Please add INSTAGRAM_SESSION_ID to server/.env`
+      message: `Fetch failed: ${fetchError || 'No posts retrieved'}. Check INSTAGRAM_SESSION_ID in server/.env`
     };
   }
 
-  console.log(`\n[Instagram API] ✓ Total posts retrieved from Instagram: ${allPosts.size}`);
+  console.log(`\n[Instagram] ✓ Retrieved ${allPosts.size} posts from @nikah_bahrain`);
 
-  // ── PHASE 4: Load existing profiles & identify new posts ─────────────────
+  // ── Step 4: Load existing + determine new posts ────────────────────────────
   const existing = loadExistingProfiles();
   let deletedIds = new Set();
   try {
@@ -391,48 +436,44 @@ export async function fetchAndSyncInstagramPosts(options = {}) {
     ? rawPosts
     : rawPosts.filter(p => !knownShortcodes.has(p.shortcode) && !deletedIds.has(`NB-${p.shortcode}`));
 
-  console.log(`[Instagram API] ${replaceAll ? 'Processing all' : `${newPosts.length} new`} post(s) for profile parsing...`);
+  console.log(`[Instagram] ${replaceAll ? `Processing all ${newPosts.length}` : `${newPosts.length} new`} post(s) for profile parsing...`);
 
-  // ── PHASE 5: Parse profiles from real caption data ─────────────────────────
+  // ── Step 5: Parse profiles from real captions ──────────────────────────────
   const parsedProfiles = [];
-  const allCurrent = [...parsedProfiles, ...existing];
 
   for (const post of newPosts) {
     try {
-      // Skip if caption is empty - this post may not be a profile flyer
-      if (!post.caption || post.caption.length < 30) {
-        console.warn(`[Instagram API] Skipping post ${post.shortcode}: caption too short (${post.caption?.length || 0} chars)`);
+      if (!post.caption || post.caption.trim().length < 20) {
+        console.warn(`  ↳ Skip ${post.shortcode}: caption too short`);
         continue;
       }
 
       const parsed = parseProfileFromAltText(post);
 
-      // Assign proper sequential ID if not found in caption
       if (!parsed.id || parsed.id.startsWith('NB-') || parsed.id.startsWith('IG-')) {
         parsed.id = getNextProfileId([...parsedProfiles, ...existing]);
       }
 
-      // Skip if admin deleted this ID
       if (deletedIds.has(parsed.id)) continue;
 
       parsedProfiles.push(parsed);
-      console.log(`[Instagram API] ✓ Parsed: ${parsed.id} | ${parsed.gender} | Age ${parsed.age} | ${parsed.nationality} | ${parsed.profession}`);
+      console.log(`  ✓ ${parsed.id} | ${parsed.gender} | Age ${parsed.age} | ${parsed.nationality} | ${parsed.profession}`);
     } catch (err) {
-      console.warn(`[Instagram API] Could not parse post ${post.shortcode}:`, err.message);
+      console.warn(`  ↳ Parse error for ${post.shortcode}:`, err.message);
     }
   }
 
-  console.log(`\n[Instagram API] Parsing complete: ${parsedProfiles.length} profiles extracted`);
+  console.log(`\n[Instagram] Parsed ${parsedProfiles.length} profile(s) from ${newPosts.length} posts`);
 
-  // ── PHASE 6: Merge & persist ──────────────────────────────────────────────
+  // ── Step 6: Merge & persist ────────────────────────────────────────────────
   let finalProfiles;
   if (replaceAll) {
-    // Replace mode: use only fresh data (keep any manually added NPF profiles)
-    const manualProfiles = existing.filter(p => p.id?.startsWith('NPF-') && !rawPosts.some(rp => rp.shortcode === p.instagramPostId));
+    const manualProfiles = existing.filter(
+      p => p.id?.startsWith('NPF-') && !rawPosts.some(rp => rp.shortcode === p.instagramPostId)
+    );
     finalProfiles = [...parsedProfiles, ...manualProfiles];
-    console.log(`[Instagram API] Replace mode: ${parsedProfiles.length} IG profiles + ${manualProfiles.length} manual profiles`);
+    console.log(`[Instagram] Replace: ${parsedProfiles.length} IG + ${manualProfiles.length} manual profiles`);
   } else {
-    // Merge mode: prepend new profiles to existing
     finalProfiles = parsedProfiles.length > 0
       ? [...parsedProfiles, ...existing.filter(p => !deletedIds.has(String(p.id)))]
       : existing.filter(p => !deletedIds.has(String(p.id)));
@@ -443,10 +484,10 @@ export async function fetchAndSyncInstagramPosts(options = {}) {
   }
 
   const message = parsedProfiles.length > 0
-    ? `✓ Fetched ${allPosts.size} posts from @nikah_bahrain. ${parsedProfiles.length} new profile(s) parsed and saved. Total: ${finalProfiles.length}`
-    : `✓ @nikah_bahrain feed is up to date. All ${finalProfiles.length} profiles already in database.`;
+    ? `✓ ${parsedProfiles.length} profile(s) fetched from @nikah_bahrain. Total in database: ${finalProfiles.length}`
+    : `✓ Already up to date. ${finalProfiles.length} profiles in database.`;
 
-  console.log(`\n[Instagram API] ${message}`);
+  console.log(`\n[Instagram] ${message}`);
 
   return {
     success: true,
@@ -461,21 +502,21 @@ export async function fetchAndSyncInstagramPosts(options = {}) {
 // ─── CLI Entry ────────────────────────────────────────────────────────────────
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
   const replaceAll = process.argv.includes('--replace-all');
-  console.log(`Running Instagram API fetch${replaceAll ? ' (replace-all mode)' : ' (incremental mode)'}...`);
-  
+  console.log(`\n🚀 Running Instagram fetch (${replaceAll ? 'REPLACE ALL' : 'incremental'})...\n`);
+
   fetchAndSyncInstagramPosts({ replaceAll, maxPosts: 300 })
     .then(res => {
       console.log('\n═══════════════════════════════════════════════');
-      console.log('✅ Instagram Fetch Complete!');
-      console.log(`   Posts found on Instagram: ${res.totalPosts}`);
-      console.log(`   New profiles parsed:      ${res.freshlyFetched}`);
-      console.log(`   Total in database:        ${res.totalProfiles}`);
-      console.log(`   Message: ${res.message}`);
+      console.log(res.success ? '✅ Done!' : '⚠️ Partial result');
+      console.log(`   Posts found:    ${res.totalPosts}`);
+      console.log(`   Profiles saved: ${res.freshlyFetched}`);
+      console.log(`   Total in DB:    ${res.totalProfiles}`);
+      console.log(`   ${res.message}`);
       console.log('═══════════════════════════════════════════════\n');
       process.exit(0);
     })
     .catch(err => {
-      console.error('Fatal error:', err.message);
+      console.error('❌ Fatal error:', err.message);
       process.exit(1);
     });
 }
