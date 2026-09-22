@@ -155,6 +155,13 @@ Please provide more details. JazakAllah Khair!`;
   const maritalEmoji = { 'Never Married': 'ðŸ’', 'Divorced': 'ðŸ”„', '2nd Marriage': 'âœ¨', 'Widowed': 'ðŸ•Šï¸' }[profile.maritalStatus] || 'ðŸ“‹';
   const nationalityFlag = { Pakistani: 'ðŸ‡µðŸ‡°', Indian: 'ðŸ‡®ðŸ‡³', Bahraini: 'ðŸ‡§ðŸ‡­', 'Saudi Arabia': 'ðŸ‡¸ðŸ‡¦', Emirati: 'ðŸ‡¦ðŸ‡ª' }[profile.nationality] || 'ðŸŒ';
 
+  // Clean display name — show actual name or fallback to nationality + gender label
+  const isGenericName = /^(IG-|NPF-)[\S]*\s*\((Bride|Groom)\)/i.test((profile.name || '').trim());
+  const displayName = isGenericName
+    ? (profile.nationality ? profile.nationality + ' ' : '') + (profile.gender === 'male' ? 'Groom' : 'Bride')
+    : (profile.name || (profile.gender === 'male' ? 'Groom' : 'Bride'));
+
+
   return (
     <animated.div
       ref={cardRef}
@@ -226,7 +233,7 @@ Please provide more details. JazakAllah Khair!`;
               <User size={28} color="var(--gold-primary)" />
             </div>
             <div className="font-cinzel" style={{ color: '#ffffff', fontWeight: 800, fontSize: '1rem', letterSpacing: '0.4px', lineHeight: 1.2 }}>
-              {profile.name}
+              {displayName}
             </div>
             {(profile.age || profile.maritalStatus) && (
               <div style={{ color: '#fae182', fontSize: '0.78rem', fontWeight: 700 }}>

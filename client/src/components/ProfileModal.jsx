@@ -181,7 +181,18 @@ Please share requirements & family verification steps.`;
         accentColor: '#be185d'
       };
 
+  // Determine if the name is a generic auto-generated one
+  const isGenericName = /^(Pakistani|Indian|Bahraini|Saudi|Emirati|\s*)\s*(Bride|Groom)/i.test((profile.name || '').trim())
+    || /^(IG-|NPF-)/.test((profile.name || '').trim());
+
+  // Use caption as fallback bio if about is empty
+  const bioText = (profile.about && profile.about.trim() !== '') ? profile.about
+    : (profile.caption && profile.caption.trim() !== '') ? profile.caption
+    : '';
+
   const detailRows = [
+    { icon: Calendar, label: 'Age', value: profile.age ? `${profile.age} Years` : '' },
+    { icon: Ruler, label: 'Height', value: profile.height },
     { icon: Briefcase, label: 'Profession', value: profile.profession },
     { icon: GraduationCap, label: 'Education', value: profile.education },
     { icon: MapPin, label: 'Location', value: profile.location },
@@ -328,11 +339,38 @@ Please share requirements & family verification steps.`;
             borderBottom: '1px solid var(--gold-border)',
             textAlign: 'center',
           }}>
+            {/* Profile ID badge - prominent */}
+            <div style={{ marginBottom: '8px' }}>
+              <span
+                style={{
+                  background: 'linear-gradient(135deg, #0f172a, #1e293b)',
+                  color: '#ffd700',
+                  fontSize: '0.8rem',
+                  fontWeight: 800,
+                  padding: '5px 14px',
+                  borderRadius: '999px',
+                  letterSpacing: '0.8px',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '5px',
+                  border: '1px solid rgba(255,215,0,0.4)'
+                }}
+              >
+                <ShieldCheck size={13} /> Profile ID: {profile.id}
+              </span>
+            </div>
+
             <h2 
               className="font-cinzel"
-              style={{ fontSize: '1.6rem', fontWeight: 800, color: '#0f172a', marginBottom: '6px' }}
+              style={{ fontSize: '1.45rem', fontWeight: 800, color: '#0f172a', marginBottom: '6px' }}
             >
-              {profile.name}
+              {isGenericName ? (
+                <span>
+                  {profile.nationality && `${profile.nationality} `}
+                  {genderConfig.label === 'GROOM' ? 'Groom' : 'Bride'}
+                  {profile.maritalStatus && profile.maritalStatus !== 'Never Married' && ` · ${profile.maritalStatus}`}
+                </span>
+              ) : profile.name}
             </h2>
 
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px', color: '#475569', fontSize: '0.88rem', flexWrap: 'wrap' }}>
@@ -356,11 +394,8 @@ Please share requirements & family verification steps.`;
               </span>
             </div>
 
-            {/* ID & Verified Badges */}
-            <div style={{ display: 'flex', justifyContent: 'center', gap: '8px', marginTop: '12px', flexWrap: 'wrap' }}>
-              <span className="gold-badge" style={{ background: '#fefce8', color: 'var(--text-gold)' }}>
-                <ShieldCheck size={13} /> {profile.id}
-              </span>
+            {/* Verified Badge */}
+            <div style={{ display: 'flex', justifyContent: 'center', gap: '8px', marginTop: '10px', flexWrap: 'wrap' }}>
               <span 
                 style={{
                   background: '#10b981',
@@ -554,19 +589,38 @@ Please share requirements & family verification steps.`;
             </animated.div>
           )}
 
-          {/* About Section - only if provided */}
-          {profile.about && profile.about.trim() !== '' && (
+          {/* About / Bio Section */}
+          {bioText && bioText.trim() !== '' && (
             <animated.div style={sectionTrail[3]}>
               <h4 
                 className="font-cinzel"
                 style={{ fontSize: '0.98rem', color: 'var(--text-gold)', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '6px' }}
               >
                 <FileText size={16} color="var(--gold-primary)" />
-                Candidate Profile & Short Bio
+                Candidate Profile & Bio
               </h4>
-              <p style={{ color: '#1e293b', fontSize: '0.88rem', lineHeight: '1.6', background: '#f8fafc', padding: '12px 16px', borderRadius: 'var(--radius-md)', border: '1px solid #e2e8f0' }}>
-                {profile.about}
+              <p style={{ color: '#1e293b', fontSize: '0.88rem', lineHeight: '1.7', background: '#f8fafc', padding: '14px 16px', borderRadius: 'var(--radius-md)', border: '1px solid #e2e8f0', whiteSpace: 'pre-line' }}>
+                {bioText}
               </p>
+            </animated.div>
+          )}
+
+          {/* No text details note for image-only profiles */}
+          {!bioText && detailRows.length === 0 && (
+            <animated.div style={sectionTrail[3]}>
+              <div style={{
+                background: '#fffdf5',
+                border: '1px solid rgba(196,155,31,0.3)',
+                borderRadius: 'var(--radius-md)',
+                padding: '14px 16px',
+                textAlign: 'center',
+                color: '#92400e',
+                fontSize: '0.88rem'
+              }}>
+                <Sparkles size={16} color="#d4af37" style={{ marginBottom: '6px' }} />
+                <p style={{ margin: 0, fontWeight: 600 }}>All profile details are displayed in the flyer above.</p>
+                <p style={{ margin: '4px 0 0', color: '#78716c', fontSize: '0.82rem' }}>Tap the image or "View Full Image" to see the complete profile flyer.</p>
+              </div>
             </animated.div>
           )}
 
