@@ -46,6 +46,11 @@ const resolveImageUrl = (img, profileId) => {
 
   return img || '';
 };
+const getInstagramThumbnailUrl = (instagramPostId) => {
+  if (!instagramPostId) return null;
+  return `https://www.instagram.com/p/${instagramPostId}/media/?size=l`;
+};
+
 
 
 export default function ProfileCard({
@@ -57,29 +62,29 @@ export default function ProfileCard({
   const [hovered, setHovered] = useState(false);
   const cardRef = useRef(null);
 
-  const initialImg = resolveImageUrl(profile.image, profile.id);
+  const initialImg = resolveImageUrl(profile.image, profile.id) || getInstagramThumbnailUrl(profile.instagramPostId);
   const [imgSrc, setImgSrc] = useState(initialImg);
   const [imgError, setImgError] = useState(!initialImg);
   const [hasFallbackTried, setHasFallbackTried] = useState(false);
 
   useEffect(() => {
-    const nextImg = resolveImageUrl(profile.image, profile.id);
+    const nextImg = resolveImageUrl(profile.image, profile.id) || getInstagramThumbnailUrl(profile.instagramPostId);
     setImgSrc(nextImg);
     setImgError(!nextImg);
     setHasFallbackTried(false);
   }, [profile.image, profile.id]);
 
   const handleImageError = () => {
-    if (!hasFallbackTried && profile.id) {
+    if (!hasFallbackTried) {
       setHasFallbackTried(true);
+      // Try localStorage cache first
       try {
         const cached = localStorage.getItem(`nikah_img_${profile.id}`);
-        if (cached && cached !== imgSrc) {
-          setImgSrc(cached);
-          setImgError(false);
-          return;
-        }
+        if (cached && cached !== imgSrc) { setImgSrc(cached); setImgError(false); return; }
       } catch (_) {}
+      // Try Instagram post thumbnail as fallback image
+      const igThumb = getInstagramThumbnailUrl(profile.instagramPostId);
+      if (igThumb && igThumb !== imgSrc) { setImgSrc(igThumb); setImgError(false); return; }
     }
     setImgError(true);
   };
