@@ -145,6 +145,7 @@ async function main() {
         try {
           const url = response.url();
           if (!url.includes("fbcdn.net") && !url.includes("cdninstagram")) return;
+          if (url.includes("rsrc.php") || url.includes("/static.") || url.includes("static.cdninstagram")) return;
           // Filter out tiny UI avatars / icons
           if (url.includes("/s150x150/") || url.includes("/s320x320/")) return;
           const ct = response.headers()["content-type"] || "";
