@@ -24,7 +24,7 @@ import {
   ZoomIn
 } from '../icons';
 
-const resolveImageUrl = (img, profileId) => {
+const resolveImageUrl = (img, profileId, instagramPostId) => {
   // 1. If direct base64 image data, use directly
   if (img && typeof img === 'string' && img.startsWith('data:image/')) {
     return img;
@@ -32,7 +32,6 @@ const resolveImageUrl = (img, profileId) => {
 
   // 2. If full external URL (Supabase storage, CDN, etc.), use directly
   if (img && typeof img === 'string' && (img.startsWith('https://') || img.startsWith('http://'))) {
-    // If it contains a legacy :5000/uploads/ reference, normalize to relative /uploads/
     if (img.includes(':5000/uploads/')) {
       return img.substring(img.indexOf('/uploads/'));
     }
@@ -49,7 +48,12 @@ const resolveImageUrl = (img, profileId) => {
     if (clean.includes('.') && !clean.includes('/')) return `/uploads/${clean}`;
   }
 
-  // 4. Fallback to localStorage image cache if available
+  // 4. Fallback to local Instagram flyer image by instagramPostId
+  if (instagramPostId) {
+    return `/uploads/ig_${instagramPostId}.jpg`;
+  }
+
+  // 5. Fallback to localStorage image cache if available
   if (profileId) {
     try {
       const cached = localStorage.getItem(`nikah_img_${profileId}`);
@@ -57,28 +61,36 @@ const resolveImageUrl = (img, profileId) => {
     } catch (_) {}
   }
 
-  return img || '';
+  return '';
 };
 
 export default function ProfileModal({ profile, isFavorite, onToggleFavorite, onClose }) {
   const [isFullscreen, setIsFullscreen] = useState(false);
-  const initialImg = resolveImageUrl(profile?.image, profile?.id);
+  const initialImg = resolveImageUrl(profile?.image, profile?.id, profile?.instagramPostId);
   const [modalImgSrc, setModalImgSrc] = useState(initialImg);
   const [modalImgError, setModalImgError] = useState(!initialImg);
   const [hasFallbackTried, setHasFallbackTried] = useState(false);
 
   useEffect(() => {
-    const nextImg = resolveImageUrl(profile?.image, profile?.id);
+    const nextImg = resolveImageUrl(profile?.image, profile?.id, profile?.instagramPostId);
     setModalImgSrc(nextImg);
     setModalImgError(!nextImg);
     setHasFallbackTried(false);
-  }, [profile?.image, profile?.id]);
+  }, [profile?.image, profile?.id, profile?.instagramPostId]);
 
   const handleModalImgError = () => {
-    if (!hasFallbackTried && profile?.id) {
+    if (!hasFallbackTried) {
       setHasFallbackTried(true);
+      if (profile?.instagramPostId) {
+        const localFlyer = `/uploads/ig_${profile.instagramPostId}.jpg`;
+        if (localFlyer !== modalImgSrc) {
+          setModalImgSrc(localFlyer);
+          setModalImgError(false);
+          return;
+        }
+      }
       try {
-        const cached = localStorage.getItem(`nikah_img_${profile.id}`);
+        const cached = localStorage.getItem(`nikah_img_${profile?.id}`);
         if (cached && cached !== modalImgSrc) {
           setModalImgSrc(cached);
           setModalImgError(false);

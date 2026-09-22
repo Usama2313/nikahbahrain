@@ -10,7 +10,7 @@ import {
 } from '../icons';
 import confetti from 'canvas-confetti';
 
-const resolveImageUrl = (img, profileId) => {
+const resolveImageUrl = (img, profileId, instagramPostId) => {
   // 1. If direct base64 image data, use directly
   if (img && typeof img === 'string' && img.startsWith('data:image/')) {
     return img;
@@ -18,7 +18,6 @@ const resolveImageUrl = (img, profileId) => {
 
   // 2. If full external URL (Supabase storage, CDN, etc.), use directly
   if (img && typeof img === 'string' && (img.startsWith('https://') || img.startsWith('http://'))) {
-    // If it contains a legacy :5000/uploads/ reference, normalize to relative /uploads/
     if (img.includes(':5000/uploads/')) {
       return img.substring(img.indexOf('/uploads/'));
     }
@@ -26,7 +25,6 @@ const resolveImageUrl = (img, profileId) => {
   }
 
   // 3. Normalize relative upload URLs — always return clean relative /uploads/...
-  // This allows the browser on mobile or desktop to fetch from current origin without firewall issues
   if (img && typeof img === 'string') {
     let clean = img.trim();
     if (clean.startsWith('/public/uploads/')) clean = clean.replace('/public/uploads/', '/uploads/');
@@ -36,7 +34,12 @@ const resolveImageUrl = (img, profileId) => {
     if (clean.includes('.') && !clean.includes('/')) return `/uploads/${clean}`;
   }
 
-  // 4. Fallback to localStorage image cache if available
+  // 4. Fallback to local Instagram flyer image by instagramPostId
+  if (instagramPostId) {
+    return `/uploads/ig_${instagramPostId}.jpg`;
+  }
+
+  // 5. Fallback to localStorage image cache if available
   if (profileId) {
     try {
       const cached = localStorage.getItem(`nikah_img_${profileId}`);
@@ -44,11 +47,7 @@ const resolveImageUrl = (img, profileId) => {
     } catch (_) {}
   }
 
-  return img || '';
-};
-const getInstagramThumbnailUrl = (instagramPostId) => {
-  if (!instagramPostId) return null;
-  return `https://www.instagram.com/p/${instagramPostId}/media/?size=l`;
+  return '';
 };
 
 
@@ -62,29 +61,39 @@ export default function ProfileCard({
   const [hovered, setHovered] = useState(false);
   const cardRef = useRef(null);
 
-  const initialImg = resolveImageUrl(profile.image, profile.id) || getInstagramThumbnailUrl(profile.instagramPostId);
+  const initialImg = resolveImageUrl(profile.image, profile.id, profile.instagramPostId);
   const [imgSrc, setImgSrc] = useState(initialImg);
   const [imgError, setImgError] = useState(!initialImg);
   const [hasFallbackTried, setHasFallbackTried] = useState(false);
 
   useEffect(() => {
-    const nextImg = resolveImageUrl(profile.image, profile.id) || getInstagramThumbnailUrl(profile.instagramPostId);
+    const nextImg = resolveImageUrl(profile.image, profile.id, profile.instagramPostId);
     setImgSrc(nextImg);
     setImgError(!nextImg);
     setHasFallbackTried(false);
-  }, [profile.image, profile.id]);
+  }, [profile.image, profile.id, profile.instagramPostId]);
 
   const handleImageError = () => {
     if (!hasFallbackTried) {
       setHasFallbackTried(true);
-      // Try localStorage cache first
+      // Try local flyer image by instagramPostId
+      if (profile.instagramPostId) {
+        const localFlyer = `/uploads/ig_${profile.instagramPostId}.jpg`;
+        if (localFlyer !== imgSrc) {
+          setImgSrc(localFlyer);
+          setImgError(false);
+          return;
+        }
+      }
+      // Try localStorage cache
       try {
         const cached = localStorage.getItem(`nikah_img_${profile.id}`);
-        if (cached && cached !== imgSrc) { setImgSrc(cached); setImgError(false); return; }
+        if (cached && cached !== imgSrc) {
+          setImgSrc(cached);
+          setImgError(false);
+          return;
+        }
       } catch (_) {}
-      // Try Instagram post thumbnail as fallback image
-      const igThumb = getInstagramThumbnailUrl(profile.instagramPostId);
-      if (igThumb && igThumb !== imgSrc) { setImgSrc(igThumb); setImgError(false); return; }
     }
     setImgError(true);
   };
