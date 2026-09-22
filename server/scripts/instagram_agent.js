@@ -1,105 +1,19 @@
-import { syncLiveInstagramPosts } from './sync_live_instagram.js';
-import dotenv from 'dotenv';
-import path from 'path';
-import fs from 'fs';
-import { fileURLToPath } from 'url';
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-
-// Load env
-const envPaths = [
-  path.join(__dirname, '..', '.env'),
-  path.join(__dirname, '..', '..', '.env'),
-  path.join(process.cwd(), '.env'),
-  path.join(process.cwd(), 'server', '.env')
-];
-for (const envPath of envPaths) {
-  if (fs.existsSync(envPath)) {
-    dotenv.config({ path: envPath });
-    break;
-  }
-}
-
-let isAgentRunning = false;
-let agentInterval = null;
-let lastCheckTime = null;
-let lastResult = null;
+// Instagram background agent — DISABLED
+// Scraping has been permanently removed. This file is kept as a stub
+// to avoid import errors in any code that may still reference it.
 
 export async function runAgentCycle() {
-  if (isAgentRunning) {
-    console.log('[Instagram Agent] Previous cycle still running, skipping...');
-    return { skipped: true, reason: 'Already running' };
-  }
-
-  isAgentRunning = true;
-  lastCheckTime = new Date().toISOString();
-  console.log(`\n[Instagram Agent] 🤖 Running automated Instagram check at ${new Date().toLocaleTimeString()}...`);
-
-  try {
-    const result = await syncLiveInstagramPosts(15);
-    lastResult = result;
-    if (result.freshlyFetched > 0) {
-      console.log(`[Instagram Agent] 🎉 NEW INSTAGRAM POST(S) DETECTED & ADDED! Fresh profiles: ${result.freshlyFetched}. Total: ${result.totalProfiles}`);
-    } else {
-      console.log(`[Instagram Agent] ✓ Check complete. No new posts detected. Total proposals: ${result.totalProfiles}`);
-    }
-    return result;
-  } catch (err) {
-    console.warn('[Instagram Agent] Automated check encountered an issue:', err.message);
-    lastResult = { success: false, error: err.message };
-    return { success: false, error: err.message };
-  } finally {
-    isAgentRunning = false;
-  }
+  return { skipped: true, reason: 'Instagram scraping is disabled' };
 }
 
-export function startInstagramAgent(options = {}) {
-  const intervalMinutes = Number(options.intervalMinutes) || 60;
-  const intervalMs = intervalMinutes * 60 * 1000;
-
-  console.log(`[Instagram Agent] 🚀 Background agent started. Checking @nikah_bahrain every ${intervalMinutes} minutes.`);
-
-  // Initial cycle after 10 seconds to allow server to bind ports cleanly
-  setTimeout(() => {
-    runAgentCycle().catch(() => {});
-  }, 10000);
-
-  if (agentInterval) clearInterval(agentInterval);
-  agentInterval = setInterval(() => {
-    // Jitter: Wait a random amount of time (0 to 5 minutes) before running to mimic human behavior
-    const jitterMs = Math.floor(Math.random() * 5 * 60 * 1000);
-    console.log(`[Instagram Agent] Jittering cycle start by ${Math.round(jitterMs / 1000)} seconds...`);
-    setTimeout(() => {
-      runAgentCycle().catch(() => {});
-    }, jitterMs);
-  }, intervalMs);
-
+export function startInstagramAgent() {
+  // No-op: scraping is disabled
   return {
-    stop: () => {
-      if (agentInterval) clearInterval(agentInterval);
-      agentInterval = null;
-      console.log('[Instagram Agent] Stopped.');
-    },
-    getStatus: () => ({
-      running: isAgentRunning,
-      lastCheckTime,
-      lastResult,
-      intervalMinutes
-    })
+    stop: () => {},
+    getStatus: () => ({ running: false, lastCheckTime: null, lastResult: null })
   };
 }
 
 export function getAgentStatus() {
-  return {
-    isAgentRunning,
-    lastCheckTime,
-    lastResult
-  };
-}
-
-// ─── CLI Entry ────────────────────────────────────────────────────────────────
-if (process.argv[1] === fileURLToPath(import.meta.url)) {
-  console.log('Starting standalone Instagram Agent process...');
-  startInstagramAgent({ intervalMinutes: 60 });
+  return { isAgentRunning: false, lastCheckTime: null, lastResult: null };
 }

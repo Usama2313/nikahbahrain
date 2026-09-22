@@ -502,64 +502,6 @@ app.get(['/api/stats', '/stats'], async (req, res) => {
   res.json({ success: true, stats });
 });
 
-// 6b. POST /api/sync-instagram (Puppeteer-based Instagram scraper)
-// Uses headless Chrome with stealth to browse Instagram as a real logged-in user.
-// Intercepts Instagram's internal API network responses to capture post captions.
-// Query param: ?mode=replace  → clears DB and replaces all profiles with fresh data
-// Query param: ?mode=incremental (default) → only adds new posts not already in database
-app.post(['/api/sync-instagram', '/sync-instagram'], async (req, res) => {
-  try {
-    const replaceAll = req.query.mode === 'replace';
-    console.log(`[Server] Instagram Puppeteer sync triggered. Mode: ${replaceAll ? 'replace-all' : 'incremental'}`);
-
-    // Run the Puppeteer scraper as a child process to avoid blocking the server
-    const { execFile } = await import('child_process');
-    const { promisify } = await import('util');
-    const execFileAsync = promisify(execFile);
-    const scriptPath = path.join(__dirname, 'scripts', 'puppeteer_caption_scraper.js');
-    const args = replaceAll ? ['--replace-all'] : [];
-
-    const { stdout, stderr } = await execFileAsync('node', [scriptPath, ...args], {
-      timeout: 5 * 60 * 1000, // 5 minute timeout
-      cwd: __dirname
-    });
-
-    console.log('[Puppeteer scraper stdout]:', stdout.slice(-1000));
-    if (stderr) console.error('[Puppeteer scraper stderr]:', stderr.slice(-500));
-
-    const profiles = await dbGetProfiles();
-    const savedMatch = stdout.match(/(\d+) saved/);
-    const freshlyFetched = savedMatch ? parseInt(savedMatch[1]) : 0;
-
-    res.json({
-      success: true,
-      message: `✓ Instagram sync complete. ${freshlyFetched} profiles updated. Total: ${profiles.length}.`,
-      freshlyFetched,
-      totalProfiles: profiles.length,
-      newProfiles: []
-    });
-  } catch (err) {
-    console.error('[Server] Instagram sync error:', err.message);
-    const profiles = await dbGetProfiles().catch(() => []);
-    res.status(500).json({
-      success: false,
-      message: `Instagram sync failed: ${err.message}`,
-      freshlyFetched: 0,
-      totalProfiles: profiles.length,
-      hint: 'Make sure INSTAGRAM_SESSION_ID is set in server/.env and Chrome is installed'
-    });
-  }
-});
-
-// 6c. GET /api/agent-status (Instagram Background Agent status)
-app.get(['/api/agent-status', '/agent-status'], async (req, res) => {
-  try {
-    const { getAgentStatus } = await import('./scripts/instagram_agent.js');
-    res.json({ success: true, status: getAgentStatus() });
-  } catch (e) {
-    res.json({ success: false, message: e.message });
-  }
-});
 
 // 7. GET & POST Favorites for unique visitor ID
 app.get('/api/favorites/:visitorId', (req, res) => {
@@ -610,8 +552,6 @@ app.get('/', (req, res) => {
 if (!process.env.VERCEL) {
   app.listen(PORT, '0.0.0.0', () => {
     console.log(`Qabul Hai Server running on http://localhost:${PORT}`);
-    console.log(`[Server] Instagram sync available at POST /api/sync-instagram`);
-    console.log(`[Server] Add ?mode=replace to fetch fresh data for ALL profiles`);
   });
 }
 

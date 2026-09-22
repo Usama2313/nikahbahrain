@@ -448,20 +448,6 @@ export default function App() {
             </svg>
             <span className="floating-btn-text">Join Group</span>
           </a>
-
-          {/* Floating Instagram Sync Button */}
-          <button
-            id="sync-instagram-btn"
-            className="floating-ig-btn"
-            onClick={() => syncInstagram(false)}
-            disabled={isSyncingIG}
-            title="Sync latest Instagram posts"
-          >
-            <span style={{ fontSize: '1.1rem', animation: isSyncingIG ? 'spin 1s linear infinite' : 'none' }}>
-              {isSyncingIG ? '⏳' : '📸'}
-            </span>
-            <span className="floating-btn-text">{isSyncingIG ? 'Syncing...' : 'Sync Instagram'}</span>
-          </button>
         </div>
       )}
 
