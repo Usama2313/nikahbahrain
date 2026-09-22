@@ -152,14 +152,10 @@ Please provide more details. JazakAllah Khair!`;
     ? { badge: 'GROOM', badgeBg: 'linear-gradient(135deg,#1d4ed8,#3b82f6)' }
     : { badge: 'BRIDE', badgeBg: 'linear-gradient(135deg,#be185d,#ec4899)' };
 
-  const maritalEmoji = { 'Never Married': 'ðŸ’', 'Divorced': 'ðŸ”„', '2nd Marriage': 'âœ¨', 'Widowed': 'ðŸ•Šï¸' }[profile.maritalStatus] || 'ðŸ“‹';
-  const nationalityFlag = { Pakistani: 'ðŸ‡µðŸ‡°', Indian: 'ðŸ‡®ðŸ‡³', Bahraini: 'ðŸ‡§ðŸ‡­', 'Saudi Arabia': 'ðŸ‡¸ðŸ‡¦', Emirati: 'ðŸ‡¦ðŸ‡ª' }[profile.nationality] || 'ðŸŒ';
+    const maritalEmoji = { 'Never Married': '💍', 'Divorced': '🔄', '2nd Marriage': '✨', 'Widowed': '🕊️', 'Separated': '📋' }[profile.maritalStatus] || '📋';
+  const nationalityFlag = { Pakistani: '🇵🇰', Indian: '🇮🇳', Bahraini: '🇧🇭', 'Saudi Arabia': '🇸🇦', Emirati: '🇦🇪' }[profile.nationality] || '🌍';
 
-  // Clean display name — show actual name or fallback to nationality + gender label
-  const isGenericName = /^(IG-|NPF-)[\S]*\s*\((Bride|Groom)\)/i.test((profile.name || '').trim());
-  const displayName = isGenericName
-    ? (profile.nationality ? profile.nationality + ' ' : '') + (profile.gender === 'male' ? 'Groom' : 'Bride')
-    : (profile.name || (profile.gender === 'male' ? 'Groom' : 'Bride'));
+  const displayName = profile.name || `${profile.id} · ${(profile.nationality ? profile.nationality + ' ' : '')}${profile.gender === 'male' ? 'Groom' : 'Bride'}`;
 
 
   return (

@@ -270,6 +270,40 @@ Please share requirements & family verification steps.`;
             overflow: 'hidden'
           }}
         >
+          {/* Fallback emblem when flyer image is not present */}
+          {(!modalImgSrc || modalImgError) && (
+            <div style={{
+              width: '100%',
+              padding: '24px 16px 16px',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              justifyContent: 'center',
+              background: profile.gender === 'male'
+                ? 'linear-gradient(135deg, #0f172a 0%, #1e293b 100%)'
+                : 'linear-gradient(135deg, #831843 0%, #500724 100%)',
+              borderBottom: '2px solid var(--gold-primary)',
+            }}>
+              <div style={{
+                width: '64px',
+                height: '64px',
+                borderRadius: '50%',
+                background: 'rgba(255,255,255,0.1)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                border: '2px solid var(--gold-primary)',
+                boxShadow: '0 0 20px rgba(212,175,55,0.4)',
+                marginBottom: '8px'
+              }}>
+                <User size={32} color="var(--gold-primary)" />
+              </div>
+              <div style={{ color: '#ffd700', fontSize: '0.78rem', fontWeight: 800, letterSpacing: '1px', textTransform: 'uppercase' }}>
+                Nikah Bahrain Official Matrimonial Record
+              </div>
+            </div>
+          )}
+
           {/* Full Complete Profile / Flyer Image */}
           {modalImgSrc && !modalImgError && (
             <animated.div style={avatarSpring}>
@@ -364,13 +398,7 @@ Please share requirements & family verification steps.`;
               className="font-cinzel"
               style={{ fontSize: '1.45rem', fontWeight: 800, color: '#0f172a', marginBottom: '6px' }}
             >
-              {isGenericName ? (
-                <span>
-                  {profile.nationality && `${profile.nationality} `}
-                  {genderConfig.label === 'GROOM' ? 'Groom' : 'Bride'}
-                  {profile.maritalStatus && profile.maritalStatus !== 'Never Married' && ` · ${profile.maritalStatus}`}
-                </span>
-              ) : profile.name}
+              {profile.name}
             </h2>
 
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px', color: '#475569', fontSize: '0.88rem', flexWrap: 'wrap' }}>
