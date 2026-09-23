@@ -15,20 +15,11 @@ import { Sparkles, AlertCircle, RefreshCw, RotateCcw } from './icons';
 import API_BASE from './api';
 import fallbackProfiles from './data/profiles.json';
 
-// Helper: read merged deleted profile IDs from localStorage (client-side)
-const getDeletedIdsFromStorage = () => {
-  try {
-    const arr = JSON.parse(localStorage.getItem('nikah_deleted_profiles') || '[]');
-    return new Set(Array.isArray(arr) ? arr.map(String) : []);
-  } catch (_) {
-    return new Set();
-  }
-};
-
-// Apply deleted-ID filter + deduplication to any profile array
-const sanitizeProfiles = (list) => {
+// Pure deduplication — NO localStorage dependency.
+// profiles.json (server) is the single source of truth for what to display.
+// This ensures desktop, mobile, and every device see the exact same profile list.
+const deduplicateProfiles = (list, excludeIds = new Set()) => {
   if (!Array.isArray(list)) return [];
-  const deletedIds = getDeletedIdsFromStorage();
   const seenIds = new Set();
   const seenPosts = new Set();
   const seenImgs = new Set();
@@ -36,7 +27,7 @@ const sanitizeProfiles = (list) => {
   for (const p of list) {
     if (!p || !p.id) continue;
     const cleanId = String(p.id).trim();
-    if (deletedIds.has(cleanId)) continue;          // skip deleted
+    if (excludeIds.has(cleanId)) continue;          // skip excluded (server-deleted)
     if (seenIds.has(cleanId)) continue;             // skip dup id
     if (p.instagramPostId && seenPosts.has(p.instagramPostId)) continue;
     if (p.image && seenImgs.has(p.image)) continue;
@@ -82,9 +73,9 @@ export default function App() {
   });
 
   // 4. Profiles & Favorites Data State
-  // Initialize by immediately filtering bundled profiles against localStorage deleted IDs
-  // so that any admin-deleted profile NEVER re-appears on page load / refresh.
-  const [profiles, setProfiles] = useState(() => sanitizeProfiles(fallbackProfiles || []));
+  // Initialize with bundled profiles.json — server is the single source of truth.
+  // No localStorage filtering here so desktop & mobile always show the same profiles.
+  const [profiles, setProfiles] = useState(() => deduplicateProfiles(fallbackProfiles || []));
   const [favorites, setFavorites] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -127,16 +118,15 @@ export default function App() {
     };
   }, []);
 
-  // Sync deleted profiles registry from server so all devices permanently respect deletions
+  // Sync deleted profiles registry from server — REPLACE localStorage (server is truth)
   useEffect(() => {
     fetch(`${API_BASE}/deleted-ids`)
       .then(res => res.json())
       .then(data => {
         if (data.success && Array.isArray(data.deletedIds)) {
           try {
-            const local = JSON.parse(localStorage.getItem('nikah_deleted_profiles') || '[]');
-            const merged = Array.from(new Set([...local, ...data.deletedIds]));
-            localStorage.setItem('nikah_deleted_profiles', JSON.stringify(merged));
+            // Server is the single source of truth — replace, don't merge
+            localStorage.setItem('nikah_deleted_profiles', JSON.stringify(data.deletedIds));
           } catch (_) {}
         }
       })
@@ -151,18 +141,14 @@ export default function App() {
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
       if (data.success && Array.isArray(data.profiles) && data.profiles.length > 0) {
-        // Merge server-side deleted IDs with client localStorage deleted IDs
+        // Use ONLY server-side deleted IDs (server is the single source of truth)
         const serverDeleted = Array.isArray(data.deletedIds) ? data.deletedIds.map(String) : [];
-        let localDeleted = [];
-        try {
-          localDeleted = JSON.parse(localStorage.getItem('nikah_deleted_profiles') || '[]');
-        } catch (_) {}
-        // Persist the merged set back to localStorage so future page loads stay clean
-        const mergedDeleted = Array.from(new Set([...localDeleted, ...serverDeleted]));
-        try { localStorage.setItem('nikah_deleted_profiles', JSON.stringify(mergedDeleted)); } catch (_) {}
-        const deletedIds = new Set(mergedDeleted.map(String));
+        const deletedIds = new Set(serverDeleted);
 
-        // Clean up locally created custom profiles (remove any that were deleted)
+        // Sync server deleted IDs to localStorage (REPLACE, not merge)
+        try { localStorage.setItem('nikah_deleted_profiles', JSON.stringify(serverDeleted)); } catch (_) {}
+
+        // Clean up locally created custom profiles (remove any that were deleted on server)
         let localCustom = [];
         try {
           const raw = JSON.parse(localStorage.getItem('nikah_custom_profiles') || '[]');
@@ -172,13 +158,13 @@ export default function App() {
           }
         } catch (_) {}
 
-        // Filter server profiles against combined deleted-ID set
+        // Server profiles already filtered by server — just deduplicate
         const validServerProfiles = data.profiles.filter(p => p && p.id && !deletedIds.has(String(p.id)));
         const serverIds = new Set(validServerProfiles.map(p => String(p.id)));
         const missingLocals = localCustom.filter(p => p && p.id && !serverIds.has(String(p.id)) && !deletedIds.has(String(p.id)));
 
-        // Deduplicate and apply full deleted-ID filter via sanitizeProfiles
-        const combined = sanitizeProfiles([...missingLocals, ...validServerProfiles]);
+        // Deduplicate only (no localStorage-based filtering)
+        const combined = deduplicateProfiles([...missingLocals, ...validServerProfiles], deletedIds);
 
         // Restore images from localStorage cache where needed
         const synced = combined.map(p => {
@@ -209,8 +195,7 @@ export default function App() {
     } finally {
       setLoading(false);
     }
-    // Offline fallback: bundled profiles.json + any locally-created custom profiles
-    // IMPORTANT: apply getDeletedIdsFromStorage() so deleted profiles never reappear
+    // Offline fallback: bundled profiles.json as-is (server truth, no localStorage filter)
     let localCustom = [];
     try {
       localCustom = JSON.parse(localStorage.getItem('nikah_custom_profiles') || '[]');
@@ -218,8 +203,8 @@ export default function App() {
     const fallbackIds = new Set((fallbackProfiles || []).map(p => String(p.id)));
     const extraLocals = localCustom.filter(p => p && p.id && !fallbackIds.has(String(p.id)));
 
-    // sanitizeProfiles applies both deleted-ID filtering AND deduplication in one pass
-    const finalFallback = sanitizeProfiles([...extraLocals, ...(fallbackProfiles || [])]).map(p => {
+    // Pure deduplication — profiles.json is the truth, no localStorage deleted-ID filtering
+    const finalFallback = deduplicateProfiles([...extraLocals, ...(fallbackProfiles || [])]).map(p => {
       let img = p.image;
       if (!img) {
         try {
