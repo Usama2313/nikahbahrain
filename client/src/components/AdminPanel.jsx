@@ -905,14 +905,14 @@ export default function AdminPanel({ onBackToPortal, onProfilesChange }) {
   const handleDeleteProfile = async (id) => {
     if (!window.confirm(`Permanently delete profile ${id}?`)) return;
 
-    // 1. Clean up from all client caches
-    removeCustomProfileFromStorage(id);
-    addDeletedProfileToStorage(id);
-    try {
-      localStorage.removeItem(`nikah_img_${id}`);
-    } catch (_) {}
+    // 1. Immediately lock the profile out of ALL client-side caches / localStorage
+    //    so that even a hard page refresh won't bring it back (offline mode safe).
+    removeCustomProfileFromStorage(id);   // removes from nikah_custom_profiles
+    addDeletedProfileToStorage(id);       // adds to nikah_deleted_profiles
+    try { localStorage.removeItem(`nikah_img_${id}`); } catch (_) {}
 
-    // 2. Remove immediately from Admin UI state
+    // 2. Remove immediately from Admin UI state AND notify parent App
+    //    (parent App re-renders the profile grid without the deleted entry)
     setProfiles((prev) => {
       const next = prev.filter(p => p.id !== id);
       if (onProfilesChange) onProfilesChange(next);
@@ -921,15 +921,21 @@ export default function AdminPanel({ onBackToPortal, onProfilesChange }) {
 
     showNotification(`Profile ${id} deleted.`);
 
-    // 3. Delete from backend server
+    // 3. Persist deletion to backend server so ALL other devices also respect it
     try {
       const res = await fetch(`${API_BASE}/profiles/${id}`, { method: 'DELETE' });
       const data = await res.json();
       if (data.success) {
-        showNotification(`Profile ${id} deleted successfully.`);
+        showNotification(`✓ Profile ${id} permanently deleted from server.`);
+        // Refresh Admin data so counts stay accurate
+        fetchData();
+      } else {
+        showNotification(`Profile ${id} removed locally. Server sync pending.`);
       }
     } catch (err) {
-      console.error('Delete server error:', err);
+      // Offline or server unreachable — deletion is already locked in localStorage
+      console.warn('[Admin] Server delete failed (offline?). Local deletion persisted:', err.message);
+      showNotification(`Profile ${id} removed. Will sync when server is online.`);
     }
   };
 

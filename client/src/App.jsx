@@ -15,6 +15,39 @@ import { Sparkles, AlertCircle, RefreshCw, RotateCcw } from './icons';
 import API_BASE from './api';
 import fallbackProfiles from './data/profiles.json';
 
+// Helper: read merged deleted profile IDs from localStorage (client-side)
+const getDeletedIdsFromStorage = () => {
+  try {
+    const arr = JSON.parse(localStorage.getItem('nikah_deleted_profiles') || '[]');
+    return new Set(Array.isArray(arr) ? arr.map(String) : []);
+  } catch (_) {
+    return new Set();
+  }
+};
+
+// Apply deleted-ID filter + deduplication to any profile array
+const sanitizeProfiles = (list) => {
+  if (!Array.isArray(list)) return [];
+  const deletedIds = getDeletedIdsFromStorage();
+  const seenIds = new Set();
+  const seenPosts = new Set();
+  const seenImgs = new Set();
+  const result = [];
+  for (const p of list) {
+    if (!p || !p.id) continue;
+    const cleanId = String(p.id).trim();
+    if (deletedIds.has(cleanId)) continue;          // skip deleted
+    if (seenIds.has(cleanId)) continue;             // skip dup id
+    if (p.instagramPostId && seenPosts.has(p.instagramPostId)) continue;
+    if (p.image && seenImgs.has(p.image)) continue;
+    seenIds.add(cleanId);
+    if (p.instagramPostId) seenPosts.add(p.instagramPostId);
+    if (p.image) seenImgs.add(p.image);
+    result.push(p);
+  }
+  return result;
+};
+
 const checkIsAdminRoute = () => {
   if (typeof window === 'undefined') return false;
   const path = window.location.pathname.toLowerCase();
@@ -48,8 +81,10 @@ export default function App() {
     return id;
   });
 
-  // 4. Profiles & Favorites Data State — initialized with bundled verified profiles
-  const [profiles, setProfiles] = useState(fallbackProfiles || []);
+  // 4. Profiles & Favorites Data State
+  // Initialize by immediately filtering bundled profiles against localStorage deleted IDs
+  // so that any admin-deleted profile NEVER re-appears on page load / refresh.
+  const [profiles, setProfiles] = useState(() => sanitizeProfiles(fallbackProfiles || []));
   const [favorites, setFavorites] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -116,54 +151,36 @@ export default function App() {
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
       if (data.success && Array.isArray(data.profiles) && data.profiles.length > 0) {
-        // Collect all deleted IDs from server and client
+        // Merge server-side deleted IDs with client localStorage deleted IDs
+        const serverDeleted = Array.isArray(data.deletedIds) ? data.deletedIds.map(String) : [];
         let localDeleted = [];
         try {
           localDeleted = JSON.parse(localStorage.getItem('nikah_deleted_profiles') || '[]');
         } catch (_) {}
-        const serverDeleted = Array.isArray(data.deletedIds) ? data.deletedIds : [];
-        const deletedIds = new Set([...localDeleted, ...serverDeleted]);
+        // Persist the merged set back to localStorage so future page loads stay clean
+        const mergedDeleted = Array.from(new Set([...localDeleted, ...serverDeleted]));
+        try { localStorage.setItem('nikah_deleted_profiles', JSON.stringify(mergedDeleted)); } catch (_) {}
+        const deletedIds = new Set(mergedDeleted.map(String));
 
-        // Clean up locally created custom profiles from Admin Panel (remove any deleted ones)
+        // Clean up locally created custom profiles (remove any that were deleted)
         let localCustom = [];
         try {
           const raw = JSON.parse(localStorage.getItem('nikah_custom_profiles') || '[]');
-          localCustom = raw.filter(p => p && p.id && !deletedIds.has(p.id));
+          localCustom = raw.filter(p => p && p.id && !deletedIds.has(String(p.id)));
           if (localCustom.length !== raw.length) {
             localStorage.setItem('nikah_custom_profiles', JSON.stringify(localCustom));
           }
         } catch (_) {}
 
-        // Filter server profiles against deleted IDs
-        const validServerProfiles = data.profiles.filter(p => p && p.id && !deletedIds.has(p.id));
-        const serverIds = new Set(validServerProfiles.map(p => p.id));
-        const missingLocals = localCustom.filter(p => p && p.id && !serverIds.has(p.id) && !deletedIds.has(p.id));
+        // Filter server profiles against combined deleted-ID set
+        const validServerProfiles = data.profiles.filter(p => p && p.id && !deletedIds.has(String(p.id)));
+        const serverIds = new Set(validServerProfiles.map(p => String(p.id)));
+        const missingLocals = localCustom.filter(p => p && p.id && !serverIds.has(String(p.id)) && !deletedIds.has(String(p.id)));
 
-        // Helper to guarantee strict 100% uniqueness (no duplicate IDs, post IDs, or images)
-        const deduplicateProfiles = (list) => {
-          if (!Array.isArray(list)) return [];
-          const seenIds = new Set();
-          const seenPosts = new Set();
-          const seenImgs = new Set();
-          const result = [];
-          for (const p of list) {
-            if (!p || !p.id) continue;
-            const cleanId = String(p.id).trim();
-            if (seenIds.has(cleanId)) continue;
-            if (p.instagramPostId && seenPosts.has(p.instagramPostId)) continue;
-            if (p.image && seenImgs.has(p.image)) continue;
-            seenIds.add(cleanId);
-            if (p.instagramPostId) seenPosts.add(p.instagramPostId);
-            if (p.image) seenImgs.add(p.image);
-            result.push(p);
-          }
-          return result;
-        };
+        // Deduplicate and apply full deleted-ID filter via sanitizeProfiles
+        const combined = sanitizeProfiles([...missingLocals, ...validServerProfiles]);
 
-        // Combined server profiles with any newly added custom profiles
-        const combined = deduplicateProfiles([...missingLocals, ...validServerProfiles]);
-
-        // Ensure images are preserved (from server or localStorage image cache)
+        // Restore images from localStorage cache where needed
         const synced = combined.map(p => {
           let img = p.image;
           if (!img) {
@@ -175,7 +192,7 @@ export default function App() {
           return { ...p, image: img || '' };
         });
 
-        // Sync truly new, valid custom profiles to server in the background
+        // Sync newly created custom profiles to server in the background
         if (missingLocals.length > 0) {
           fetch(`${API_BASE}/admin/persist-profiles`, {
             method: 'POST',
@@ -192,31 +209,17 @@ export default function App() {
     } finally {
       setLoading(false);
     }
-    // Fallback: use bundled verified profiles + local custom profiles with deduplication
+    // Offline fallback: bundled profiles.json + any locally-created custom profiles
+    // IMPORTANT: apply getDeletedIdsFromStorage() so deleted profiles never reappear
     let localCustom = [];
     try {
       localCustom = JSON.parse(localStorage.getItem('nikah_custom_profiles') || '[]');
     } catch (_) {}
-    const fallbackIds = new Set((fallbackProfiles || []).map(p => p.id));
-    const extraLocals = localCustom.filter(p => p && p.id && !fallbackIds.has(p.id));
-    
-    const seenFallbackIds = new Set();
-    const seenFallbackPosts = new Set();
-    const seenFallbackImgs = new Set();
-    const uniqueFallback = [];
-    for (const p of [...extraLocals, ...(fallbackProfiles || [])]) {
-      if (!p || !p.id) continue;
-      const cleanId = String(p.id).trim();
-      if (seenFallbackIds.has(cleanId)) continue;
-      if (p.instagramPostId && seenFallbackPosts.has(p.instagramPostId)) continue;
-      if (p.image && seenFallbackImgs.has(p.image)) continue;
-      seenFallbackIds.add(cleanId);
-      if (p.instagramPostId) seenFallbackPosts.add(p.instagramPostId);
-      if (p.image) seenFallbackImgs.add(p.image);
-      uniqueFallback.push(p);
-    }
+    const fallbackIds = new Set((fallbackProfiles || []).map(p => String(p.id)));
+    const extraLocals = localCustom.filter(p => p && p.id && !fallbackIds.has(String(p.id)));
 
-    const finalFallback = uniqueFallback.map(p => {
+    // sanitizeProfiles applies both deleted-ID filtering AND deduplication in one pass
+    const finalFallback = sanitizeProfiles([...extraLocals, ...(fallbackProfiles || [])]).map(p => {
       let img = p.image;
       if (!img) {
         try {

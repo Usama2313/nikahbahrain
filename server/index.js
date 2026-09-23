@@ -96,8 +96,11 @@ function getProfiles() {
 }
 
 // Helper to save profiles across server and client bundles
+// Always strips deleted IDs so profiles.json is never polluted with deleted profiles
 function saveProfiles(profiles) {
-  const jsonStr = JSON.stringify(profiles, null, 2);
+  const deletedIds = getDeletedProfileIds();
+  const clean = (profiles || []).filter(p => p && p.id && !deletedIds.has(String(p.id)));
+  const jsonStr = JSON.stringify(clean, null, 2);
   const targetFile = getDataFilePath();
   try {
     fs.writeFileSync(targetFile, jsonStr, 'utf8');
