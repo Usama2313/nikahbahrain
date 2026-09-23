@@ -322,6 +322,21 @@ export default function AdminPanel({ onBackToPortal, onProfilesChange }) {
     window.open('https://www.instagram.com/', '_blank');
   };
 
+  const handleExportJson = () => {
+    try {
+      const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(profiles, null, 2));
+      const downloadAnchor = document.createElement('a');
+      downloadAnchor.setAttribute("href", dataStr);
+      downloadAnchor.setAttribute("download", "profiles.json");
+      document.body.appendChild(downloadAnchor);
+      downloadAnchor.click();
+      downloadAnchor.remove();
+      showNotification('✓ Exported profiles.json successfully!');
+    } catch (err) {
+      showNotification(`Export error: ${err.message}`);
+    }
+  };
+
   const [creationMode, setCreationMode] = useState('form'); // 'form' (Tab 1: Form Filling) | 'picture' (Tab 2: Picture & Instagram Link)
 
   const handleOpenCreate = (mode = 'form') => {
@@ -1285,6 +1300,10 @@ export default function AdminPanel({ onBackToPortal, onProfilesChange }) {
           <button onClick={handleReplaceAllFromInstagram} disabled={syncingInstagram} className="btn-ghost" style={{ fontSize: '0.78rem', padding: '7px 11px', border: '1px solid rgba(212,175,55,0.4)' }} title="Fetch ALL posts from Instagram and replace all profiles">
             <RefreshCw size={13} />
             <span>{syncingInstagram ? '…' : 'Replace All'}</span>
+          </button>
+          <button onClick={handleExportJson} className="btn-ghost" style={{ fontSize: '0.78rem', padding: '7px 11px', border: '1px solid rgba(212,175,55,0.4)', color: '#d4af37' }} title="Export full profiles.json backup file">
+            <Download size={14} />
+            <span>Export JSON</span>
           </button>
           <button onClick={fetchData} className="btn-ghost" style={{ padding: '8px 10px' }} title="Refresh">
             <RefreshCw size={15} />

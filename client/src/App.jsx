@@ -542,9 +542,8 @@ export default function App() {
                 maxWidth: '1440px',
                 margin: '24px auto',
                 padding: '0 16px',
-                boxSizing: 'border-box',
-                overflowX: 'hidden',
-                overflowY: 'auto',              }}
+                boxSizing: 'border-box'
+              }}
             >
               {loading ? (
                 <div 
