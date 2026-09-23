@@ -106,9 +106,20 @@ export default function AdminPanel({ onBackToPortal, onProfilesChange }) {
   const [showPassword, setShowPassword] = useState(false);
 
   // Data
-  const [stats, setStats] = useState(null);
-  const [profiles, setProfiles] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [profiles, setProfiles] = useState(() => fallbackProfiles || []);
+  const [stats, setStats] = useState(() => {
+    const pList = fallbackProfiles || [];
+    return {
+      total: pList.length,
+      grooms: pList.filter(p => p.gender === 'male').length,
+      brides: pList.filter(p => p.gender === 'female').length,
+      divorcedGrooms: pList.filter(p => p.gender === 'male' && p.maritalStatus === 'Divorced').length,
+      widowedGrooms: pList.filter(p => p.gender === 'male' && p.maritalStatus === 'Widowed').length,
+      pakistani: pList.filter(p => p.nationality === 'Pakistani').length,
+      indian: pList.filter(p => p.nationality === 'Indian').length,
+    };
+  });
+  const [loading, setLoading] = useState(false);
   const [syncingInstagram, setSyncingInstagram] = useState(false);
   const [notification, setNotification] = useState(null);
 
@@ -783,9 +794,14 @@ export default function AdminPanel({ onBackToPortal, onProfilesChange }) {
     setPasswordInput('');
   };
 
-  const getMergedProfiles = (baseList) => {
+  const getMergedProfiles = (baseList, serverDeletedIds = null) => {
     try {
-      const deletedIds = new Set(JSON.parse(localStorage.getItem('nikah_deleted_profiles') || '[]'));
+      let deletedIds;
+      if (serverDeletedIds instanceof Set) {
+        deletedIds = serverDeletedIds;
+      } else {
+        deletedIds = new Set(JSON.parse(localStorage.getItem('nikah_deleted_profiles') || '[]'));
+      }
       const custom = JSON.parse(localStorage.getItem('nikah_custom_profiles') || '[]');
       const map = new Map();
       if (Array.isArray(custom)) {
@@ -805,8 +821,8 @@ export default function AdminPanel({ onBackToPortal, onProfilesChange }) {
               changed = true;
             }
           }
-          if (c.id && !deletedIds.has(c.id)) {
-            map.set(c.id, c);
+          if (c.id && !deletedIds.has(String(c.id))) {
+            map.set(String(c.id), c);
           }
         }
         if (changed) {
@@ -816,8 +832,8 @@ export default function AdminPanel({ onBackToPortal, onProfilesChange }) {
         }
       }
       for (const b of (baseList || [])) {
-        if (b && b.id && !deletedIds.has(b.id)) {
-          if (!map.has(b.id)) map.set(b.id, b);
+        if (b && b.id && !deletedIds.has(String(b.id))) {
+          if (!map.has(String(b.id))) map.set(String(b.id), b);
         }
       }
       return Array.from(map.values()).map(p => {
@@ -838,10 +854,22 @@ export default function AdminPanel({ onBackToPortal, onProfilesChange }) {
   const fetchData = async () => {
     try {
       setLoading(true);
-      const [statsRes, profilesRes] = await Promise.all([
+      const [statsRes, profilesRes, deletedRes] = await Promise.all([
         fetch(`${API_BASE}/stats`).catch(() => null),
         fetch(`${API_BASE}/profiles`).catch(() => null),
+        fetch(`${API_BASE}/deleted-ids`).catch(() => null),
       ]);
+
+      let serverDeleted = [];
+      if (deletedRes && deletedRes.ok) {
+        const dData = await deletedRes.json();
+        if (dData.success && Array.isArray(dData.deletedIds)) {
+          serverDeleted = dData.deletedIds.map(String);
+          try { localStorage.setItem('nikah_deleted_profiles', JSON.stringify(serverDeleted)); } catch (_) {}
+        }
+      }
+      const serverDeletedSet = new Set(serverDeleted);
+
       if (statsRes && statsRes.ok) {
         const statsData = await statsRes.json();
         if (statsData.success) setStats(statsData.stats);
@@ -849,14 +877,18 @@ export default function AdminPanel({ onBackToPortal, onProfilesChange }) {
       if (profilesRes && profilesRes.ok) {
         const profilesData = await profilesRes.json();
         if (profilesData.success && Array.isArray(profilesData.profiles)) {
-          const synced = getMergedProfiles(profilesData.profiles);
+          if (Array.isArray(profilesData.deletedIds)) {
+            serverDeleted = profilesData.deletedIds.map(String);
+            try { localStorage.setItem('nikah_deleted_profiles', JSON.stringify(serverDeleted)); } catch (_) {}
+          }
+          const synced = getMergedProfiles(profilesData.profiles, new Set(serverDeleted));
           setProfiles(synced);
           if (onProfilesChange) onProfilesChange(synced);
           return;
         }
       }
-      // Fallback if API is offline
-      const fallbackList = getMergedProfiles(fallbackProfiles || []);
+      // Fallback if API is offline — use server-verified deleted set
+      const fallbackList = getMergedProfiles(fallbackProfiles || [], serverDeletedSet);
       setProfiles(fallbackList);
       if (onProfilesChange) onProfilesChange(fallbackList);
       const pList = fallbackList;
