@@ -205,10 +205,10 @@ Please share requirements & family verification steps.`;
   const detailRows = [
     { icon: Calendar, label: 'Age', value: profile.age ? `${profile.age} Years` : '' },
     { icon: Ruler, label: 'Height', value: profile.height },
-    { icon: Briefcase, label: 'Profession', value: profile.profession },
-    { icon: GraduationCap, label: 'Education', value: profile.education },
+    { icon: Briefcase, label: 'Profession', value: (profile.profession && profile.profession !== 'Professional') ? profile.profession : '' },
+    { icon: GraduationCap, label: 'Education', value: (profile.education && profile.education !== 'Degree Holder') ? profile.education : '' },
     { icon: MapPin, label: 'Location', value: profile.location },
-    { icon: Home, label: 'Residency', value: profile.residence },
+    { icon: Home, label: 'Residency', value: (profile.residence && profile.residence !== profile.location) ? profile.residence : '' },
     { icon: BookOpen, label: 'Sect', value: profile.sect },
     { icon: User, label: 'Caste', value: (profile.caste && profile.caste !== 'General') ? profile.caste : '' },
     { icon: FileText, label: 'Languages', value: profile.languages },
@@ -323,7 +323,7 @@ Please share requirements & family verification steps.`;
                 style={{
                   width: '100%',
                   position: 'relative',
-                  background: '#f8fafc',
+                  background: '#0f172a',
                   borderBottom: '1.5px solid var(--gold-border)',
                   display: 'flex',
                   flexDirection: 'column',
@@ -337,10 +337,12 @@ Please share requirements & family verification steps.`;
                   alt={`${profile.id} - ${profile.name}`}
                   style={{
                     width: '100%',
+                    maxHeight: '65vh',
                     height: 'auto',
                     display: 'block',
                     objectFit: 'contain',
                     cursor: 'zoom-in',
+                    background: '#0f172a'
                   }}
                   onClick={() => setIsFullscreen(true)}
                   onError={handleModalImgError}

@@ -139,8 +139,29 @@ export default function App() {
         const serverIds = new Set(validServerProfiles.map(p => p.id));
         const missingLocals = localCustom.filter(p => p && p.id && !serverIds.has(p.id) && !deletedIds.has(p.id));
 
+        // Helper to guarantee strict 100% uniqueness (no duplicate IDs, post IDs, or images)
+        const deduplicateProfiles = (list) => {
+          if (!Array.isArray(list)) return [];
+          const seenIds = new Set();
+          const seenPosts = new Set();
+          const seenImgs = new Set();
+          const result = [];
+          for (const p of list) {
+            if (!p || !p.id) continue;
+            const cleanId = String(p.id).trim();
+            if (seenIds.has(cleanId)) continue;
+            if (p.instagramPostId && seenPosts.has(p.instagramPostId)) continue;
+            if (p.image && seenImgs.has(p.image)) continue;
+            seenIds.add(cleanId);
+            if (p.instagramPostId) seenPosts.add(p.instagramPostId);
+            if (p.image) seenImgs.add(p.image);
+            result.push(p);
+          }
+          return result;
+        };
+
         // Combined server profiles with any newly added custom profiles
-        const combined = [...missingLocals, ...validServerProfiles];
+        const combined = deduplicateProfiles([...missingLocals, ...validServerProfiles]);
 
         // Ensure images are preserved (from server or localStorage image cache)
         const synced = combined.map(p => {
@@ -171,14 +192,31 @@ export default function App() {
     } finally {
       setLoading(false);
     }
-    // Fallback: use bundled verified profiles + local custom profiles
+    // Fallback: use bundled verified profiles + local custom profiles with deduplication
     let localCustom = [];
     try {
       localCustom = JSON.parse(localStorage.getItem('nikah_custom_profiles') || '[]');
     } catch (_) {}
     const fallbackIds = new Set((fallbackProfiles || []).map(p => p.id));
     const extraLocals = localCustom.filter(p => p && p.id && !fallbackIds.has(p.id));
-    const finalFallback = [...extraLocals, ...(fallbackProfiles || [])].map(p => {
+    
+    const seenFallbackIds = new Set();
+    const seenFallbackPosts = new Set();
+    const seenFallbackImgs = new Set();
+    const uniqueFallback = [];
+    for (const p of [...extraLocals, ...(fallbackProfiles || [])]) {
+      if (!p || !p.id) continue;
+      const cleanId = String(p.id).trim();
+      if (seenFallbackIds.has(cleanId)) continue;
+      if (p.instagramPostId && seenFallbackPosts.has(p.instagramPostId)) continue;
+      if (p.image && seenFallbackImgs.has(p.image)) continue;
+      seenFallbackIds.add(cleanId);
+      if (p.instagramPostId) seenFallbackPosts.add(p.instagramPostId);
+      if (p.image) seenFallbackImgs.add(p.image);
+      uniqueFallback.push(p);
+    }
+
+    const finalFallback = uniqueFallback.map(p => {
       let img = p.image;
       if (!img) {
         try {

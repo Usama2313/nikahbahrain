@@ -113,12 +113,8 @@ export default function ProfileCard({
       ? '0 20px 50px -12px rgba(212, 175, 55, 0.35), 0 0 30px rgba(212, 175, 55, 0.15)'
       : '0 4px 20px -4px rgba(0, 0, 0, 0.15)',
     borderColor: hovered ? 'rgba(212, 175, 55, 0.6)' : 'rgba(212, 175, 55, 0.2)',
+    transform: hovered ? 'translateY(-4px)' : 'translateY(0px)',
     config: { tension: 280, friction: 22 }
-  });
-
-  const imgSpring = useSpring({
-    transform: hovered ? 'scale(1.06)' : 'scale(1)',
-    config: { tension: 260, friction: 22 }
   });
 
   const heartSpring = useSpring({
@@ -193,23 +189,22 @@ Please provide more details. JazakAllah Khair!`;
         position: 'relative',
       }}
     >
-      {/* â”€â”€ Image Section â”€â”€ */}
-      <div style={{ position: 'relative', width: '100%', aspectRatio: '1 / 1', overflow: 'hidden', background: '#f8fafc' }}>
+      {/* ── Image Section: Portrait 4:5 with contain so 100% of flyer text is readable and never zoomed in ── */}
+      <div style={{ position: 'relative', width: '100%', aspectRatio: '4 / 5', overflow: 'hidden', background: '#0f172a' }}>
         {imgSrc && !imgError ? (
-          <animated.img
+          <img
             src={imgSrc}
             alt={profile.id}
             onError={handleImageError}
             onLoad={handleImageLoad}
             loading="lazy"
             style={{
-              ...imgSpring,
               width: '100%',
               height: '100%',
-              objectFit: 'cover',
-              objectPosition: 'top center',
+              objectFit: 'contain',
+              objectPosition: 'center',
               display: 'block',
-              background: '#f8fafc'
+              background: '#0f172a'
             }}
           />
         ) : (
@@ -384,7 +379,7 @@ Please provide more details. JazakAllah Khair!`;
         gap: '6px',
         flex: 1
       }}>
-        {/* Marital Status + Nationality row */}
+        {/* Marital Status + Nationality row — only display verified authentic fields */}
         {(profile.maritalStatus || profile.nationality) && (
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: '5px', alignItems: 'center' }}>
             {profile.maritalStatus && (
@@ -419,7 +414,7 @@ Please provide more details. JazakAllah Khair!`;
           </div>
         )}
 
-        {/* Location + age row */}
+        {/* Location + age row — only display verified age */}
         {(profile.age || profile.location) && (
           <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.78rem', color: '#475569', flexWrap: 'wrap' }}>
             {profile.age && (
@@ -431,6 +426,21 @@ Please provide more details. JazakAllah Khair!`;
                 <MapPin size={11} color="#d4af37" /> {profile.location}
               </span>
             )}
+          </div>
+        )}
+
+        {/* Profession if authentic */}
+        {profile.profession && profile.profession !== 'Professional' && (
+          <div style={{ fontSize: '0.75rem', color: '#334155', fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+            💼 {profile.profession}
+          </div>
+        )}
+
+        {/* If no metadata exists, show clear indicator that all details are on the flyer picture */}
+        {!profile.maritalStatus && !profile.nationality && !profile.age && (
+          <div style={{ fontSize: '0.74rem', color: '#64748b', fontStyle: 'italic', display: 'flex', alignItems: 'center', gap: '4px', margin: '2px 0' }}>
+            <span>📄</span>
+            <span>All details in flyer above</span>
           </div>
         )}
 
