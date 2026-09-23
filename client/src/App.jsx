@@ -179,11 +179,22 @@ export default function App() {
         });
 
         // Sync newly created custom profiles to server in the background
+        // After syncing, clear them from localStorage so ALL devices (mobile, desktop) see the same count
         if (missingLocals.length > 0) {
           fetch(`${API_BASE}/admin/persist-profiles`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ profiles: missingLocals })
+          }).then(async (syncRes) => {
+            if (syncRes.ok) {
+              // Remove synced profiles from localStorage — server is now the single source of truth
+              try {
+                const remaining = localCustom.filter(p => missingLocals.every(m => m.id !== p.id));
+                localStorage.setItem('nikah_custom_profiles', JSON.stringify(remaining));
+              } catch (_) {}
+              // Re-fetch so the UI count matches what the server has (affects admin panel count too)
+              await fetchProfiles();
+            }
           }).catch(() => {});
         }
 

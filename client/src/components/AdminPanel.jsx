@@ -704,6 +704,7 @@ export default function AdminPanel({ onBackToPortal, onProfilesChange }) {
           createdAt: new Date().toISOString()
         };
 
+        let serverSaveSuccess = false;
         try {
           const res = await fetch(`${API_BASE}/profiles`, {
             method: 'POST',
@@ -712,6 +713,7 @@ export default function AdminPanel({ onBackToPortal, onProfilesChange }) {
           });
           const data = await res.json();
           if (data.success && data.profile) {
+            serverSaveSuccess = true;
             newProf = {
               ...data.profile,
               // Preserve image from local formData if server/DB lost it (large base64 can be dropped)
@@ -728,12 +730,38 @@ export default function AdminPanel({ onBackToPortal, onProfilesChange }) {
           try { localStorage.setItem(`nikah_img_${newProf.id}`, newProf.image); } catch (_) {}
         }
 
-        saveCustomProfileToStorage(newProf);
+        if (serverSaveSuccess) {
+          // Server saved successfully — also persist to profiles.json so ALL devices (including mobile) can see it
+          // Then remove from localStorage custom profiles since server is now the source of truth
+          try {
+            const persistRes = await fetch(`${API_BASE}/admin/persist-profiles`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ profiles: [newProf] })
+            });
+            if (persistRes.ok) {
+              // Remove this profile from localStorage custom profiles — server has it now
+              try {
+                const existing = JSON.parse(localStorage.getItem('nikah_custom_profiles') || '[]');
+                const filtered = existing.filter(p => p.id !== newProf.id);
+                localStorage.setItem('nikah_custom_profiles', JSON.stringify(filtered));
+              } catch (_) {}
+            }
+          } catch (_) {
+            // If persist-profiles fails, keep in localStorage as fallback
+            saveCustomProfileToStorage(newProf);
+          }
+          // Re-fetch from server to get accurate count on all devices
+          setTimeout(() => fetchData(), 500);
+        } else {
+          // Server failed — save to localStorage as fallback and try to sync later
+          saveCustomProfileToStorage(newProf);
+          persistProfilesToServer([newProf]);
+        }
+
         setProfiles((prev) => {
-          const next = [newProf, ...prev];
+          const next = [newProf, ...prev.filter(p => p.id !== newProf.id)];
           if (onProfilesChange) onProfilesChange(next);
-          // Persist all custom profiles to server so mobile/other devices see them
-          persistProfilesToServer([newProf, ...prev]);
           return next;
         });
         showNotification(`✓ Published new profile ${newProf.id} successfully!`);
