@@ -133,7 +133,45 @@ export default function App() {
       .catch(() => {});
   }, []);
 
-  // Fetch profiles from server — single source of truth for ALL devices (PC, mobile, etc.)
+  // ─── CORE FIX: Push any localStorage-stuck profiles to server FIRST, then fetch ───
+  // This runs on app startup on every device. If desktop has profiles in localStorage
+  // that aren't on the server yet, they get pushed immediately so mobile sees them too.
+  const syncLocalStorageToServer = async () => {
+    try {
+      const localCustom = JSON.parse(localStorage.getItem('nikah_custom_profiles') || '[]');
+      const deletedIds = new Set(JSON.parse(localStorage.getItem('nikah_deleted_profiles') || '[]'));
+      const validCustom = localCustom.filter(p => p && p.id && !deletedIds.has(String(p.id)));
+      if (validCustom.length === 0) return; // nothing to sync
+
+      // Enrich profiles with cached images before pushing to server
+      const enriched = validCustom.map(p => {
+        if (!p.image) {
+          try {
+            const cached = localStorage.getItem(`nikah_img_${p.id}`);
+            if (cached) return { ...p, image: cached };
+          } catch (_) {}
+        }
+        return p;
+      });
+
+      const res = await fetch(`${API_BASE}/admin/persist-profiles`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ profiles: enriched })
+      });
+      if (res.ok) {
+        // Successfully pushed to server — clear localStorage custom profiles
+        localStorage.setItem('nikah_custom_profiles', JSON.stringify([]));
+        console.log(`[Sync] Pushed ${enriched.length} localStorage profiles to server and cleared cache.`);
+      }
+    } catch (_) {
+      // Sync failed — will retry on next load
+    }
+  };
+
+  // Fetch profiles from server — server is the ONLY source of truth for ALL devices.
+  // localStorage is NEVER merged into the display list. This guarantees mobile and desktop
+  // always show the same profiles.
   const fetchProfiles = async () => {
     try {
       setError(null);
@@ -148,26 +186,12 @@ export default function App() {
         // Sync server deleted IDs to localStorage (REPLACE, not merge)
         try { localStorage.setItem('nikah_deleted_profiles', JSON.stringify(serverDeleted)); } catch (_) {}
 
-        // Clean up locally created custom profiles (remove any that were deleted on server)
-        let localCustom = [];
-        try {
-          const raw = JSON.parse(localStorage.getItem('nikah_custom_profiles') || '[]');
-          localCustom = raw.filter(p => p && p.id && !deletedIds.has(String(p.id)));
-          if (localCustom.length !== raw.length) {
-            localStorage.setItem('nikah_custom_profiles', JSON.stringify(localCustom));
-          }
-        } catch (_) {}
-
-        // Server profiles already filtered by server — just deduplicate
+        // Server profiles — filter deleted and deduplicate. NO localStorage merge.
         const validServerProfiles = data.profiles.filter(p => p && p.id && !deletedIds.has(String(p.id)));
-        const serverIds = new Set(validServerProfiles.map(p => String(p.id)));
-        const missingLocals = localCustom.filter(p => p && p.id && !serverIds.has(String(p.id)) && !deletedIds.has(String(p.id)));
+        const deduped = deduplicateProfiles(validServerProfiles, deletedIds);
 
-        // Deduplicate only (no localStorage-based filtering)
-        const combined = deduplicateProfiles([...missingLocals, ...validServerProfiles], deletedIds);
-
-        // Restore images from localStorage cache where needed
-        const synced = combined.map(p => {
+        // Restore images from localStorage cache where server lost the image field
+        const withImages = deduped.map(p => {
           let img = p.image;
           if (!img) {
             try {
@@ -178,27 +202,7 @@ export default function App() {
           return { ...p, image: img || '' };
         });
 
-        // Sync newly created custom profiles to server in the background
-        // After syncing, clear them from localStorage so ALL devices (mobile, desktop) see the same count
-        if (missingLocals.length > 0) {
-          fetch(`${API_BASE}/admin/persist-profiles`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ profiles: missingLocals })
-          }).then(async (syncRes) => {
-            if (syncRes.ok) {
-              // Remove synced profiles from localStorage — server is now the single source of truth
-              try {
-                const remaining = localCustom.filter(p => missingLocals.every(m => m.id !== p.id));
-                localStorage.setItem('nikah_custom_profiles', JSON.stringify(remaining));
-              } catch (_) {}
-              // Re-fetch so the UI count matches what the server has (affects admin panel count too)
-              await fetchProfiles();
-            }
-          }).catch(() => {});
-        }
-
-        setProfiles(synced);
+        setProfiles(withImages);
         return;
       }
     } catch (err) {
@@ -206,16 +210,8 @@ export default function App() {
     } finally {
       setLoading(false);
     }
-    // Offline fallback: bundled profiles.json as-is (server truth, no localStorage filter)
-    let localCustom = [];
-    try {
-      localCustom = JSON.parse(localStorage.getItem('nikah_custom_profiles') || '[]');
-    } catch (_) {}
-    const fallbackIds = new Set((fallbackProfiles || []).map(p => String(p.id)));
-    const extraLocals = localCustom.filter(p => p && p.id && !fallbackIds.has(String(p.id)));
-
-    // Pure deduplication — profiles.json is the truth, no localStorage deleted-ID filtering
-    const finalFallback = deduplicateProfiles([...extraLocals, ...(fallbackProfiles || [])]).map(p => {
+    // Offline fallback: bundled profiles.json ONLY — no localStorage merge
+    const fallback = deduplicateProfiles(fallbackProfiles || []).map(p => {
       let img = p.image;
       if (!img) {
         try {
@@ -225,8 +221,9 @@ export default function App() {
       }
       return { ...p, image: img || '' };
     });
-    setProfiles(finalFallback);
+    setProfiles(fallback);
   };
+
 
 
   // Trigger Instagram sync — works on all environments with clean fallback
@@ -268,7 +265,8 @@ export default function App() {
   };
 
   useEffect(() => {
-    fetchProfiles();
+    // On startup: push any localStorage-stuck profiles to server FIRST, then fetch
+    syncLocalStorageToServer().then(() => fetchProfiles());
     fetchFavorites();
   }, [visitorId]);
 
