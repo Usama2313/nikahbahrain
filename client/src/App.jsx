@@ -16,21 +16,75 @@ import API_BASE from './api';
 import fallbackProfiles from './data/profiles.json';
 import fallbackDeletedIds from './data/deleted_ids.json';
 
-// Pure deduplication — Database & profiles.json are the single source of truth.
-// NO localStorage dependency for profile data.
-// This ensures desktop, mobile, and every device see the exact same profile list.
-const deduplicateProfiles = (list, excludeIds = new Set()) => {
-  if (!Array.isArray(list)) return [];
-  const seenIds = new Set();
+// Persistent storage keys for custom admin created/edited profiles
+const ADMIN_CUSTOM_PROFILES_KEY = 'nikah_admin_custom_profiles';
+const ADMIN_DELETED_IDS_KEY = 'nikah_admin_deleted_ids';
+
+export const getStoredCustomProfiles = () => {
+  try {
+    const raw = localStorage.getItem(ADMIN_CUSTOM_PROFILES_KEY);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed)) return parsed;
+    }
+  } catch (_) {}
+  return [];
+};
+
+export const saveStoredCustomProfiles = (list) => {
+  try {
+    localStorage.setItem(ADMIN_CUSTOM_PROFILES_KEY, JSON.stringify(list || []));
+  } catch (_) {}
+};
+
+export const getStoredDeletedIds = () => {
+  try {
+    const raw = localStorage.getItem(ADMIN_DELETED_IDS_KEY);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed)) return new Set(parsed.map(String));
+    }
+  } catch (_) {}
+  return new Set();
+};
+
+export const saveStoredDeletedIds = (setOrArr) => {
+  try {
+    const arr = Array.from(setOrArr || []);
+    localStorage.setItem(ADMIN_DELETED_IDS_KEY, JSON.stringify(arr));
+  } catch (_) {}
+};
+
+// Seamlessly merge server profiles with custom admin profiles
+// Custom admin profiles appear at the top and override any matching ID
+const mergeAndDeduplicateProfiles = (serverList = [], customList = [], excludeIds = new Set()) => {
   const result = [];
-  for (const p of list) {
-    if (!p || !p.id) continue;
-    const cleanId = String(p.id).trim();
-    if (excludeIds.has(cleanId)) continue; // skip excluded (server-deleted)
-    if (seenIds.has(cleanId)) continue;    // skip duplicate ID
-    seenIds.add(cleanId);
-    result.push(p);
+  const seenIds = new Set();
+
+  // 1. Custom admin profiles come FIRST (latest creations/edits have top priority)
+  if (Array.isArray(customList)) {
+    for (const p of customList) {
+      if (!p || !p.id) continue;
+      const cleanId = String(p.id).trim();
+      if (excludeIds.has(cleanId)) continue;
+      if (seenIds.has(cleanId)) continue;
+      seenIds.add(cleanId);
+      result.push(p);
+    }
   }
+
+  // 2. Server / fallback profiles come next
+  if (Array.isArray(serverList)) {
+    for (const p of serverList) {
+      if (!p || !p.id) continue;
+      const cleanId = String(p.id).trim();
+      if (excludeIds.has(cleanId)) continue;
+      if (seenIds.has(cleanId)) continue;
+      seenIds.add(cleanId);
+      result.push(p);
+    }
+  }
+
   return result;
 };
 
@@ -68,11 +122,13 @@ export default function App() {
   });
 
   // 4. Profiles & Favorites Data State
-  // Initialize with bundled profiles.json — server & database are the single source of truth.
-  // No localStorage for profiles so desktop & mobile always show the same database profiles.
+  // Initialize by merging bundled profiles with locally stored admin custom profiles
   const [profiles, setProfiles] = useState(() => {
-    const deletedSet = new Set((fallbackDeletedIds || []).map(String));
-    return deduplicateProfiles(fallbackProfiles || [], deletedSet);
+    const localDeleted = getStoredDeletedIds();
+    const fallbackDeleted = new Set((fallbackDeletedIds || []).map(String));
+    const allDeleted = new Set([...localDeleted, ...fallbackDeleted]);
+    const custom = getStoredCustomProfiles();
+    return mergeAndDeduplicateProfiles(fallbackProfiles || [], custom, allDeleted);
   });
   const [favorites, setFavorites] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -116,22 +172,33 @@ export default function App() {
     };
   }, []);
 
-  // Fetch profiles from database/server — database is the ONLY source of truth for ALL devices (desktop & mobile).
+  // Fetch profiles from database/server with seamless admin custom profiles persistence
   const fetchProfiles = async () => {
+    const localDeleted = getStoredDeletedIds();
+    const custom = getStoredCustomProfiles();
     try {
       setError(null);
       const res = await fetch(`${API_BASE}/profiles`);
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const data = await res.json();
-      if (data.success && Array.isArray(data.profiles)) {
-        const deletedSet = new Set((data.deletedIds || []).map(String));
-        setProfiles(deduplicateProfiles(data.profiles, deletedSet));
-        return;
+      if (res.ok) {
+        const data = await res.json();
+        if (data.success && Array.isArray(data.profiles)) {
+          const serverDeleted = new Set((data.deletedIds || []).map(String));
+          const allDeleted = new Set([...localDeleted, ...serverDeleted]);
+          const unified = mergeAndDeduplicateProfiles(data.profiles, custom, allDeleted);
+          setProfiles(unified);
+          return;
+        }
       }
+      const fallbackDeleted = new Set((fallbackDeletedIds || []).map(String));
+      const allDeleted = new Set([...localDeleted, ...fallbackDeleted]);
+      const unified = mergeAndDeduplicateProfiles(fallbackProfiles || [], custom, allDeleted);
+      setProfiles(unified);
     } catch (err) {
       console.warn('Live API sync note, displaying verified profile registry:', err.message);
-      const deletedSet = new Set((fallbackDeletedIds || []).map(String));
-      setProfiles(deduplicateProfiles(fallbackProfiles || [], deletedSet));
+      const fallbackDeleted = new Set((fallbackDeletedIds || []).map(String));
+      const allDeleted = new Set([...localDeleted, ...fallbackDeleted]);
+      const unified = mergeAndDeduplicateProfiles(fallbackProfiles || [], custom, allDeleted);
+      setProfiles(unified);
     } finally {
       setLoading(false);
     }

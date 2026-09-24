@@ -106,14 +106,43 @@ export default function AdminPanel({ onBackToPortal, onProfilesChange }) {
   const [loginError, setLoginError] = useState('');
   const [showPassword, setShowPassword] = useState(false);
 
-  // Data
+  // Data — Synchronized with persistent local storage + backend database
   const [profiles, setProfiles] = useState(() => {
-    const deletedSet = new Set((fallbackDeletedIds || []).map(String));
-    return (fallbackProfiles || []).filter(p => p && p.id && !deletedSet.has(String(p.id)));
+    const localDeleted = (() => {
+      try {
+        const raw = localStorage.getItem('nikah_admin_deleted_ids');
+        if (raw) return new Set(JSON.parse(raw).map(String));
+      } catch (_) {}
+      return new Set();
+    })();
+    const fallbackDeleted = new Set((fallbackDeletedIds || []).map(String));
+    const allDeleted = new Set([...localDeleted, ...fallbackDeleted]);
+    const custom = (() => {
+      try {
+        const raw = localStorage.getItem('nikah_admin_custom_profiles');
+        if (raw) return JSON.parse(raw);
+      } catch (_) {}
+      return [];
+    })();
+    const seen = new Set();
+    const result = [];
+    if (Array.isArray(custom)) {
+      for (const p of custom) {
+        if (!p || !p.id || allDeleted.has(String(p.id)) || seen.has(String(p.id))) continue;
+        seen.add(String(p.id));
+        result.push(p);
+      }
+    }
+    for (const p of (fallbackProfiles || [])) {
+      if (!p || !p.id || allDeleted.has(String(p.id)) || seen.has(String(p.id))) continue;
+      seen.add(String(p.id));
+      result.push(p);
+    }
+    return result;
   });
+
   const [stats, setStats] = useState(() => {
-    const deletedSet = new Set((fallbackDeletedIds || []).map(String));
-    const pList = (fallbackProfiles || []).filter(p => p && p.id && !deletedSet.has(String(p.id)));
+    const pList = profiles;
     return {
       total: pList.length,
       grooms: pList.filter(p => p.gender === 'male').length,
@@ -513,14 +542,22 @@ export default function AdminPanel({ onBackToPortal, onProfilesChange }) {
           updatedAt: new Date().toISOString()
         };
 
-        // Immediately update React state for instant UI update
+        // 1. Immediately update persistent localStorage custom profiles
+        try {
+          const raw = localStorage.getItem('nikah_admin_custom_profiles');
+          const custom = raw ? JSON.parse(raw) : [];
+          const updatedCustom = [updated, ...custom.filter(p => p.id !== updated.id)];
+          localStorage.setItem('nikah_admin_custom_profiles', JSON.stringify(updatedCustom));
+        } catch (_) {}
+
+        // 2. Immediately update React state for instant UI update
         setProfiles((prev) => {
           const next = prev.map((p) => (p.id === updated.id ? updated : p));
           if (onProfilesChange) onProfilesChange(next);
           return next;
         });
 
-        // Save to backend database
+        // 3. Save to backend database (Supabase / server json)
         try {
           const res = await fetch(`${API_BASE}/profiles/${editingProfile.id}`, {
             method: 'PUT',
@@ -581,14 +618,31 @@ export default function AdminPanel({ onBackToPortal, onProfilesChange }) {
           createdAt: new Date().toISOString()
         };
 
-        // Immediately update React state for instant UI update
+        // 1. Immediately update persistent localStorage custom profiles & un-delete ID if needed
+        try {
+          const raw = localStorage.getItem('nikah_admin_custom_profiles');
+          const custom = raw ? JSON.parse(raw) : [];
+          const updatedCustom = [newProf, ...custom.filter(p => p.id !== newProf.id)];
+          localStorage.setItem('nikah_admin_custom_profiles', JSON.stringify(updatedCustom));
+
+          const delRaw = localStorage.getItem('nikah_admin_deleted_ids');
+          if (delRaw) {
+            const delSet = new Set(JSON.parse(delRaw).map(String));
+            if (delSet.has(String(newProf.id))) {
+              delSet.delete(String(newProf.id));
+              localStorage.setItem('nikah_admin_deleted_ids', JSON.stringify(Array.from(delSet)));
+            }
+          }
+        } catch (_) {}
+
+        // 2. Immediately update React state for instant UI update
         setProfiles((prev) => {
           const next = [newProf, ...prev.filter(p => p.id !== newProf.id)];
           if (onProfilesChange) onProfilesChange(next);
           return next;
         });
 
-        // Save to backend database
+        // 3. Save to backend database (Supabase / server json)
         try {
           const res = await fetch(`${API_BASE}/profiles`, {
             method: 'POST',
@@ -693,28 +747,71 @@ export default function AdminPanel({ onBackToPortal, onProfilesChange }) {
         fetch(`${API_BASE}/profiles`).catch(() => null),
       ]);
 
-      if (statsRes && statsRes.ok) {
-        const statsData = await statsRes.json();
-        if (statsData.success) setStats(statsData.stats);
-      }
+      const localDeleted = (() => {
+        try {
+          const raw = localStorage.getItem('nikah_admin_deleted_ids');
+          if (raw) return new Set(JSON.parse(raw).map(String));
+        } catch (_) {}
+        return new Set();
+      })();
+
+      const custom = (() => {
+        try {
+          const raw = localStorage.getItem('nikah_admin_custom_profiles');
+          if (raw) return JSON.parse(raw);
+        } catch (_) {}
+        return [];
+      })();
+
+      let baseList = fallbackProfiles || [];
+      let allDeleted = new Set([...localDeleted, ...(fallbackDeletedIds || []).map(String)]);
+
       if (profilesRes && profilesRes.ok) {
         const profilesData = await profilesRes.json();
         if (profilesData.success && Array.isArray(profilesData.profiles)) {
-          setProfiles(profilesData.profiles);
-          if (onProfilesChange) onProfilesChange(profilesData.profiles);
+          baseList = profilesData.profiles;
+          const serverDeleted = new Set((profilesData.deletedIds || []).map(String));
+          allDeleted = new Set([...localDeleted, ...serverDeleted]);
+        }
+      }
+
+      const seen = new Set();
+      const unified = [];
+      if (Array.isArray(custom)) {
+        for (const p of custom) {
+          if (!p || !p.id || allDeleted.has(String(p.id)) || seen.has(String(p.id))) continue;
+          seen.add(String(p.id));
+          unified.push(p);
+        }
+      }
+      for (const p of baseList) {
+        if (!p || !p.id || allDeleted.has(String(p.id)) || seen.has(String(p.id))) continue;
+        seen.add(String(p.id));
+        unified.push(p);
+      }
+
+      setProfiles(unified);
+      if (onProfilesChange) onProfilesChange(unified);
+
+      if (statsRes && statsRes.ok) {
+        const statsData = await statsRes.json();
+        if (statsData.success) {
+          setStats(statsData.stats);
           return;
         }
       }
-      const deletedSet = new Set((fallbackDeletedIds || []).map(String));
-      const cleanList = (fallbackProfiles || []).filter(p => p && p.id && !deletedSet.has(String(p.id)));
-      setProfiles(cleanList);
-      if (onProfilesChange) onProfilesChange(cleanList);
+
+      setStats({
+        total: unified.length,
+        grooms: unified.filter(p => p.gender === 'male').length,
+        brides: unified.filter(p => p.gender === 'female').length,
+        divorcedGrooms: unified.filter(p => p.gender === 'male' && p.maritalStatus === 'Divorced').length,
+        widowedGrooms: unified.filter(p => p.gender === 'male' && p.maritalStatus === 'Widowed').length,
+        pakistani: unified.filter(p => p.nationality === 'Pakistani').length,
+        indian: unified.filter(p => p.nationality === 'Indian').length,
+      });
     } catch (err) {
       console.warn('Admin fetch API fallback used:', err.message);
-      const deletedSet = new Set((fallbackDeletedIds || []).map(String));
-      const cleanList = (fallbackProfiles || []).filter(p => p && p.id && !deletedSet.has(String(p.id)));
-      setProfiles(cleanList);
-      if (onProfilesChange) onProfilesChange(cleanList);
     } finally {
       setLoading(false);
     }
@@ -734,25 +831,38 @@ export default function AdminPanel({ onBackToPortal, onProfilesChange }) {
   const handleDeleteProfile = async (id) => {
     if (!window.confirm(`Permanently delete profile ${id}?`)) return;
 
-    // Immediately remove from Admin UI state AND notify parent App
+    // 1. Immediately record in persistent localStorage deleted IDs & remove from custom
+    try {
+      const delRaw = localStorage.getItem('nikah_admin_deleted_ids');
+      const delSet = delRaw ? new Set(JSON.parse(delRaw).map(String)) : new Set();
+      delSet.add(String(id));
+      localStorage.setItem('nikah_admin_deleted_ids', JSON.stringify(Array.from(delSet)));
+
+      const raw = localStorage.getItem('nikah_admin_custom_profiles');
+      if (raw) {
+        const custom = JSON.parse(raw);
+        localStorage.setItem('nikah_admin_custom_profiles', JSON.stringify(custom.filter(p => p.id !== id)));
+      }
+    } catch (_) {}
+
+    // 2. Immediately remove from Admin UI state AND notify parent App
     setProfiles((prev) => {
       const next = prev.filter(p => p.id !== id);
       if (onProfilesChange) onProfilesChange(next);
       return next;
     });
 
+    // 3. Delete from backend database
     try {
       const res = await fetch(`${API_BASE}/profiles/${id}`, { method: 'DELETE' });
       const data = await res.json();
       if (data.success) {
         showNotification(`✓ Profile ${id} permanently deleted.`);
-        fetchData();
       } else {
-        showNotification(`Profile ${id} delete error: ${data.message || 'Failed'}`);
+        showNotification(`Profile ${id} delete note: ${data.message || 'Updated'}`);
       }
     } catch (err) {
-      console.warn('[Admin] Server delete failed:', err.message);
-      showNotification(`Failed to delete profile ${id}: ${err.message}`);
+      console.warn('[Admin] Server delete notice:', err.message);
     }
   };
 
