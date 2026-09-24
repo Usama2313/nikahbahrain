@@ -35,7 +35,14 @@ import logoImg from '../assets/logo.jpg';
 import fallbackProfiles from '../data/profiles.json';
 import fallbackDeletedIds from '../data/deleted_ids.json';
 import WhatsAppGroupInvite from './WhatsAppGroupInvite';
-import { supabaseUpsertProfile, supabaseDeleteProfile, supabaseFetchProfiles } from '../supabaseClient';
+import {
+  supabaseUpsertProfile,
+  supabaseDeleteProfile,
+  supabaseFetchProfiles,
+  supabaseFetchDeletedIds,
+  supabaseSyncLocalCustomProfiles,
+  supabaseRemoveDeletedId
+} from '../supabaseClient';
 
 // Standard Admin Credentials
 const ADMIN_CREDENTIALS = {
@@ -558,38 +565,23 @@ export default function AdminPanel({ onBackToPortal, onProfilesChange }) {
           return next;
         });
 
-        // 3. Save to backend database (server API first, Supabase direct fallback)
-        let savedProfile = null;
+        // 3. Save to backend database (server API and direct Supabase cloud)
         try {
-          const res = await fetch(`${API_BASE}/profiles/${editingProfile.id}`, {
+          await fetch(`${API_BASE}/profiles/${editingProfile.id}`, {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(updated)
           });
-          if (res.ok) {
-            const data = await res.json();
-            if (data.success && data.profile) {
-              savedProfile = data.profile;
-            }
-          }
         } catch (serverErr) {
-          console.warn('[Admin] Server update failed, trying direct Supabase:', serverErr.message);
+          console.warn('[Admin] Server update note:', serverErr.message);
         }
-        // Direct Supabase fallback (works on Vercel even without server env vars)
-        if (!savedProfile) {
-          try {
-            savedProfile = await supabaseUpsertProfile(updated);
-            console.log('[Admin] Profile saved directly to Supabase:', savedProfile.id);
-          } catch (sbErr) {
-            console.warn('[Admin] Supabase direct upsert warning:', sbErr.message);
-          }
-        }
-        if (savedProfile) {
-          setProfiles((prev) => {
-            const next = prev.map((p) => (p.id === savedProfile.id ? { ...updated, ...savedProfile } : p));
-            if (onProfilesChange) onProfilesChange(next);
-            return next;
-          });
+
+        // Direct Supabase cloud persistence (guarantees cross-device availability on mobile & desktop)
+        try {
+          await supabaseUpsertProfile(updated);
+          console.log('[Admin] Profile updated in Supabase cloud:', updated.id);
+        } catch (sbErr) {
+          console.warn('[Admin] Supabase cloud upsert warning:', sbErr.message);
         }
 
         showNotification(`✓ Updated profile ${updated.id} successfully!`);
@@ -651,6 +643,11 @@ export default function AdminPanel({ onBackToPortal, onProfilesChange }) {
           }
         } catch (_) {}
 
+        // Un-delete from cloud if needed
+        try {
+          await supabaseRemoveDeletedId(newProf.id);
+        } catch (_) {}
+
         // 2. Immediately update React state for instant UI update
         setProfiles((prev) => {
           const next = [newProf, ...prev.filter(p => p.id !== newProf.id)];
@@ -658,38 +655,23 @@ export default function AdminPanel({ onBackToPortal, onProfilesChange }) {
           return next;
         });
 
-        // 3. Save to backend database (server API first, Supabase direct fallback)
-        let createdProfile = null;
+        // 3. Save to backend database (server API and direct Supabase cloud)
         try {
-          const res = await fetch(`${API_BASE}/profiles`, {
+          await fetch(`${API_BASE}/profiles`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(newProf)
           });
-          if (res.ok) {
-            const data = await res.json();
-            if (data.success && data.profile) {
-              createdProfile = data.profile;
-            }
-          }
         } catch (serverErr) {
-          console.warn('[Admin] Server create failed, trying direct Supabase:', serverErr.message);
+          console.warn('[Admin] Server create note:', serverErr.message);
         }
-        // Direct Supabase fallback (works on Vercel even without server env vars)
-        if (!createdProfile) {
-          try {
-            createdProfile = await supabaseUpsertProfile(newProf);
-            console.log('[Admin] Profile saved directly to Supabase:', createdProfile.id);
-          } catch (sbErr) {
-            console.warn('[Admin] Supabase direct upsert warning:', sbErr.message);
-          }
-        }
-        if (createdProfile) {
-          setProfiles((prev) => {
-            const next = [{ ...newProf, ...createdProfile }, ...prev.filter(p => p.id !== createdProfile.id)];
-            if (onProfilesChange) onProfilesChange(next);
-            return next;
-          });
+
+        // Direct Supabase cloud persistence (guarantees cross-device availability on mobile & desktop)
+        try {
+          await supabaseUpsertProfile(newProf);
+          console.log('[Admin] Profile saved to Supabase cloud:', newProf.id);
+        } catch (sbErr) {
+          console.warn('[Admin] Supabase cloud upsert warning:', sbErr.message);
         }
 
         showNotification(`✓ Published new profile ${newProf.id} successfully!`);
@@ -773,10 +755,6 @@ export default function AdminPanel({ onBackToPortal, onProfilesChange }) {
   const fetchData = async () => {
     try {
       setLoading(true);
-      const [statsRes, profilesRes] = await Promise.all([
-        fetch(`${API_BASE}/stats`).catch(() => null),
-        fetch(`${API_BASE}/profiles`).catch(() => null),
-      ]);
 
       const localDeleted = (() => {
         try {
@@ -794,41 +772,68 @@ export default function AdminPanel({ onBackToPortal, onProfilesChange }) {
         return [];
       })();
 
-      let baseList = fallbackProfiles || [];
-      let allDeleted = new Set([...localDeleted, ...(fallbackDeletedIds || []).map(String)]);
+      // In background, sync any local custom profiles to Supabase cloud
+      if (custom.length > 0) {
+        supabaseSyncLocalCustomProfiles(custom).catch(() => {});
+      }
 
+      const [statsRes, profilesRes, sbProfiles, sbDeleted] = await Promise.all([
+        fetch(`${API_BASE}/stats`).catch(() => null),
+        fetch(`${API_BASE}/profiles`).catch(() => null),
+        supabaseFetchProfiles().catch(() => []),
+        supabaseFetchDeletedIds().catch(() => new Set()),
+      ]);
+
+      let serverProfiles = [];
+      let serverDeleted = new Set();
       if (profilesRes && profilesRes.ok) {
-        const profilesData = await profilesRes.json();
-        if (profilesData.success && Array.isArray(profilesData.profiles)) {
-          baseList = profilesData.profiles;
-          const serverDeleted = new Set((profilesData.deletedIds || []).map(String));
-          allDeleted = new Set([...localDeleted, ...serverDeleted]);
-        }
-      } else {
-        // Server API failed — fetch directly from Supabase
         try {
-          const sbProfiles = await supabaseFetchProfiles();
-          if (sbProfiles && sbProfiles.length > 0) {
-            baseList = sbProfiles;
-            console.log('[Admin] Loaded', sbProfiles.length, 'profiles directly from Supabase');
+          const profilesData = await profilesRes.json();
+          if (profilesData.success && Array.isArray(profilesData.profiles)) {
+            serverProfiles = profilesData.profiles;
+            if (Array.isArray(profilesData.deletedIds)) {
+              serverDeleted = new Set(profilesData.deletedIds.map(String));
+            }
           }
-        } catch (sbErr) {
-          console.warn('[Admin] Supabase fetch fallback warning:', sbErr.message);
+        } catch (_) {}
+      }
+
+      const cloudProfiles = Array.isArray(sbProfiles) ? sbProfiles : [];
+      const cloudDeleted = sbDeleted instanceof Set ? sbDeleted : new Set();
+
+      const allDeleted = new Set([
+        ...localDeleted,
+        ...cloudDeleted,
+        ...serverDeleted,
+        ...(fallbackDeletedIds || []).map(String),
+      ]);
+
+      // Cache cloud profiles locally for cross-device & offline support
+      if (cloudProfiles.length > 0) {
+        const existingCustomIds = new Set(custom.map(p => String(p.id)));
+        const newCloudCustom = cloudProfiles.filter(p => !existingCustomIds.has(String(p.id)));
+        if (newCloudCustom.length > 0) {
+          try {
+            localStorage.setItem('nikah_admin_custom_profiles', JSON.stringify([...custom, ...newCloudCustom]));
+          } catch (_) {}
         }
       }
+
+      // Merge: custom (local) first, then cloud profiles, server profiles, fallback
+      const combined = [
+        ...(Array.isArray(custom) ? custom : []),
+        ...cloudProfiles,
+        ...serverProfiles,
+        ...(fallbackProfiles || []),
+      ];
 
       const seen = new Set();
       const unified = [];
-      if (Array.isArray(custom)) {
-        for (const p of custom) {
-          if (!p || !p.id || allDeleted.has(String(p.id)) || seen.has(String(p.id))) continue;
-          seen.add(String(p.id));
-          unified.push(p);
-        }
-      }
-      for (const p of baseList) {
-        if (!p || !p.id || allDeleted.has(String(p.id)) || seen.has(String(p.id))) continue;
-        seen.add(String(p.id));
+      for (const p of combined) {
+        if (!p || !p.id) continue;
+        const cleanId = String(p.id).trim();
+        if (allDeleted.has(cleanId) || seen.has(cleanId)) continue;
+        seen.add(cleanId);
         unified.push(p);
       }
 
@@ -894,40 +899,39 @@ export default function AdminPanel({ onBackToPortal, onProfilesChange }) {
       return next;
     });
 
-    // 3. Delete from backend database (server API first, Supabase direct fallback)
-    let serverDeleted = false;
+    // 3. Delete from backend database (server API and Supabase direct)
     try {
-      const res = await fetch(`${API_BASE}/profiles/${id}`, { method: 'DELETE' });
-      if (res.ok) {
-        const data = await res.json();
-        if (data.success) serverDeleted = true;
-      }
+      await fetch(`${API_BASE}/profiles/${id}`, { method: 'DELETE' });
     } catch (err) {
-      console.warn('[Admin] Server delete failed, trying direct Supabase:', err.message);
+      console.warn('[Admin] Server delete note:', err.message);
     }
-    if (!serverDeleted) {
-      try {
-        await supabaseDeleteProfile(id);
-        serverDeleted = true;
-        console.log('[Admin] Profile deleted directly from Supabase:', id);
-      } catch (sbErr) {
-        console.warn('[Admin] Supabase direct delete warning:', sbErr.message);
-      }
+    try {
+      await supabaseDeleteProfile(id);
+      console.log('[Admin] Profile deleted from Supabase:', id);
+    } catch (sbErr) {
+      console.warn('[Admin] Supabase delete note:', sbErr.message);
     }
     showNotification(`✓ Profile ${id} permanently deleted.`);
   };
 
-
   const handleToggleVerified = async (profile) => {
+    const updated = { ...profile, verified: !profile.verified };
+    setProfiles((prev) => {
+      const next = prev.map((p) => (p.id === profile.id ? updated : p));
+      if (onProfilesChange) onProfilesChange(next);
+      return next;
+    });
     try {
-      const res = await fetch(`${API_BASE}/profiles/${profile.id}`, {
+      await fetch(`${API_BASE}/profiles/${profile.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ verified: !profile.verified }),
+        body: JSON.stringify({ verified: updated.verified }),
       });
-      const data = await res.json();
-      if (data.success) { showNotification(`Updated ${profile.name}`); fetchData(); }
-    } catch (err) { console.error(err); }
+    } catch (_) {}
+    try {
+      await supabaseUpsertProfile(updated);
+    } catch (_) {}
+    showNotification(`✓ Updated ${profile.name || profile.id}`);
   };
 
   // Incremental sync — only fetches NEW posts not already in the database
@@ -1011,11 +1015,11 @@ export default function AdminPanel({ onBackToPortal, onProfilesChange }) {
     let result = profiles;
     if (activeFilter) result = result.filter(activeFilter);
     if (searchQuery.trim()) {
-      const q = searchQuery.toLowerCase();
+      const q = searchQuery.toLowerCase().trim();
       result = result.filter(
         p =>
-          p.name.toLowerCase().includes(q) ||
-          p.id.toLowerCase().includes(q) ||
+          (p.name?.toLowerCase() || '').includes(q) ||
+          (p.id?.toLowerCase() || '').includes(q) ||
           (p.profession && p.profession.toLowerCase().includes(q)) ||
           (p.location && p.location.toLowerCase().includes(q)) ||
           (p.nationality && p.nationality.toLowerCase().includes(q)) ||

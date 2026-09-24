@@ -15,7 +15,11 @@ import { Sparkles, AlertCircle, RefreshCw, RotateCcw } from './icons';
 import API_BASE from './api';
 import fallbackProfiles from './data/profiles.json';
 import fallbackDeletedIds from './data/deleted_ids.json';
-import { supabaseFetchProfiles } from './supabaseClient';
+import {
+  supabaseFetchProfiles,
+  supabaseFetchDeletedIds,
+  supabaseSyncLocalCustomProfiles
+} from './supabaseClient';
 
 // Persistent storage keys for custom admin created/edited profiles
 const ADMIN_CUSTOM_PROFILES_KEY = 'nikah_admin_custom_profiles';
@@ -177,50 +181,69 @@ export default function App() {
   const fetchProfiles = async () => {
     const localDeleted = getStoredDeletedIds();
     const custom = getStoredCustomProfiles();
+
+    // In background, sync any locally cached custom profiles up to Supabase cloud
+    if (custom.length > 0) {
+      supabaseSyncLocalCustomProfiles(custom).catch(() => {});
+    }
+
     try {
       setError(null);
-      const res = await fetch(`${API_BASE}/profiles`);
-      if (res.ok) {
-        const data = await res.json();
-        if (data.success && Array.isArray(data.profiles)) {
-          const serverDeleted = new Set((data.deletedIds || []).map(String));
-          const allDeleted = new Set([...localDeleted, ...serverDeleted]);
-          const unified = mergeAndDeduplicateProfiles(data.profiles, custom, allDeleted);
-          setProfiles(unified);
-          return;
-        }
-      }
-      // Server API failed — try Supabase directly
+
+      // 1. Fetch directly from cloud Supabase
+      let cloudProfiles = [];
+      let cloudDeleted = new Set();
       try {
-        const sbProfiles = await supabaseFetchProfiles();
-        if (sbProfiles && sbProfiles.length > 0) {
-          const fallbackDeleted = new Set((fallbackDeletedIds || []).map(String));
-          const allDeleted = new Set([...localDeleted, ...fallbackDeleted]);
-          const unified = mergeAndDeduplicateProfiles(sbProfiles, custom, allDeleted);
-          setProfiles(unified);
-          console.log('[App] Loaded', sbProfiles.length, 'profiles directly from Supabase');
-          return;
-        }
+        const [sbList, sbDel] = await Promise.all([
+          supabaseFetchProfiles(),
+          supabaseFetchDeletedIds()
+        ]);
+        if (Array.isArray(sbList)) cloudProfiles = sbList;
+        if (sbDel instanceof Set) cloudDeleted = sbDel;
       } catch (sbErr) {
-        console.warn('[App] Supabase direct fetch note:', sbErr.message);
+        console.warn('[App] Supabase cloud fetch note:', sbErr.message);
       }
-      const fallbackDeleted = new Set((fallbackDeletedIds || []).map(String));
-      const allDeleted = new Set([...localDeleted, ...fallbackDeleted]);
-      const unified = mergeAndDeduplicateProfiles(fallbackProfiles || [], custom, allDeleted);
+
+      // 2. Fetch from server API
+      let serverProfiles = [];
+      let serverDeleted = new Set();
+      try {
+        const res = await fetch(`${API_BASE}/profiles`);
+        if (res.ok) {
+          const data = await res.json();
+          if (data.success && Array.isArray(data.profiles)) {
+            serverProfiles = data.profiles;
+            if (Array.isArray(data.deletedIds)) {
+              serverDeleted = new Set(data.deletedIds.map(String));
+            }
+          }
+        }
+      } catch (apiErr) {
+        console.warn('[App] Server API fetch note:', apiErr.message);
+      }
+
+      const allDeleted = new Set([
+        ...localDeleted,
+        ...cloudDeleted,
+        ...serverDeleted,
+        ...(fallbackDeletedIds || []).map(String)
+      ]);
+
+      // Cache any cloud profiles into local custom profiles for instant offline & cross-device availability
+      if (cloudProfiles.length > 0) {
+        const existingCustomIds = new Set(custom.map(p => String(p.id)));
+        const newCloudCustom = cloudProfiles.filter(p => !existingCustomIds.has(String(p.id)));
+        if (newCloudCustom.length > 0) {
+          saveStoredCustomProfiles([...custom, ...newCloudCustom]);
+        }
+      }
+
+      // Merge: cloud custom profiles + server profiles + fallback profiles
+      const baseList = [...cloudProfiles, ...serverProfiles, ...(fallbackProfiles || [])];
+      const unified = mergeAndDeduplicateProfiles(baseList, custom, allDeleted);
       setProfiles(unified);
     } catch (err) {
-      console.warn('Live API sync note, displaying verified profile registry:', err.message);
-      // Try Supabase as fallback
-      try {
-        const sbProfiles = await supabaseFetchProfiles();
-        if (sbProfiles && sbProfiles.length > 0) {
-          const fallbackDeleted = new Set((fallbackDeletedIds || []).map(String));
-          const allDeleted = new Set([...localDeleted, ...fallbackDeleted]);
-          const unified = mergeAndDeduplicateProfiles(sbProfiles, custom, allDeleted);
-          setProfiles(unified);
-          return;
-        }
-      } catch (_) {}
+      console.warn('Profile fetch note:', err.message);
       const fallbackDeleted = new Set((fallbackDeletedIds || []).map(String));
       const allDeleted = new Set([...localDeleted, ...fallbackDeleted]);
       const unified = mergeAndDeduplicateProfiles(fallbackProfiles || [], custom, allDeleted);

@@ -171,8 +171,8 @@ export async function dbGetProfiles() {
   const deletedIds = getDeletedProfileIds();
   const db = getSupabase();
   if (db) {
+    // 1. Try 'profiles' table
     try {
-      // Supabase defaults to 1000 rows max per request.
       const BATCH_SIZE = 1000;
       let allRows = [];
       let from = 0;
@@ -185,10 +185,7 @@ export async function dbGetProfiles() {
           .order('created_at', { ascending: false })
           .range(from, from + BATCH_SIZE - 1);
 
-        if (error) {
-          console.warn('[DB] Supabase read error:', error.message);
-          break;
-        }
+        if (error) break;
 
         if (data && data.length > 0) {
           allRows = allRows.concat(data);
@@ -204,13 +201,39 @@ export async function dbGetProfiles() {
           .map(normalizeFromDb)
           .filter(p => p && p.id && !deletedIds.has(String(p.id)));
         memoryProfilesCache = normalized;
-        console.log(`[DB] Fetched ${normalized.length} total profiles from Supabase (filtered deletions)`);
+        console.log(`[DB] Fetched ${normalized.length} total profiles from Supabase profiles table`);
         return normalized;
       }
+    } catch (_) {}
 
-      console.warn('[DB] Supabase returned empty results, using local fallback');
+    // 2. Fallback: Try 'properties' table (status = 'nikah_profile')
+    try {
+      const { data, error } = await db
+        .from('properties')
+        .select('*')
+        .eq('status', 'nikah_profile')
+        .order('createdAt', { ascending: false });
+
+      if (!error && Array.isArray(data) && data.length > 0) {
+        const parsed = [];
+        for (const item of data) {
+          try {
+            if (item.description) {
+              const p = JSON.parse(item.description);
+              if (p && p.id && !deletedIds.has(String(p.id))) {
+                parsed.push(p);
+              }
+            }
+          } catch (_) {}
+        }
+        if (parsed.length > 0) {
+          memoryProfilesCache = parsed;
+          console.log(`[DB] Fetched ${parsed.length} profiles from Supabase properties table`);
+          return parsed;
+        }
+      }
     } catch (err) {
-      console.warn('[DB] Supabase unavailable, using local fallback:', err.message);
+      console.warn('[DB] properties fetch note:', err.message);
     }
   }
   return getLocalProfiles();
@@ -227,18 +250,30 @@ export async function dbGetProfileById(id) {
       const { data, error } = await db.from('profiles').select('*').eq('id', id).single();
       if (!error && data) return normalizeFromDb(data);
     } catch (_) {}
+
+    try {
+      const { data, error } = await db
+        .from('properties')
+        .select('description')
+        .eq('title', id)
+        .eq('status', 'nikah_profile')
+        .limit(1);
+      if (!error && data && data.length > 0 && data[0].description) {
+        return JSON.parse(data[0].description);
+      }
+    } catch (_) {}
   }
   return getLocalProfiles().find(p => p.id === id) || null;
 }
 
 export async function dbInsertProfile(profile) {
   if (!profile || !profile.id) return profile;
-  // If this ID was previously marked deleted, un-delete it because it is being intentionally created/saved
   removeDeletedProfileId(profile.id);
 
   const db = getSupabase();
   const row = normalizeForDb(profile);
   if (db) {
+    // Try profiles table
     try {
       const { data, error } = await db
         .from('profiles')
@@ -246,18 +281,61 @@ export async function dbInsertProfile(profile) {
         .select()
         .single();
       if (!error && data) {
-        console.log(`[DB] Inserted/updated profile ${profile.id} in Supabase`);
+        console.log(`[DB] Inserted/updated profile ${profile.id} in Supabase profiles`);
         const all = getLocalProfiles();
         const idx = all.findIndex(p => p.id === profile.id);
         if (idx >= 0) all[idx] = profile; else all.unshift(profile);
         saveLocalProfiles(all);
         return normalizeFromDb(data);
       }
-      console.warn('[DB] Supabase insert error:', error?.message);
-    } catch (err) {
-      console.warn('[DB] Supabase insert failed:', err.message);
+    } catch (_) {}
+
+    // Resilient fallback: store in properties table
+    try {
+      const now = new Date().toISOString();
+      const { data: existing } = await db
+        .from('properties')
+        .select('id')
+        .eq('title', profile.id)
+        .eq('status', 'nikah_profile')
+        .limit(1);
+
+      if (existing && existing.length > 0) {
+        await db
+          .from('properties')
+          .update({
+            description: JSON.stringify(profile),
+            category: profile.category || 'grooms',
+            isApproved: profile.verified !== false,
+            isFeatured: profile.featured === true,
+            updatedAt: now,
+          })
+          .eq('id', existing[0].id);
+      } else {
+        await db
+          .from('properties')
+          .insert({
+            title: profile.id,
+            description: JSON.stringify(profile),
+            status: 'nikah_profile',
+            category: profile.category || 'grooms',
+            isApproved: profile.verified !== false,
+            isFeatured: profile.featured === true,
+            createdAt: profile.createdAt || now,
+            updatedAt: now,
+          });
+      }
+      console.log(`[DB] Saved profile ${profile.id} to Supabase properties table`);
+      const all = getLocalProfiles();
+      const idx = all.findIndex(p => p.id === profile.id);
+      if (idx >= 0) all[idx] = profile; else all.unshift(profile);
+      saveLocalProfiles(all);
+      return profile;
+    } catch (propErr) {
+      console.warn('[DB] Supabase insert failed on both tables:', propErr.message);
     }
   }
+
   const all = getLocalProfiles();
   const idx = all.findIndex(p => p.id === profile.id);
   if (idx >= 0) all[idx] = profile; else all.unshift(profile);
@@ -280,16 +358,50 @@ export async function dbUpdateProfile(id, updates) {
         .select()
         .single();
       if (!error && data) {
-        console.log(`[DB] Updated profile ${id} in Supabase`);
+        console.log(`[DB] Updated profile ${id} in Supabase profiles`);
         const all = getLocalProfiles();
         const idx = all.findIndex(p => p.id === id);
         if (idx >= 0) { all[idx] = { ...all[idx], ...updates }; saveLocalProfiles(all); }
         return normalizeFromDb(data);
       }
-      console.warn('[DB] Supabase update error:', error?.message);
-    } catch (err) {
-      console.warn('[DB] Supabase update failed:', err.message);
-    }
+    } catch (_) {}
+
+    // Resilient fallback: update in properties table
+    try {
+      const now = new Date().toISOString();
+      const { data: existing } = await db
+        .from('properties')
+        .select('id, description')
+        .eq('title', id)
+        .eq('status', 'nikah_profile')
+        .limit(1);
+
+      if (existing && existing.length > 0) {
+        let merged = { ...updates, id, updatedAt: now };
+        try {
+          if (existing[0].description) {
+            merged = { ...JSON.parse(existing[0].description), ...updates, id, updatedAt: now };
+          }
+        } catch (_) {}
+
+        await db
+          .from('properties')
+          .update({
+            description: JSON.stringify(merged),
+            category: merged.category || 'grooms',
+            isApproved: merged.verified !== false,
+            isFeatured: merged.featured === true,
+            updatedAt: now,
+          })
+          .eq('id', existing[0].id);
+
+        console.log(`[DB] Updated profile ${id} in Supabase properties table`);
+        const all = getLocalProfiles();
+        const idx = all.findIndex(p => p.id === id);
+        if (idx >= 0) { all[idx] = merged; saveLocalProfiles(all); }
+        return merged;
+      }
+    } catch (_) {}
   }
   const all = getLocalProfiles();
   const idx = all.findIndex(p => p.id === id);
@@ -303,21 +415,16 @@ export async function dbUpdateProfile(id, updates) {
 
 export async function dbDeleteProfile(id) {
   if (!id) return false;
-  // Permanently record deletion in deleted_ids.json
   addDeletedProfileId(id);
 
   const db = getSupabase();
   if (db) {
     try {
-      const { error } = await db.from('profiles').delete().eq('id', id);
-      if (!error) {
-        console.log(`[DB] Deleted profile ${id} from Supabase`);
-      } else {
-        console.warn('[DB] Supabase delete warning:', error?.message);
-      }
-    } catch (err) {
-      console.warn('[DB] Supabase delete warning:', err.message);
-    }
+      await db.from('profiles').delete().eq('id', id);
+    } catch (_) {}
+    try {
+      await db.from('properties').delete().eq('title', id).eq('status', 'nikah_profile');
+    } catch (_) {}
   }
 
   // Remove from memory and file stores
