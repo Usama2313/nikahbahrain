@@ -2,7 +2,7 @@
 echo ===================================================
 echo Starting Nikah Bahrain Matrimonial Platform
 echo ===================================================
-echo Backend API:  http://localhost:5000/api
+echo Backend API:  http://localhost:5001/api
 echo Frontend Web: http://localhost:5173
 echo ===================================================
 start "Nikah Bahrain Backend" cmd /k "cd /d %~dp0server && node index.js"

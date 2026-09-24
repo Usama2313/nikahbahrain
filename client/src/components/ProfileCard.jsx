@@ -39,14 +39,6 @@ const resolveImageUrl = (img, profileId, instagramPostId) => {
     return `/uploads/ig_${instagramPostId}.jpg`;
   }
 
-  // 5. Fallback to localStorage image cache if available
-  if (profileId) {
-    try {
-      const cached = localStorage.getItem(`nikah_img_${profileId}`);
-      if (cached) return cached;
-    } catch (_) {}
-  }
-
   return '';
 };
 
@@ -85,27 +77,12 @@ export default function ProfileCard({
           return;
         }
       }
-      // Try localStorage cache
-      try {
-        const cached = localStorage.getItem(`nikah_img_${profile.id}`);
-        if (cached && cached !== imgSrc) {
-          setImgSrc(cached);
-          setImgError(false);
-          return;
-        }
-      } catch (_) {}
     }
     setImgError(true);
   };
 
   const handleImageLoad = () => {
     setImgError(false);
-    // Cache verified working base64 or path to ensure permanent display on reload
-    if (profile.id && imgSrc && imgSrc.startsWith('data:image/')) {
-      try {
-        localStorage.setItem(`nikah_img_${profile.id}`, imgSrc);
-      } catch (_) {}
-    }
   };
 
   const hoverSpring = useSpring({

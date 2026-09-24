@@ -91,6 +91,32 @@ export function addDeletedProfileId(id) {
   }
 }
 
+export function removeDeletedProfileId(id) {
+  if (!id) return;
+  try {
+    const current = getDeletedProfileIds();
+    if (current.has(String(id))) {
+      current.delete(String(id));
+      const arr = Array.from(current);
+      const file = getDeletedIdsFilePath();
+      const dir = path.dirname(file);
+      if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+      fs.writeFileSync(file, JSON.stringify(arr, null, 2), 'utf8');
+
+      // Also sync to client bundle if present
+      const clientFile = path.join(__dirname, '..', 'client', 'src', 'data', 'deleted_ids.json');
+      try {
+        const cdir = path.dirname(clientFile);
+        if (fs.existsSync(cdir)) {
+          fs.writeFileSync(clientFile, JSON.stringify(arr, null, 2), 'utf8');
+        }
+      } catch (_) {}
+    }
+  } catch (err) {
+    console.warn('[DB] Could not remove deleted ID:', err.message);
+  }
+}
+
 // ─── Fallback: read/write local / serverless JSON file ───────────────────────────
 export function getLocalProfiles() {
   const deletedIds = getDeletedProfileIds();
@@ -207,11 +233,8 @@ export async function dbGetProfileById(id) {
 
 export async function dbInsertProfile(profile) {
   if (!profile || !profile.id) return profile;
-  const deletedIds = getDeletedProfileIds();
-  if (deletedIds.has(String(profile.id))) {
-    console.log(`[DB] Skipping insertion of previously deleted profile ${profile.id}`);
-    return profile;
-  }
+  // If this ID was previously marked deleted, un-delete it because it is being intentionally created/saved
+  removeDeletedProfileId(profile.id);
 
   const db = getSupabase();
   const row = normalizeForDb(profile);
@@ -244,11 +267,7 @@ export async function dbInsertProfile(profile) {
 
 export async function dbUpdateProfile(id, updates) {
   if (!id) return null;
-  const deletedIds = getDeletedProfileIds();
-  if (deletedIds.has(String(id))) {
-    console.warn(`[DB] Cannot update deleted profile ${id}`);
-    return null;
-  }
+  removeDeletedProfileId(id);
 
   const db = getSupabase();
   const row = normalizeForDb({ ...updates, id, updatedAt: new Date().toISOString() });

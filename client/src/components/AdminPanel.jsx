@@ -33,6 +33,7 @@ import confetti from 'canvas-confetti';
 import API_BASE from '../api';
 import logoImg from '../assets/logo.jpg';
 import fallbackProfiles from '../data/profiles.json';
+import fallbackDeletedIds from '../data/deleted_ids.json';
 import WhatsAppGroupInvite from './WhatsAppGroupInvite';
 
 // Standard Admin Credentials
@@ -106,9 +107,13 @@ export default function AdminPanel({ onBackToPortal, onProfilesChange }) {
   const [showPassword, setShowPassword] = useState(false);
 
   // Data
-  const [profiles, setProfiles] = useState(() => fallbackProfiles || []);
+  const [profiles, setProfiles] = useState(() => {
+    const deletedSet = new Set((fallbackDeletedIds || []).map(String));
+    return (fallbackProfiles || []).filter(p => p && p.id && !deletedSet.has(String(p.id)));
+  });
   const [stats, setStats] = useState(() => {
-    const pList = fallbackProfiles || [];
+    const deletedSet = new Set((fallbackDeletedIds || []).map(String));
+    const pList = (fallbackProfiles || []).filter(p => p && p.id && !deletedSet.has(String(p.id)));
     return {
       total: pList.length,
       grooms: pList.filter(p => p.gender === 'male').length,
@@ -396,93 +401,6 @@ export default function AdminPanel({ onBackToPortal, onProfilesChange }) {
     setIsFormOpen(true);
   };
 
-  const addDeletedProfileToStorage = (profileId) => {
-    try {
-      const existing = JSON.parse(localStorage.getItem('nikah_deleted_profiles') || '[]');
-      if (!existing.includes(profileId)) {
-        existing.push(profileId);
-        localStorage.setItem('nikah_deleted_profiles', JSON.stringify(existing));
-      }
-    } catch (e) {
-      console.error(e);
-    }
-  };
-
-  const saveCustomProfileToStorage = (profileObj) => {
-    try {
-      const deleted = JSON.parse(localStorage.getItem('nikah_deleted_profiles') || '[]');
-      const updatedDeleted = deleted.filter(id => id !== profileObj.id);
-      localStorage.setItem('nikah_deleted_profiles', JSON.stringify(updatedDeleted));
-
-      // Cache image separately under nikah_img_${id} for instant lookup
-      if (profileObj.image) {
-        try {
-          localStorage.setItem(`nikah_img_${profileObj.id}`, profileObj.image);
-        } catch (_) {}
-      }
-
-      const existing = JSON.parse(localStorage.getItem('nikah_custom_profiles') || '[]');
-      const filtered = existing.filter(p => p.id !== profileObj.id);
-      filtered.unshift(profileObj);
-
-      try {
-        localStorage.setItem('nikah_custom_profiles', JSON.stringify(filtered));
-      } catch (quotaErr) {
-        // If quota exceeded, store with empty image in array but preserve in nikah_img_${id}
-        const fallbackObj = profileObj.image?.startsWith('data:') ? { ...profileObj, image: '' } : profileObj;
-        filtered[0] = fallbackObj;
-        try { localStorage.setItem('nikah_custom_profiles', JSON.stringify(filtered)); } catch (_) {}
-      }
-    } catch (e) {
-      console.error('saveCustomProfileToStorage error:', e);
-    }
-  };
-
-
-  const removeCustomProfileFromStorage = (profileId) => {
-    try {
-      addDeletedProfileToStorage(profileId);
-      const existing = JSON.parse(localStorage.getItem('nikah_custom_profiles') || '[]');
-      const filtered = existing.filter(p => p.id !== profileId);
-      localStorage.setItem('nikah_custom_profiles', JSON.stringify(filtered));
-    } catch (e) {
-      console.error(e);
-    }
-  };
-
-  // Persist all custom profiles to server JSON so they appear on ALL devices (including mobile)
-  const persistProfilesToServer = async (allProfiles) => {
-    try {
-      const custom = JSON.parse(localStorage.getItem('nikah_custom_profiles') || '[]');
-      const enrichedCustom = custom.map(p => {
-        if (!p.image) {
-          try {
-            const cachedImg = localStorage.getItem(`nikah_img_${p.id}`);
-            if (cachedImg) return { ...p, image: cachedImg };
-          } catch (_) {}
-        }
-        return p;
-      });
-
-      const deletedIds = new Set(JSON.parse(localStorage.getItem('nikah_deleted_profiles') || '[]'));
-      const rawList = allProfiles && allProfiles.length > 0 ? allProfiles : enrichedCustom;
-      const toSync = rawList.filter(p => p && p.id && !deletedIds.has(p.id));
-      if (!toSync.length) return;
-
-      const res = await fetch(`${API_BASE}/admin/persist-profiles`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ profiles: toSync })
-      });
-      const data = await res.json();
-      if (data.success) {
-        console.log(`[Admin] Persisted ${toSync.length} profiles to server JSON. Total: ${data.count}`);
-      }
-    } catch (err) {
-      console.warn('Could not persist profiles to server:', err.message);
-    }
-  };
-
   const validateProfileForm = () => {
     const errs = {};
 
@@ -595,16 +513,38 @@ export default function AdminPanel({ onBackToPortal, onProfilesChange }) {
         if (match) igPostId = match[1];
       }
 
+      let finalImageUrl = formData.image?.trim() || '';
+      if (finalImageUrl.startsWith('data:image/')) {
+        try {
+          const safeName = `profile_${Date.now()}`;
+          const uploadRes = await fetch(`${API_BASE}/upload-image`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ image: finalImageUrl, filename: safeName })
+          });
+          const uploadData = await uploadRes.json();
+          if (uploadData.success && uploadData.url) {
+            finalImageUrl = uploadData.url;
+          }
+        } catch (_) {}
+      }
+
       if (editingProfile) {
+        const marital = formData.maritalStatus?.trim() || editingProfile.maritalStatus || 'Never Married';
+        let profCat = formData.gender === 'male' ? 'grooms' : 'brides';
+        if (marital === 'Divorced') profCat = formData.gender === 'male' ? 'divorced-grooms' : 'divorced-brides';
+        else if (marital === 'Widowed') profCat = formData.gender === 'male' ? 'widowed-grooms' : 'widowed-brides';
+
         let updated = {
           ...editingProfile,
           ...formData,
           name: candidateName,
           age: candidateAge,
-          image: formData.image?.trim() || '',
+          image: finalImageUrl,
           instagramPostUrl: formData.instagramPostUrl?.trim() || '',
           instagramPostId: igPostId || editingProfile.instagramPostId || '',
-          category: formData.gender === 'male' ? 'grooms' : 'brides',
+          maritalStatus: marital,
+          category: profCat,
           salary: formData.salary?.trim() || '',
           location: formData.location?.trim() || '',
           residence: formData.residence?.trim() || '',
@@ -624,43 +564,33 @@ export default function AdminPanel({ onBackToPortal, onProfilesChange }) {
           updatedAt: new Date().toISOString()
         };
 
-        try {
-          const res = await fetch(`${API_BASE}/profiles/${editingProfile.id}`, {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(updated)
-          });
-          const data = await res.json();
-          if (data.success && data.profile) {
-            updated = {
-              ...data.profile,
-              // Preserve image from local formData if server/DB lost it
-              image: data.profile.image || formData.image || '',
-            };
-          }
-        } catch (apiErr) {
-          console.warn('API update fallback:', apiErr.message);
-        }
+        const res = await fetch(`${API_BASE}/profiles/${editingProfile.id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(updated)
+        });
+        const data = await res.json();
+        const savedProfile = (data.success && data.profile) ? data.profile : updated;
 
-        // Cache image in localStorage by profile ID
-        if (updated.image) {
-          try { localStorage.setItem(`nikah_img_${updated.id}`, updated.image); } catch (_) {}
-        }
-
-        saveCustomProfileToStorage(updated);
         setProfiles((prev) => {
-          const next = prev.map((p) => (p.id === updated.id ? updated : p));
+          const next = prev.map((p) => (p.id === savedProfile.id ? savedProfile : p));
           if (onProfilesChange) onProfilesChange(next);
-          // Persist updated profiles to server so mobile/other devices see them
-          persistProfilesToServer(next);
           return next;
         });
-        showNotification(`✓ Updated profile ${updated.id} successfully!`);
+        fetchData();
+        showNotification(`✓ Updated profile ${savedProfile.id} successfully!`);
         setIsFormOpen(false);
-        if (openInstagram) setInstagramModalProfile(updated);
+        if (openInstagram) setInstagramModalProfile(savedProfile);
       } else {
-        let nextCustomId = `NPF-${Date.now().toString().slice(-4)}`;
-        // Match NPF ID anywhere in candidate name, e.g. #NPF-26(GROOM) -> NPF-26
+        const maxNpf = profiles.reduce((max, p) => {
+          const m = (p.id || '').match(/NPF-?(\d+)/i);
+          if (m) {
+            const n = parseInt(m[1], 10);
+            return n > max && n < 9000 ? n : max;
+          }
+          return max;
+        }, 228);
+        let nextCustomId = `NPF-${maxNpf + 1}`;
         const npfMatch = candidateName.match(/NPF-?(\d+)/i);
         if (npfMatch) {
           nextCustomId = `NPF-${npfMatch[1]}`;
@@ -680,7 +610,6 @@ export default function AdminPanel({ onBackToPortal, onProfilesChange }) {
           nationality: formData.nationality?.trim() || 'Pakistani',
           category: profCat,
           salary: formData.salary?.trim() || '',
-
           location: formData.location?.trim() || '',
           residence: formData.residence?.trim() || '',
           siblings: formData.siblings?.trim() || '',
@@ -696,7 +625,7 @@ export default function AdminPanel({ onBackToPortal, onProfilesChange }) {
           education: formData.education?.trim() || '',
           sect: formData.sect?.trim() || '',
           caste: formData.caste?.trim() || '',
-          image: formData.image?.trim() || '',
+          image: finalImageUrl,
           instagramPostUrl: formData.instagramPostUrl?.trim() || '',
           instagramPostId: igPostId,
           verified: true,
@@ -704,69 +633,26 @@ export default function AdminPanel({ onBackToPortal, onProfilesChange }) {
           createdAt: new Date().toISOString()
         };
 
-        let serverSaveSuccess = false;
-        try {
-          const res = await fetch(`${API_BASE}/profiles`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(newProf)
-          });
-          const data = await res.json();
-          if (data.success && data.profile) {
-            serverSaveSuccess = true;
-            newProf = {
-              ...data.profile,
-              // Preserve image from local formData if server/DB lost it (large base64 can be dropped)
-              image: data.profile.image || formData.image || '',
-            };
-          }
-        } catch (apiErr) {
-          console.warn('API create fallback:', apiErr.message);
+        const res = await fetch(`${API_BASE}/profiles`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(newProf)
+        });
+        const data = await res.json();
+        if (!res.ok || !data.success) {
+          throw new Error(data.message || 'Failed to save profile to database');
         }
-
-        // Cache the image separately in localStorage keyed by profile ID
-        // This ensures it displays even if the DB entry loses the image field
-        if (newProf.image) {
-          try { localStorage.setItem(`nikah_img_${newProf.id}`, newProf.image); } catch (_) {}
-        }
-
-        if (serverSaveSuccess) {
-          // Server saved successfully — also persist to profiles.json so ALL devices (including mobile) can see it
-          // Then remove from localStorage custom profiles since server is now the source of truth
-          try {
-            const persistRes = await fetch(`${API_BASE}/admin/persist-profiles`, {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ profiles: [newProf] })
-            });
-            if (persistRes.ok) {
-              // Remove this profile from localStorage custom profiles — server has it now
-              try {
-                const existing = JSON.parse(localStorage.getItem('nikah_custom_profiles') || '[]');
-                const filtered = existing.filter(p => p.id !== newProf.id);
-                localStorage.setItem('nikah_custom_profiles', JSON.stringify(filtered));
-              } catch (_) {}
-            }
-          } catch (_) {
-            // If persist-profiles fails, keep in localStorage as fallback
-            saveCustomProfileToStorage(newProf);
-          }
-          // Re-fetch from server to get accurate count on all devices
-          setTimeout(() => fetchData(), 500);
-        } else {
-          // Server failed — save to localStorage as fallback and try to sync later
-          saveCustomProfileToStorage(newProf);
-          persistProfilesToServer([newProf]);
-        }
+        const savedProfile = data.profile || newProf;
 
         setProfiles((prev) => {
-          const next = [newProf, ...prev.filter(p => p.id !== newProf.id)];
+          const next = [savedProfile, ...prev.filter(p => p.id !== savedProfile.id)];
           if (onProfilesChange) onProfilesChange(next);
           return next;
         });
-        showNotification(`✓ Published new profile ${newProf.id} successfully!`);
+        fetchData();
+        showNotification(`✓ Published new profile ${savedProfile.id} successfully!`);
         setIsFormOpen(false);
-        if (openInstagram) setInstagramModalProfile(newProf);
+        if (openInstagram) setInstagramModalProfile(savedProfile);
       }
     } catch (err) {
       showNotification(`Error: ${err.message}`);
@@ -837,81 +723,17 @@ export default function AdminPanel({ onBackToPortal, onProfilesChange }) {
     setPasswordInput('');
   };
 
-  const getMergedProfiles = (baseList, serverDeletedIds = null) => {
-    try {
-      let deletedIds;
-      if (serverDeletedIds instanceof Set) {
-        deletedIds = serverDeletedIds;
-      } else {
-        deletedIds = new Set(JSON.parse(localStorage.getItem('nikah_deleted_profiles') || '[]'));
-      }
-      const custom = JSON.parse(localStorage.getItem('nikah_custom_profiles') || '[]');
-      const map = new Map();
-      if (Array.isArray(custom)) {
-        let changed = false;
-        for (const c of custom) {
-          if (!c) continue;
-          // Clean up auto-added fake dummy values if present on custom profiles
-          if (c.profession === 'Professional') { c.profession = ''; changed = true; }
-          if (c.height === "5'8\"") { c.height = ''; changed = true; }
-          if (c.salary && c.salary.includes('Confidential')) { c.salary = ''; changed = true; }
-          if (c.education === 'Bachelor Degree') { c.education = ''; changed = true; }
-          // Specifically ensure NPF-26 displays accurate age 41 from flyer picture
-          if ((c.name && c.name.includes('NPF-26')) || c.id === 'NPF-3754' || c.id === 'NPF-26') {
-            c.id = 'NPF-26';
-            if (c.age === 25) {
-              c.age = 41;
-              changed = true;
-            }
-          }
-          if (c.id && !deletedIds.has(String(c.id))) {
-            map.set(String(c.id), c);
-          }
-        }
-        if (changed) {
-          try {
-            localStorage.setItem('nikah_custom_profiles', JSON.stringify(custom));
-          } catch (_) {}
-        }
-      }
-      for (const b of (baseList || [])) {
-        if (b && b.id && !deletedIds.has(String(b.id))) {
-          if (!map.has(String(b.id))) map.set(String(b.id), b);
-        }
-      }
-      return Array.from(map.values()).map(p => {
-        if (!p.image) {
-          try {
-            const cached = localStorage.getItem(`nikah_img_${p.id}`);
-            if (cached) return { ...p, image: cached };
-          } catch (_) {}
-        }
-        return p;
-      });
-    } catch (e) {
-      return baseList || [];
-    }
+  const getMergedProfiles = (baseList) => {
+    return baseList || [];
   };
-
 
   const fetchData = async () => {
     try {
       setLoading(true);
-      const [statsRes, profilesRes, deletedRes] = await Promise.all([
+      const [statsRes, profilesRes] = await Promise.all([
         fetch(`${API_BASE}/stats`).catch(() => null),
         fetch(`${API_BASE}/profiles`).catch(() => null),
-        fetch(`${API_BASE}/deleted-ids`).catch(() => null),
       ]);
-
-      let serverDeleted = [];
-      if (deletedRes && deletedRes.ok) {
-        const dData = await deletedRes.json();
-        if (dData.success && Array.isArray(dData.deletedIds)) {
-          serverDeleted = dData.deletedIds.map(String);
-          try { localStorage.setItem('nikah_deleted_profiles', JSON.stringify(serverDeleted)); } catch (_) {}
-        }
-      }
-      const serverDeletedSet = new Set(serverDeleted);
 
       if (statsRes && statsRes.ok) {
         const statsData = await statsRes.json();
@@ -920,34 +742,21 @@ export default function AdminPanel({ onBackToPortal, onProfilesChange }) {
       if (profilesRes && profilesRes.ok) {
         const profilesData = await profilesRes.json();
         if (profilesData.success && Array.isArray(profilesData.profiles)) {
-          if (Array.isArray(profilesData.deletedIds)) {
-            serverDeleted = profilesData.deletedIds.map(String);
-            try { localStorage.setItem('nikah_deleted_profiles', JSON.stringify(serverDeleted)); } catch (_) {}
-          }
-          const synced = getMergedProfiles(profilesData.profiles, new Set(serverDeleted));
-          setProfiles(synced);
-          if (onProfilesChange) onProfilesChange(synced);
+          setProfiles(profilesData.profiles);
+          if (onProfilesChange) onProfilesChange(profilesData.profiles);
           return;
         }
       }
-      // Fallback if API is offline — use server-verified deleted set
-      const fallbackList = getMergedProfiles(fallbackProfiles || [], serverDeletedSet);
-      setProfiles(fallbackList);
-      if (onProfilesChange) onProfilesChange(fallbackList);
-      const pList = fallbackList;
-      setStats((prev) => prev || {
-        total: pList.length,
-        grooms: pList.filter(p => p.gender === 'male').length,
-        brides: pList.filter(p => p.gender === 'female').length,
-        divorcedGrooms: pList.filter(p => p.gender === 'male' && p.maritalStatus === 'Divorced').length,
-        widowedGrooms: pList.filter(p => p.gender === 'male' && p.maritalStatus === 'Widowed').length,
-        pakistani: pList.filter(p => p.nationality === 'Pakistani').length,
-        indian: pList.filter(p => p.nationality === 'Indian').length,
-      });
+      const deletedSet = new Set((fallbackDeletedIds || []).map(String));
+      const cleanList = (fallbackProfiles || []).filter(p => p && p.id && !deletedSet.has(String(p.id)));
+      setProfiles(cleanList);
+      if (onProfilesChange) onProfilesChange(cleanList);
     } catch (err) {
       console.warn('Admin fetch API fallback used:', err.message);
-      setProfiles(fallbackProfiles || []);
-      if (onProfilesChange) onProfilesChange(fallbackProfiles || []);
+      const deletedSet = new Set((fallbackDeletedIds || []).map(String));
+      const cleanList = (fallbackProfiles || []).filter(p => p && p.id && !deletedSet.has(String(p.id)));
+      setProfiles(cleanList);
+      if (onProfilesChange) onProfilesChange(cleanList);
     } finally {
       setLoading(false);
     }
@@ -956,19 +765,6 @@ export default function AdminPanel({ onBackToPortal, onProfilesChange }) {
   useEffect(() => {
     if (isAuthenticated) {
       fetchData();
-      // Auto-sync any unsaved custom profiles to server on login (excluding deleted)
-      setTimeout(async () => {
-        try {
-          const deletedIds = new Set(JSON.parse(localStorage.getItem('nikah_deleted_profiles') || '[]'));
-          const custom = JSON.parse(localStorage.getItem('nikah_custom_profiles') || '[]');
-          const validCustom = custom.filter(p => p && p.id && !deletedIds.has(p.id));
-          if (validCustom.length > 0) {
-            await persistProfilesToServer(validCustom);
-          }
-        } catch (e) {
-          console.warn('Auto-sync note:', e.message);
-        }
-      }, 1500);
     }
   }, [isAuthenticated]);
 
@@ -980,37 +776,25 @@ export default function AdminPanel({ onBackToPortal, onProfilesChange }) {
   const handleDeleteProfile = async (id) => {
     if (!window.confirm(`Permanently delete profile ${id}?`)) return;
 
-    // 1. Immediately lock the profile out of ALL client-side caches / localStorage
-    //    so that even a hard page refresh won't bring it back (offline mode safe).
-    removeCustomProfileFromStorage(id);   // removes from nikah_custom_profiles
-    addDeletedProfileToStorage(id);       // adds to nikah_deleted_profiles
-    try { localStorage.removeItem(`nikah_img_${id}`); } catch (_) {}
-
-    // 2. Remove immediately from Admin UI state AND notify parent App
-    //    (parent App re-renders the profile grid without the deleted entry)
+    // Immediately remove from Admin UI state AND notify parent App
     setProfiles((prev) => {
       const next = prev.filter(p => p.id !== id);
       if (onProfilesChange) onProfilesChange(next);
       return next;
     });
 
-    showNotification(`Profile ${id} deleted.`);
-
-    // 3. Persist deletion to backend server so ALL other devices also respect it
     try {
       const res = await fetch(`${API_BASE}/profiles/${id}`, { method: 'DELETE' });
       const data = await res.json();
       if (data.success) {
-        showNotification(`✓ Profile ${id} permanently deleted from server.`);
-        // Refresh Admin data so counts stay accurate
+        showNotification(`✓ Profile ${id} permanently deleted.`);
         fetchData();
       } else {
-        showNotification(`Profile ${id} removed locally. Server sync pending.`);
+        showNotification(`Profile ${id} delete error: ${data.message || 'Failed'}`);
       }
     } catch (err) {
-      // Offline or server unreachable — deletion is already locked in localStorage
-      console.warn('[Admin] Server delete failed (offline?). Local deletion persisted:', err.message);
-      showNotification(`Profile ${id} removed. Will sync when server is online.`);
+      console.warn('[Admin] Server delete failed:', err.message);
+      showNotification(`Failed to delete profile ${id}: ${err.message}`);
     }
   };
 

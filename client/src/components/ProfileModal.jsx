@@ -53,14 +53,6 @@ const resolveImageUrl = (img, profileId, instagramPostId) => {
     return `/uploads/ig_${instagramPostId}.jpg`;
   }
 
-  // 5. Fallback to localStorage image cache if available
-  if (profileId) {
-    try {
-      const cached = localStorage.getItem(`nikah_img_${profileId}`);
-      if (cached) return cached;
-    } catch (_) {}
-  }
-
   return '';
 };
 
@@ -89,25 +81,12 @@ export default function ProfileModal({ profile, isFavorite, onToggleFavorite, on
           return;
         }
       }
-      try {
-        const cached = localStorage.getItem(`nikah_img_${profile?.id}`);
-        if (cached && cached !== modalImgSrc) {
-          setModalImgSrc(cached);
-          setModalImgError(false);
-          return;
-        }
-      } catch (_) {}
     }
     setModalImgError(true);
   };
 
   const handleModalImgLoad = () => {
     setModalImgError(false);
-    if (profile?.id && modalImgSrc && modalImgSrc.startsWith('data:image/')) {
-      try {
-        localStorage.setItem(`nikah_img_${profile.id}`, modalImgSrc);
-      } catch (_) {}
-    }
   };
 
   useEffect(() => {

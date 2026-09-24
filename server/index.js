@@ -22,7 +22,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const app = express();
-const PORT = process.env.PORT || 5000;
+const PORT = process.env.PORT || 5001;
 
 app.use(cors());
 app.use(morgan('dev'));
@@ -301,17 +301,61 @@ function buildProfileObject(reqBody, profiles) {
   };
 }
 
+// Helper to convert base64 image to local file URL if needed
+function processProfileImage(image, profileId) {
+  if (!image || typeof image !== 'string') return '';
+  if (image.startsWith('http://') || image.startsWith('https://') || image.startsWith('/uploads/')) {
+    return image;
+  }
+  if (image.startsWith('data:image/')) {
+    const matches = image.match(/^data:image\/([a-zA-Z0-9+]+);base64,(.+)$/);
+    if (matches) {
+      try {
+        const mimeExt = matches[1] === 'jpeg' ? 'jpg' : matches[1];
+        const safeId = String(profileId || Date.now()).replace(/[^a-zA-Z0-9_-]/g, '_');
+        const safeName = `profile_${safeId}_${Date.now()}.${mimeExt}`;
+        const buffer = Buffer.from(matches[2], 'base64');
+
+        const serverUploadsDir = path.join(__dirname, 'public', 'uploads');
+        if (!fs.existsSync(serverUploadsDir)) fs.mkdirSync(serverUploadsDir, { recursive: true });
+        fs.writeFileSync(path.join(serverUploadsDir, safeName), buffer);
+
+        const clientUploadsDir = path.join(__dirname, '..', 'client', 'public', 'uploads');
+        if (!fs.existsSync(clientUploadsDir)) fs.mkdirSync(clientUploadsDir, { recursive: true });
+        fs.writeFileSync(path.join(clientUploadsDir, safeName), buffer);
+
+        const relativeUrl = `/uploads/${safeName}`;
+        console.log(`[Storage] ✓ Auto-converted base64 image to ${relativeUrl}`);
+        return relativeUrl;
+      } catch (err) {
+        console.error('Error saving base64 profile image:', err);
+      }
+    }
+  }
+  return image;
+}
+
 // 3. POST /api/profiles (Add new profile from Form or Admin)
 app.post(['/api/profiles', '/profiles'], async (req, res) => {
-  const profiles = await dbGetProfiles();
-  const newProfile = buildProfileObject(req.body, profiles);
-  const saved = await dbInsertProfile(newProfile);
-  console.log(`[DB] New profile created: ${saved.id}`);
-  res.status(201).json({
-    success: true,
-    message: 'Profile created and added to Qabul Hai successfully!',
-    profile: saved
-  });
+  try {
+    const profiles = await dbGetProfiles();
+    const newProfile = buildProfileObject(req.body, profiles);
+    if (newProfile.image && newProfile.image.startsWith('data:image/')) {
+      newProfile.image = processProfileImage(newProfile.image, newProfile.id);
+    }
+    const saved = await dbInsertProfile(newProfile);
+    const all = await dbGetProfiles();
+    saveProfiles(all);
+    console.log(`[DB] New profile created: ${saved.id}`);
+    res.status(201).json({
+      success: true,
+      message: 'Profile created and added to Qabul Hai successfully!',
+      profile: saved
+    });
+  } catch (err) {
+    console.error('Create profile error:', err);
+    res.status(500).json({ success: false, message: err.message });
+  }
 });
 
 // 3b. POST /api/google-form-submission
@@ -432,26 +476,41 @@ app.post(['/api/upload-image', '/upload-image', '/api/upload', '/upload'], async
 
 // 4. PUT /api/profiles/:id (Admin update)
 app.put(['/api/profiles/:id', '/profiles/:id'], async (req, res) => {
-  const updated = await dbUpdateProfile(req.params.id, req.body);
-  if (!updated) {
-    return res.status(404).json({ success: false, message: 'Profile not found' });
+  try {
+    if (req.body.image && req.body.image.startsWith('data:image/')) {
+      req.body.image = processProfileImage(req.body.image, req.params.id);
+    }
+    const updated = await dbUpdateProfile(req.params.id, req.body);
+    if (!updated) {
+      return res.status(404).json({ success: false, message: 'Profile not found' });
+    }
+    const all = await dbGetProfiles();
+    saveProfiles(all);
+    res.json({ success: true, profile: updated });
+  } catch (err) {
+    console.error('Update profile error:', err);
+    res.status(500).json({ success: false, message: err.message });
   }
-  res.json({ success: true, profile: updated });
 });
 
 // 5. DELETE /api/profiles/:id (Admin delete)
 app.delete(['/api/profiles/:id', '/profiles/:id'], async (req, res) => {
-  const targetId = req.params.id;
-  await dbDeleteProfile(targetId);
-  const remaining = await dbGetProfiles();
-  saveProfiles(remaining);
-  console.log(`[Admin] Purged profile ${targetId}. Remaining: ${remaining.length}`);
-  res.json({
-    success: true,
-    message: `Profile ${targetId} deleted successfully`,
-    count: remaining.length,
-    deletedId: targetId
-  });
+  try {
+    const targetId = req.params.id;
+    await dbDeleteProfile(targetId);
+    const remaining = await dbGetProfiles();
+    saveProfiles(remaining);
+    console.log(`[Admin] Purged profile ${targetId}. Remaining: ${remaining.length}`);
+    res.json({
+      success: true,
+      message: `Profile ${targetId} deleted successfully`,
+      count: remaining.length,
+      deletedId: targetId
+    });
+  } catch (err) {
+    console.error('Delete profile error:', err);
+    res.status(500).json({ success: false, message: err.message });
+  }
 });
 
 // 5a. GET /api/deleted-ids (Deleted Profiles List)
@@ -543,14 +602,51 @@ app.post('/api/favorites/toggle', (req, res) => {
   });
 });
 
-// Google Sheet responses endpoint\napp.get('/api/google-form-responses', async (req, res) => {\n  const sheetUrl = process.env.GOOGLE_SHEET_CSV_URL;\n  if (!sheetUrl) {\n    return res.status(500).json({ success: false, message: 'Google Sheet URL not configured.' });\n  }\n  try {\n    const fetchRes = await fetch(sheetUrl);\n    if (!fetchRes.ok) throw new Error(`HTTP ${fetchRes.status}`);\n    const csvText = await fetchRes.text();\n    const [headerLine, ...rows] = csvText.split('\n').filter(l => l.trim() !== '');\n    const headers = headerLine.split(',');\n    const data = rows.map(row => {\n      const values = row.split(',');\n      const obj = {};\n      headers.forEach((h, i) => { obj[h.trim()] = values[i]?.trim(); });\n      return obj;\n    });\n    res.json({ success: true, responses: data });\n  } catch (err) {\n    console.error('Google Sheet fetch error:', err);\n    res.status(500).json({ success: false, message: err.message });\n  }\n});\n\n// Root ping
-app.get('/', (req, res) => {
-  res.json({
-    status: 'online',
-    service: 'Qabul Hai API',
-    endpoints: ['/api/profiles', '/api/stats', '/api/favorites', '/api/google-form-submission']
-  });
+// Google Sheet responses endpoint
+app.get('/api/google-form-responses', async (req, res) => {
+  const sheetUrl = process.env.GOOGLE_SHEET_CSV_URL;
+  if (!sheetUrl) {
+    return res.status(500).json({ success: false, message: 'Google Sheet URL not configured.' });
+  }
+  try {
+    const fetchRes = await fetch(sheetUrl);
+    if (!fetchRes.ok) throw new Error(`HTTP ${fetchRes.status}`);
+    const csvText = await fetchRes.text();
+    const [headerLine, ...rows] = csvText.split('\n').filter(l => l.trim() !== '');
+    const headers = headerLine.split(',');
+    const data = rows.map(row => {
+      const values = row.split(',');
+      const obj = {};
+      headers.forEach((h, i) => { obj[h.trim()] = values[i]?.trim(); });
+      return obj;
+    });
+    res.json({ success: true, responses: data });
+  } catch (err) {
+    console.error('Google Sheet fetch error:', err);
+    res.status(500).json({ success: false, message: err.message });
+  }
 });
+
+// Serve frontend build if present (e.g. production)
+const clientDistDir = path.join(__dirname, '..', 'client', 'dist');
+if (fs.existsSync(clientDistDir)) {
+  app.use(express.static(clientDistDir));
+  app.get('*', (req, res, next) => {
+    if (req.path.startsWith('/api') || req.path.startsWith('/uploads') || req.path.startsWith('/public')) {
+      return next();
+    }
+    res.sendFile(path.join(clientDistDir, 'index.html'));
+  });
+} else {
+  // Root ping
+  app.get('/', (req, res) => {
+    res.json({
+      status: 'online',
+      service: 'Qabul Hai API',
+      endpoints: ['/api/profiles', '/api/stats', '/api/favorites', '/api/google-form-submission']
+    });
+  });
+}
 
 if (!process.env.VERCEL) {
   app.listen(PORT, '0.0.0.0', () => {

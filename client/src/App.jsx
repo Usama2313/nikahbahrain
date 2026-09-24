@@ -14,26 +14,21 @@ import { Sparkles, AlertCircle, RefreshCw, RotateCcw } from './icons';
 
 import API_BASE from './api';
 import fallbackProfiles from './data/profiles.json';
+import fallbackDeletedIds from './data/deleted_ids.json';
 
-// Pure deduplication — NO localStorage dependency.
-// profiles.json (server) is the single source of truth for what to display.
+// Pure deduplication — Database & profiles.json are the single source of truth.
+// NO localStorage dependency for profile data.
 // This ensures desktop, mobile, and every device see the exact same profile list.
 const deduplicateProfiles = (list, excludeIds = new Set()) => {
   if (!Array.isArray(list)) return [];
   const seenIds = new Set();
-  const seenPosts = new Set();
-  const seenImgs = new Set();
   const result = [];
   for (const p of list) {
     if (!p || !p.id) continue;
     const cleanId = String(p.id).trim();
-    if (excludeIds.has(cleanId)) continue;          // skip excluded (server-deleted)
-    if (seenIds.has(cleanId)) continue;             // skip dup id
-    if (p.instagramPostId && seenPosts.has(p.instagramPostId)) continue;
-    if (p.image && seenImgs.has(p.image)) continue;
+    if (excludeIds.has(cleanId)) continue; // skip excluded (server-deleted)
+    if (seenIds.has(cleanId)) continue;    // skip duplicate ID
     seenIds.add(cleanId);
-    if (p.instagramPostId) seenPosts.add(p.instagramPostId);
-    if (p.image) seenImgs.add(p.image);
     result.push(p);
   }
   return result;
@@ -73,9 +68,12 @@ export default function App() {
   });
 
   // 4. Profiles & Favorites Data State
-  // Initialize with bundled profiles.json — server is the single source of truth.
-  // No localStorage filtering here so desktop & mobile always show the same profiles.
-  const [profiles, setProfiles] = useState(() => deduplicateProfiles(fallbackProfiles || []));
+  // Initialize with bundled profiles.json — server & database are the single source of truth.
+  // No localStorage for profiles so desktop & mobile always show the same database profiles.
+  const [profiles, setProfiles] = useState(() => {
+    const deletedSet = new Set((fallbackDeletedIds || []).map(String));
+    return deduplicateProfiles(fallbackProfiles || [], deletedSet);
+  });
   const [favorites, setFavorites] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -118,110 +116,25 @@ export default function App() {
     };
   }, []);
 
-  // Sync deleted profiles registry from server — REPLACE localStorage (server is truth)
-  useEffect(() => {
-    fetch(`${API_BASE}/deleted-ids`)
-      .then(res => res.json())
-      .then(data => {
-        if (data.success && Array.isArray(data.deletedIds)) {
-          try {
-            // Server is the single source of truth — replace, don't merge
-            localStorage.setItem('nikah_deleted_profiles', JSON.stringify(data.deletedIds));
-          } catch (_) {}
-        }
-      })
-      .catch(() => {});
-  }, []);
-
-  // ─── CORE FIX: Push any localStorage-stuck profiles to server FIRST, then fetch ───
-  // This runs on app startup on every device. If desktop has profiles in localStorage
-  // that aren't on the server yet, they get pushed immediately so mobile sees them too.
-  const syncLocalStorageToServer = async () => {
-    try {
-      const localCustom = JSON.parse(localStorage.getItem('nikah_custom_profiles') || '[]');
-      const deletedIds = new Set(JSON.parse(localStorage.getItem('nikah_deleted_profiles') || '[]'));
-      const validCustom = localCustom.filter(p => p && p.id && !deletedIds.has(String(p.id)));
-      if (validCustom.length === 0) return; // nothing to sync
-
-      // Enrich profiles with cached images before pushing to server
-      const enriched = validCustom.map(p => {
-        if (!p.image) {
-          try {
-            const cached = localStorage.getItem(`nikah_img_${p.id}`);
-            if (cached) return { ...p, image: cached };
-          } catch (_) {}
-        }
-        return p;
-      });
-
-      const res = await fetch(`${API_BASE}/admin/persist-profiles`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ profiles: enriched })
-      });
-      if (res.ok) {
-        // Successfully pushed to server — clear localStorage custom profiles
-        localStorage.setItem('nikah_custom_profiles', JSON.stringify([]));
-        console.log(`[Sync] Pushed ${enriched.length} localStorage profiles to server and cleared cache.`);
-      }
-    } catch (_) {
-      // Sync failed — will retry on next load
-    }
-  };
-
-  // Fetch profiles from server — server is the ONLY source of truth for ALL devices.
-  // localStorage is NEVER merged into the display list. This guarantees mobile and desktop
-  // always show the same profiles.
+  // Fetch profiles from database/server — database is the ONLY source of truth for ALL devices (desktop & mobile).
   const fetchProfiles = async () => {
     try {
       setError(null);
       const res = await fetch(`${API_BASE}/profiles`);
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
-      if (data.success && Array.isArray(data.profiles) && data.profiles.length > 0) {
-        // Use ONLY server-side deleted IDs (server is the single source of truth)
-        const serverDeleted = Array.isArray(data.deletedIds) ? data.deletedIds.map(String) : [];
-        const deletedIds = new Set(serverDeleted);
-
-        // Sync server deleted IDs to localStorage (REPLACE, not merge)
-        try { localStorage.setItem('nikah_deleted_profiles', JSON.stringify(serverDeleted)); } catch (_) {}
-
-        // Server profiles — filter deleted and deduplicate. NO localStorage merge.
-        const validServerProfiles = data.profiles.filter(p => p && p.id && !deletedIds.has(String(p.id)));
-        const deduped = deduplicateProfiles(validServerProfiles, deletedIds);
-
-        // Restore images from localStorage cache where server lost the image field
-        const withImages = deduped.map(p => {
-          let img = p.image;
-          if (!img) {
-            try {
-              const cached = localStorage.getItem(`nikah_img_${p.id}`);
-              if (cached) img = cached;
-            } catch (_) {}
-          }
-          return { ...p, image: img || '' };
-        });
-
-        setProfiles(withImages);
+      if (data.success && Array.isArray(data.profiles)) {
+        const deletedSet = new Set((data.deletedIds || []).map(String));
+        setProfiles(deduplicateProfiles(data.profiles, deletedSet));
         return;
       }
     } catch (err) {
       console.warn('Live API sync note, displaying verified profile registry:', err.message);
+      const deletedSet = new Set((fallbackDeletedIds || []).map(String));
+      setProfiles(deduplicateProfiles(fallbackProfiles || [], deletedSet));
     } finally {
       setLoading(false);
     }
-    // Offline fallback: bundled profiles.json ONLY — no localStorage merge
-    const fallback = deduplicateProfiles(fallbackProfiles || []).map(p => {
-      let img = p.image;
-      if (!img) {
-        try {
-          const cached = localStorage.getItem(`nikah_img_${p.id}`);
-          if (cached) img = cached;
-        } catch (_) {}
-      }
-      return { ...p, image: img || '' };
-    });
-    setProfiles(fallback);
   };
 
 
@@ -265,8 +178,12 @@ export default function App() {
   };
 
   useEffect(() => {
-    // On startup: push any localStorage-stuck profiles to server FIRST, then fetch
-    syncLocalStorageToServer().then(() => fetchProfiles());
+    // Clean up any legacy localStorage profile cache
+    try {
+      localStorage.removeItem('nikah_custom_profiles');
+      localStorage.removeItem('nikah_deleted_profiles');
+    } catch (_) {}
+    fetchProfiles();
     fetchFavorites();
   }, [visitorId]);
 
@@ -352,9 +269,9 @@ export default function App() {
 
     // 1. Tab Filter
     if (activeTab === 'groom') {
-      result = result.filter((p) => p.gender === 'male');
+      result = result.filter((p) => (p.gender || '').toLowerCase().trim() === 'male');
     } else if (activeTab === 'bride') {
-      result = result.filter((p) => p.gender === 'female');
+      result = result.filter((p) => (p.gender || '').toLowerCase().trim() === 'female');
     } else if (activeTab === 'favorites') {
       result = result.filter((p) => favorites.includes(p.id));
     }
@@ -362,29 +279,42 @@ export default function App() {
 
     // 2. Category Filter (ALL, NEVER MARRIED, DIVORCED, 2ND MARRIAGE, LATE WIFE)
     if (activeCategory === 'never-married') {
-      result = result.filter((p) => p.maritalStatus === 'Never Married');
+      result = result.filter((p) => {
+        const m = (p.maritalStatus || '').toLowerCase().trim();
+        return m === 'never married' || m.includes('never');
+      });
     } else if (activeCategory === 'divorced') {
-      result = result.filter((p) => p.maritalStatus === 'Divorced');
+      result = result.filter((p) => {
+        const m = (p.maritalStatus || '').toLowerCase().trim();
+        return m === 'divorced' || m.includes('divorce');
+      });
     } else if (activeCategory === '2nd-marriage') {
-      result = result.filter((p) => 
-        p.maritalStatus === '2nd Marriage' || 
-        (p.category && p.category.includes('second')) ||
-        (p.about && p.about.toLowerCase().includes('2nd marriage')) ||
-        (p.requirements && p.requirements.toLowerCase().includes('2nd marriage'))
-      );
+      result = result.filter((p) => {
+        const m = (p.maritalStatus || '').toLowerCase().trim();
+        return (
+          m === '2nd marriage' || 
+          m.includes('second') ||
+          (p.category && p.category.toLowerCase().includes('second')) ||
+          (p.about && p.about.toLowerCase().includes('2nd marriage')) ||
+          (p.requirements && p.requirements.toLowerCase().includes('2nd marriage'))
+        );
+      });
     } else if (activeCategory === 'late-wife') {
-      result = result.filter((p) => p.maritalStatus === 'Widowed');
+      result = result.filter((p) => {
+        const m = (p.maritalStatus || '').toLowerCase().trim();
+        return m === 'widowed' || m.includes('widow') || m.includes('late') || (p.category && p.category.toLowerCase().includes('widow'));
+      });
     }
 
     // 3. Nationality filter
     if (activeNationality && activeNationality !== 'all') {
-      result = result.filter((p) => p.nationality && p.nationality.toLowerCase().includes(activeNationality.toLowerCase()));
+      const natLower = activeNationality.toLowerCase().trim();
+      result = result.filter((p) => (p.nationality || '').toLowerCase().includes(natLower));
     }
 
     // 4. Search query — use optional chaining to prevent TypeError crashes
-    // when any field is null/undefined (e.g. from legacy local JSON or Supabase nulls)
     if (searchQuery.trim()) {
-      const q = searchQuery.toLowerCase();
+      const q = searchQuery.toLowerCase().trim();
       result = result.filter(
         (p) =>
           (p.name?.toLowerCase() || '').includes(q) ||
@@ -427,21 +357,34 @@ export default function App() {
   // Category counts for CategoryBar
   const categoryCounts = useMemo(() => {
     let base = profiles;
-    if (activeTab === 'groom') base = base.filter(p => p.gender === 'male');
-    else if (activeTab === 'bride') base = base.filter(p => p.gender === 'female');
+    if (activeTab === 'groom') base = base.filter(p => (p.gender || '').toLowerCase().trim() === 'male');
+    else if (activeTab === 'bride') base = base.filter(p => (p.gender || '').toLowerCase().trim() === 'female');
     else if (activeTab === 'favorites') base = base.filter(p => favorites.includes(p.id));
 
     return {
       all: base.length,
-      'never-married': base.filter(p => p.maritalStatus === 'Never Married').length,
-      'divorced': base.filter(p => p.maritalStatus === 'Divorced').length,
-      '2nd-marriage': base.filter(p => 
-        p.maritalStatus === '2nd Marriage' || 
-        (p.category && p.category.includes('second')) ||
-        (p.about && p.about.toLowerCase().includes('2nd marriage')) ||
-        (p.requirements && p.requirements.toLowerCase().includes('2nd marriage'))
-      ).length,
-      'late-wife': base.filter(p => p.maritalStatus === 'Widowed').length
+      'never-married': base.filter(p => {
+        const m = (p.maritalStatus || '').toLowerCase().trim();
+        return m === 'never married' || m.includes('never');
+      }).length,
+      'divorced': base.filter(p => {
+        const m = (p.maritalStatus || '').toLowerCase().trim();
+        return m === 'divorced' || m.includes('divorce');
+      }).length,
+      '2nd-marriage': base.filter(p => {
+        const m = (p.maritalStatus || '').toLowerCase().trim();
+        return (
+          m === '2nd marriage' || 
+          m.includes('second') ||
+          (p.category && p.category.toLowerCase().includes('second')) ||
+          (p.about && p.about.toLowerCase().includes('2nd marriage')) ||
+          (p.requirements && p.requirements.toLowerCase().includes('2nd marriage'))
+        );
+      }).length,
+      'late-wife': base.filter(p => {
+        const m = (p.maritalStatus || '').toLowerCase().trim();
+        return m === 'widowed' || m.includes('widow') || m.includes('late') || (p.category && p.category.toLowerCase().includes('widow'));
+      }).length,
     };
   }, [profiles, activeTab, favorites]);
 
