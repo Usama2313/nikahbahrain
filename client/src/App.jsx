@@ -15,6 +15,7 @@ import { Sparkles, AlertCircle, RefreshCw, RotateCcw } from './icons';
 import API_BASE from './api';
 import fallbackProfiles from './data/profiles.json';
 import fallbackDeletedIds from './data/deleted_ids.json';
+import { supabaseFetchProfiles } from './supabaseClient';
 
 // Persistent storage keys for custom admin created/edited profiles
 const ADMIN_CUSTOM_PROFILES_KEY = 'nikah_admin_custom_profiles';
@@ -189,12 +190,37 @@ export default function App() {
           return;
         }
       }
+      // Server API failed — try Supabase directly
+      try {
+        const sbProfiles = await supabaseFetchProfiles();
+        if (sbProfiles && sbProfiles.length > 0) {
+          const fallbackDeleted = new Set((fallbackDeletedIds || []).map(String));
+          const allDeleted = new Set([...localDeleted, ...fallbackDeleted]);
+          const unified = mergeAndDeduplicateProfiles(sbProfiles, custom, allDeleted);
+          setProfiles(unified);
+          console.log('[App] Loaded', sbProfiles.length, 'profiles directly from Supabase');
+          return;
+        }
+      } catch (sbErr) {
+        console.warn('[App] Supabase direct fetch note:', sbErr.message);
+      }
       const fallbackDeleted = new Set((fallbackDeletedIds || []).map(String));
       const allDeleted = new Set([...localDeleted, ...fallbackDeleted]);
       const unified = mergeAndDeduplicateProfiles(fallbackProfiles || [], custom, allDeleted);
       setProfiles(unified);
     } catch (err) {
       console.warn('Live API sync note, displaying verified profile registry:', err.message);
+      // Try Supabase as fallback
+      try {
+        const sbProfiles = await supabaseFetchProfiles();
+        if (sbProfiles && sbProfiles.length > 0) {
+          const fallbackDeleted = new Set((fallbackDeletedIds || []).map(String));
+          const allDeleted = new Set([...localDeleted, ...fallbackDeleted]);
+          const unified = mergeAndDeduplicateProfiles(sbProfiles, custom, allDeleted);
+          setProfiles(unified);
+          return;
+        }
+      } catch (_) {}
       const fallbackDeleted = new Set((fallbackDeletedIds || []).map(String));
       const allDeleted = new Set([...localDeleted, ...fallbackDeleted]);
       const unified = mergeAndDeduplicateProfiles(fallbackProfiles || [], custom, allDeleted);

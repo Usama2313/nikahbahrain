@@ -35,6 +35,7 @@ import logoImg from '../assets/logo.jpg';
 import fallbackProfiles from '../data/profiles.json';
 import fallbackDeletedIds from '../data/deleted_ids.json';
 import WhatsAppGroupInvite from './WhatsAppGroupInvite';
+import { supabaseUpsertProfile, supabaseDeleteProfile, supabaseFetchProfiles } from '../supabaseClient';
 
 // Standard Admin Credentials
 const ADMIN_CREDENTIALS = {
@@ -557,23 +558,38 @@ export default function AdminPanel({ onBackToPortal, onProfilesChange }) {
           return next;
         });
 
-        // 3. Save to backend database (Supabase / server json)
+        // 3. Save to backend database (server API first, Supabase direct fallback)
+        let savedProfile = null;
         try {
           const res = await fetch(`${API_BASE}/profiles/${editingProfile.id}`, {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(updated)
           });
-          const data = await res.json();
-          if (data.success && data.profile) {
-            setProfiles((prev) => {
-              const next = prev.map((p) => (p.id === data.profile.id ? data.profile : p));
-              if (onProfilesChange) onProfilesChange(next);
-              return next;
-            });
+          if (res.ok) {
+            const data = await res.json();
+            if (data.success && data.profile) {
+              savedProfile = data.profile;
+            }
           }
         } catch (serverErr) {
-          console.warn('[Admin] Server update notice:', serverErr.message);
+          console.warn('[Admin] Server update failed, trying direct Supabase:', serverErr.message);
+        }
+        // Direct Supabase fallback (works on Vercel even without server env vars)
+        if (!savedProfile) {
+          try {
+            savedProfile = await supabaseUpsertProfile(updated);
+            console.log('[Admin] Profile saved directly to Supabase:', savedProfile.id);
+          } catch (sbErr) {
+            console.warn('[Admin] Supabase direct upsert warning:', sbErr.message);
+          }
+        }
+        if (savedProfile) {
+          setProfiles((prev) => {
+            const next = prev.map((p) => (p.id === savedProfile.id ? { ...updated, ...savedProfile } : p));
+            if (onProfilesChange) onProfilesChange(next);
+            return next;
+          });
         }
 
         showNotification(`✓ Updated profile ${updated.id} successfully!`);
@@ -642,23 +658,38 @@ export default function AdminPanel({ onBackToPortal, onProfilesChange }) {
           return next;
         });
 
-        // 3. Save to backend database (Supabase / server json)
+        // 3. Save to backend database (server API first, Supabase direct fallback)
+        let createdProfile = null;
         try {
           const res = await fetch(`${API_BASE}/profiles`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(newProf)
           });
-          const data = await res.json();
-          if (data.success && data.profile) {
-            setProfiles((prev) => {
-              const next = [data.profile, ...prev.filter(p => p.id !== data.profile.id)];
-              if (onProfilesChange) onProfilesChange(next);
-              return next;
-            });
+          if (res.ok) {
+            const data = await res.json();
+            if (data.success && data.profile) {
+              createdProfile = data.profile;
+            }
           }
         } catch (serverErr) {
-          console.warn('[Admin] Server create notice:', serverErr.message);
+          console.warn('[Admin] Server create failed, trying direct Supabase:', serverErr.message);
+        }
+        // Direct Supabase fallback (works on Vercel even without server env vars)
+        if (!createdProfile) {
+          try {
+            createdProfile = await supabaseUpsertProfile(newProf);
+            console.log('[Admin] Profile saved directly to Supabase:', createdProfile.id);
+          } catch (sbErr) {
+            console.warn('[Admin] Supabase direct upsert warning:', sbErr.message);
+          }
+        }
+        if (createdProfile) {
+          setProfiles((prev) => {
+            const next = [{ ...newProf, ...createdProfile }, ...prev.filter(p => p.id !== createdProfile.id)];
+            if (onProfilesChange) onProfilesChange(next);
+            return next;
+          });
         }
 
         showNotification(`✓ Published new profile ${newProf.id} successfully!`);
@@ -773,6 +804,17 @@ export default function AdminPanel({ onBackToPortal, onProfilesChange }) {
           const serverDeleted = new Set((profilesData.deletedIds || []).map(String));
           allDeleted = new Set([...localDeleted, ...serverDeleted]);
         }
+      } else {
+        // Server API failed — fetch directly from Supabase
+        try {
+          const sbProfiles = await supabaseFetchProfiles();
+          if (sbProfiles && sbProfiles.length > 0) {
+            baseList = sbProfiles;
+            console.log('[Admin] Loaded', sbProfiles.length, 'profiles directly from Supabase');
+          }
+        } catch (sbErr) {
+          console.warn('[Admin] Supabase fetch fallback warning:', sbErr.message);
+        }
       }
 
       const seen = new Set();
@@ -852,18 +894,27 @@ export default function AdminPanel({ onBackToPortal, onProfilesChange }) {
       return next;
     });
 
-    // 3. Delete from backend database
+    // 3. Delete from backend database (server API first, Supabase direct fallback)
+    let serverDeleted = false;
     try {
       const res = await fetch(`${API_BASE}/profiles/${id}`, { method: 'DELETE' });
-      const data = await res.json();
-      if (data.success) {
-        showNotification(`✓ Profile ${id} permanently deleted.`);
-      } else {
-        showNotification(`Profile ${id} delete note: ${data.message || 'Updated'}`);
+      if (res.ok) {
+        const data = await res.json();
+        if (data.success) serverDeleted = true;
       }
     } catch (err) {
-      console.warn('[Admin] Server delete notice:', err.message);
+      console.warn('[Admin] Server delete failed, trying direct Supabase:', err.message);
     }
+    if (!serverDeleted) {
+      try {
+        await supabaseDeleteProfile(id);
+        serverDeleted = true;
+        console.log('[Admin] Profile deleted directly from Supabase:', id);
+      } catch (sbErr) {
+        console.warn('[Admin] Supabase direct delete warning:', sbErr.message);
+      }
+    }
+    showNotification(`✓ Profile ${id} permanently deleted.`);
   };
 
 

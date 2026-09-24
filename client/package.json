@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "@react-spring/web": "^9.7.5",
+    "@supabase/supabase-js": "^2.117.1",
     "canvas-confetti": "^1.9.4",
     "react": "^18.3.1",
     "react-dom": "^18.3.1"
