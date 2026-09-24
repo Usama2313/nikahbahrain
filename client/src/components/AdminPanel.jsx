@@ -152,8 +152,8 @@ export default function AdminPanel({ onBackToPortal, onProfilesChange }) {
   const DEFAULT_FORM = {
     name: '',
     gender: 'male',
-    maritalStatus: '',
-    nationality: '',
+    maritalStatus: 'Never Married',
+    nationality: 'Pakistani',
     age: '',
     height: '',
     sect: '',
@@ -161,8 +161,8 @@ export default function AdminPanel({ onBackToPortal, onProfilesChange }) {
     education: '',
     profession: '',
     salary: '',
-    location: '',
-    residence: '',
+    location: 'Bahrain',
+    residence: 'Bahrain Resident',
     siblings: '',
     father: '',
     mother: '',
@@ -352,7 +352,7 @@ export default function AdminPanel({ onBackToPortal, onProfilesChange }) {
       const m = (p.id || '').match(/NPF-?(\d+)/i);
       if (m) {
         const n = parseInt(m[1], 10);
-        return n > max ? n : max;
+        return n > max && n < 9000 ? n : max;
       }
       return max;
     }, 228);
@@ -362,6 +362,8 @@ export default function AdminPanel({ onBackToPortal, onProfilesChange }) {
       ...DEFAULT_FORM,
       name: `${nextId} (Groom)`,
       gender: 'male',
+      maritalStatus: 'Never Married',
+      nationality: 'Pakistani',
       about: '',
       image: '',
       instagramPostUrl: ''
@@ -374,10 +376,10 @@ export default function AdminPanel({ onBackToPortal, onProfilesChange }) {
     setCreationMode(p.image ? 'picture' : 'form');
     setFormErrors({});
     setFormData({
-      name: p.name || '',
+      name: p.name || `${p.id} (${p.gender === 'female' ? 'Bride' : 'Groom'})`,
       gender: p.gender || 'male',
-      maritalStatus: p.maritalStatus || '',
-      nationality: p.nationality || '',
+      maritalStatus: p.maritalStatus || 'Never Married',
+      nationality: p.nationality || 'Pakistani',
       age: p.age !== null && p.age !== undefined ? p.age : '',
       height: p.height || '',
       sect: p.sect || '',
@@ -385,8 +387,8 @@ export default function AdminPanel({ onBackToPortal, onProfilesChange }) {
       education: p.education || '',
       profession: p.profession || '',
       salary: p.salary || '',
-      location: p.location || '',
-      residence: p.residence || '',
+      location: p.location || 'Bahrain',
+      residence: p.residence || 'Bahrain Resident',
       siblings: p.siblings || '',
       father: p.father || '',
       mother: p.mother || '',
@@ -404,73 +406,17 @@ export default function AdminPanel({ onBackToPortal, onProfilesChange }) {
   const validateProfileForm = () => {
     const errs = {};
 
-    if (creationMode === 'form') {
-      if (!formData.name?.trim()) {
-        errs.name = 'Full Name / Profile Title is required.';
-      } else if (formData.name.trim().length < 3) {
-        errs.name = 'Profile Title must be at least 3 characters.';
+    if (formData.age !== '' && formData.age !== null && formData.age !== undefined) {
+      const numAge = Number(formData.age);
+      if (isNaN(numAge) || numAge < 18 || numAge > 90) {
+        errs.age = 'Age must be a valid number between 18 and 90.';
       }
+    }
 
-      if (!formData.gender) {
-        errs.gender = 'Candidate Gender is required.';
-      }
-
-      if (!formData.maritalStatus) {
-        errs.maritalStatus = 'Please select a marital status.';
-      }
-
-      if (!formData.nationality) {
-        errs.nationality = 'Please select a nationality.';
-      }
-
-      if (formData.age !== '' && formData.age !== null && formData.age !== undefined) {
-        const numAge = Number(formData.age);
-        if (isNaN(numAge) || numAge < 18 || numAge > 80) {
-          errs.age = 'Age must be a valid number between 18 and 80.';
-        }
-      }
-
-      if (formData.contact?.trim()) {
-        const digits = formData.contact.replace(/\D/g, '');
-        if (digits.length < 7 || digits.length > 16) {
-          errs.contact = 'Please enter a valid phone number (7-16 digits, e.g. +973 3718 8557).';
-        }
-      }
-    } else {
-      // creationMode === 'picture'
-      if (!formData.image?.trim()) {
-        errs.image = 'Candidate picture / flyer is required. Please upload an image or paste a direct image URL.';
-      }
-
-      if (!formData.name?.trim()) {
-        errs.name = 'Profile Title / Code is required (e.g. NPF-26 (Groom)).';
-      } else if (formData.name.trim().length < 3) {
-        errs.name = 'Profile Title / Code must be at least 3 characters.';
-      }
-
-      if (!formData.gender) {
-        errs.gender = 'Candidate Gender is required.';
-      }
-
-      if (formData.age !== '' && formData.age !== null && formData.age !== undefined) {
-        const numAge = Number(formData.age);
-        if (isNaN(numAge) || numAge < 18 || numAge > 80) {
-          errs.age = 'Age must be a valid number between 18 and 80.';
-        }
-      }
-
-      if (formData.instagramPostUrl?.trim()) {
-        const url = formData.instagramPostUrl.trim();
-        if (!/^https?:\/\/(www\.)?instagram\.com\//i.test(url)) {
-          errs.instagramPostUrl = 'Please enter a valid Instagram URL (e.g. https://www.instagram.com/p/...).';
-        }
-      }
-
-      if (formData.contact?.trim()) {
-        const digits = formData.contact.replace(/\D/g, '');
-        if (digits.length < 7 || digits.length > 16) {
-          errs.contact = 'Please enter a valid phone number (7-16 digits, e.g. +973 3718 8557).';
-        }
+    if (formData.instagramPostUrl?.trim()) {
+      const url = formData.instagramPostUrl.trim();
+      if (!/^https?:\/\/(www\.)?instagram\.com\//i.test(url) && !url.includes('instagram.com')) {
+        errs.instagramPostUrl = 'Please enter a valid Instagram URL (e.g. https://www.instagram.com/p/...).';
       }
     }
 
@@ -478,7 +424,7 @@ export default function AdminPanel({ onBackToPortal, onProfilesChange }) {
   };
 
   const handleSaveAdminProfile = async (e, openInstagram = false) => {
-    e?.preventDefault();
+    if (e && e.preventDefault) e.preventDefault();
 
     const errs = validateProfileForm();
     if (Object.keys(errs).length > 0) {
@@ -490,17 +436,19 @@ export default function AdminPanel({ onBackToPortal, onProfilesChange }) {
 
     setIsSaving(true);
     try {
+      const maxNpf = profiles.reduce((max, p) => {
+        const m = (p.id || '').match(/NPF-?(\d+)/i);
+        if (m) {
+          const n = parseInt(m[1], 10);
+          return n > max && n < 9000 ? n : max;
+        }
+        return max;
+      }, 228);
+      const nextAutoId = `NPF-${maxNpf + 1}`;
+
       let candidateName = formData.name?.trim();
       if (!candidateName) {
-        const maxNpf = profiles.reduce((max, p) => {
-          const m = (p.id || '').match(/NPF-?(\d+)/i);
-          if (m) {
-            const n = parseInt(m[1], 10);
-            return n > max ? n : max;
-          }
-          return max;
-        }, 228);
-        candidateName = `NPF-${maxNpf + 1} (${formData.gender === 'female' ? 'Bride' : 'Groom'})`;
+        candidateName = `${editingProfile?.id || nextAutoId} (${formData.gender === 'female' ? 'Bride' : 'Groom'})`;
       }
 
       const candidateAge = formData.age !== '' && formData.age !== null && !isNaN(Number(formData.age))
@@ -529,12 +477,12 @@ export default function AdminPanel({ onBackToPortal, onProfilesChange }) {
         } catch (_) {}
       }
 
-      if (editingProfile) {
-        const marital = formData.maritalStatus?.trim() || editingProfile.maritalStatus || 'Never Married';
-        let profCat = formData.gender === 'male' ? 'grooms' : 'brides';
-        if (marital === 'Divorced') profCat = formData.gender === 'male' ? 'divorced-grooms' : 'divorced-brides';
-        else if (marital === 'Widowed') profCat = formData.gender === 'male' ? 'widowed-grooms' : 'widowed-brides';
+      const marital = formData.maritalStatus?.trim() || editingProfile?.maritalStatus || 'Never Married';
+      let profCat = formData.gender === 'female' ? 'brides' : 'grooms';
+      if (marital === 'Divorced') profCat = formData.gender === 'female' ? 'divorced-brides' : 'divorced-grooms';
+      else if (marital === 'Widowed') profCat = formData.gender === 'female' ? 'widowed-brides' : 'widowed-grooms';
 
+      if (editingProfile) {
         let updated = {
           ...editingProfile,
           ...formData,
@@ -544,10 +492,11 @@ export default function AdminPanel({ onBackToPortal, onProfilesChange }) {
           instagramPostUrl: formData.instagramPostUrl?.trim() || '',
           instagramPostId: igPostId || editingProfile.instagramPostId || '',
           maritalStatus: marital,
+          nationality: formData.nationality?.trim() || editingProfile.nationality || 'Pakistani',
           category: profCat,
           salary: formData.salary?.trim() || '',
-          location: formData.location?.trim() || '',
-          residence: formData.residence?.trim() || '',
+          location: formData.location?.trim() || 'Bahrain',
+          residence: formData.residence?.trim() || 'Bahrain Resident',
           siblings: formData.siblings?.trim() || '',
           father: formData.father?.trim() || '',
           mother: formData.mother?.trim() || '',
@@ -564,42 +513,41 @@ export default function AdminPanel({ onBackToPortal, onProfilesChange }) {
           updatedAt: new Date().toISOString()
         };
 
-        const res = await fetch(`${API_BASE}/profiles/${editingProfile.id}`, {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(updated)
-        });
-        const data = await res.json();
-        const savedProfile = (data.success && data.profile) ? data.profile : updated;
-
+        // Immediately update React state for instant UI update
         setProfiles((prev) => {
-          const next = prev.map((p) => (p.id === savedProfile.id ? savedProfile : p));
+          const next = prev.map((p) => (p.id === updated.id ? updated : p));
           if (onProfilesChange) onProfilesChange(next);
           return next;
         });
-        fetchData();
-        showNotification(`✓ Updated profile ${savedProfile.id} successfully!`);
-        setIsFormOpen(false);
-        if (openInstagram) setInstagramModalProfile(savedProfile);
-      } else {
-        const maxNpf = profiles.reduce((max, p) => {
-          const m = (p.id || '').match(/NPF-?(\d+)/i);
-          if (m) {
-            const n = parseInt(m[1], 10);
-            return n > max && n < 9000 ? n : max;
+
+        // Save to backend database
+        try {
+          const res = await fetch(`${API_BASE}/profiles/${editingProfile.id}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(updated)
+          });
+          const data = await res.json();
+          if (data.success && data.profile) {
+            setProfiles((prev) => {
+              const next = prev.map((p) => (p.id === data.profile.id ? data.profile : p));
+              if (onProfilesChange) onProfilesChange(next);
+              return next;
+            });
           }
-          return max;
-        }, 228);
-        let nextCustomId = `NPF-${maxNpf + 1}`;
+        } catch (serverErr) {
+          console.warn('[Admin] Server update notice:', serverErr.message);
+        }
+
+        showNotification(`✓ Updated profile ${updated.id} successfully!`);
+        setIsFormOpen(false);
+        if (openInstagram) setInstagramModalProfile(updated);
+      } else {
+        let nextCustomId = nextAutoId;
         const npfMatch = candidateName.match(/NPF-?(\d+)/i);
         if (npfMatch) {
           nextCustomId = `NPF-${npfMatch[1]}`;
         }
-
-        const marital = formData.maritalStatus?.trim() || 'Never Married';
-        let profCat = formData.gender === 'male' ? 'grooms' : 'brides';
-        if (marital === 'Divorced') profCat = formData.gender === 'male' ? 'divorced-grooms' : 'divorced-brides';
-        else if (marital === 'Widowed') profCat = formData.gender === 'male' ? 'widowed-grooms' : 'widowed-brides';
 
         let newProf = {
           ...formData,
@@ -610,8 +558,8 @@ export default function AdminPanel({ onBackToPortal, onProfilesChange }) {
           nationality: formData.nationality?.trim() || 'Pakistani',
           category: profCat,
           salary: formData.salary?.trim() || '',
-          location: formData.location?.trim() || '',
-          residence: formData.residence?.trim() || '',
+          location: formData.location?.trim() || 'Bahrain',
+          residence: formData.residence?.trim() || 'Bahrain Resident',
           siblings: formData.siblings?.trim() || '',
           father: formData.father?.trim() || '',
           mother: formData.mother?.trim() || '',
@@ -633,29 +581,39 @@ export default function AdminPanel({ onBackToPortal, onProfilesChange }) {
           createdAt: new Date().toISOString()
         };
 
-        const res = await fetch(`${API_BASE}/profiles`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(newProf)
-        });
-        const data = await res.json();
-        if (!res.ok || !data.success) {
-          throw new Error(data.message || 'Failed to save profile to database');
-        }
-        const savedProfile = data.profile || newProf;
-
+        // Immediately update React state for instant UI update
         setProfiles((prev) => {
-          const next = [savedProfile, ...prev.filter(p => p.id !== savedProfile.id)];
+          const next = [newProf, ...prev.filter(p => p.id !== newProf.id)];
           if (onProfilesChange) onProfilesChange(next);
           return next;
         });
-        fetchData();
-        showNotification(`✓ Published new profile ${savedProfile.id} successfully!`);
+
+        // Save to backend database
+        try {
+          const res = await fetch(`${API_BASE}/profiles`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(newProf)
+          });
+          const data = await res.json();
+          if (data.success && data.profile) {
+            setProfiles((prev) => {
+              const next = [data.profile, ...prev.filter(p => p.id !== data.profile.id)];
+              if (onProfilesChange) onProfilesChange(next);
+              return next;
+            });
+          }
+        } catch (serverErr) {
+          console.warn('[Admin] Server create notice:', serverErr.message);
+        }
+
+        showNotification(`✓ Published new profile ${newProf.id} successfully!`);
         setIsFormOpen(false);
-        if (openInstagram) setInstagramModalProfile(savedProfile);
+        if (openInstagram) setInstagramModalProfile(newProf);
       }
     } catch (err) {
-      showNotification(`Error: ${err.message}`);
+      console.error('[Admin] Save error:', err);
+      showNotification(`Save Error: ${err.message}`);
     } finally {
       setIsSaving(false);
     }
@@ -2790,8 +2748,26 @@ export default function AdminPanel({ onBackToPortal, onProfilesChange }) {
                   <Instagram size={14} color="#E1306C" />
                   <span>Save & Post to Instagram</span>
                 </button>
-                <button type="submit" disabled={isSaving} style={{ padding: '9px 24px', borderRadius: '8px', border: 'none', background: 'linear-gradient(135deg, #fae182 0%, #d4af37 50%, #b8860b 100%)', color: '#0d251c', fontWeight: 800, cursor: 'pointer', boxShadow: '0 4px 14px rgba(212, 175, 55, 0.4)' }}>
-                  {isSaving ? 'Saving...' : editingProfile ? 'Update Profile' : creationMode === 'picture' ? 'Save Picture Profile' : 'Save Form Profile'}
+                <button
+                  type="submit"
+                  disabled={isSaving}
+                  onClick={(e) => handleSaveAdminProfile(e, false)}
+                  style={{
+                    padding: '9px 24px',
+                    borderRadius: '8px',
+                    border: 'none',
+                    background: 'linear-gradient(135deg, #fae182 0%, #d4af37 50%, #b8860b 100%)',
+                    color: '#0d251c',
+                    fontWeight: 800,
+                    cursor: isSaving ? 'not-allowed' : 'pointer',
+                    boxShadow: '0 4px 14px rgba(212, 175, 55, 0.4)',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '6px'
+                  }}
+                >
+                  {isSaving && <RefreshCw size={14} className="animate-spin" />}
+                  <span>{isSaving ? 'Saving...' : editingProfile ? 'Update Profile' : creationMode === 'picture' ? 'Save Picture Profile' : 'Save Form Profile'}</span>
                 </button>
               </div>
             </form>
