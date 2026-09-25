@@ -8,13 +8,13 @@ import { createClient } from '@supabase/supabase-js';
 const SUPABASE_URL =
   import.meta.env.VITE_SUPABASE_URL ||
   import.meta.env.NEXT_PUBLIC_SUPABASE_URL ||
-  'https://awweckttcpgzxbvntiyv.supabase.co';
+  'https://qfjwpsglllvoztwgqitw.supabase.co';
 
 const SUPABASE_ANON_KEY =
   import.meta.env.VITE_SUPABASE_ANON_KEY ||
   import.meta.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ||
   import.meta.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ||
-  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImF3d2Vja3R0Y3Bnenhidm50aXl2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc3MTUwMzYsImV4cCI6MjA5MzI5MTAzNn0.6kCr-nVpUPjm9opHOAVjbsYDty51DP5k8dLDwrxcTPI';
+  'sb_publishable_u1s9_wcNHOOUjYZXvt5dcw_VJveOlDz';
 
 let _supabase = null;
 

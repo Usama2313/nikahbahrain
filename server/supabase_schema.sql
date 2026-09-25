@@ -1,5 +1,5 @@
 -- Run this SQL in your Supabase SQL Editor to create the profiles table
--- Go to: https://app.supabase.com → Your Project → SQL Editor → New Query
+-- Go to: https://supabase.com/dashboard/project/qfjwpsglllvoztwgqitw/sql -> New query -> Paste & Run
 
 CREATE TABLE IF NOT EXISTS profiles (
   id TEXT PRIMARY KEY,
@@ -37,25 +37,19 @@ CREATE TABLE IF NOT EXISTS profiles (
   updated_at TIMESTAMPTZ
 );
 
--- Allow public read access (anonymous users can view profiles)
+-- Allow public read & write access
 ALTER TABLE profiles ENABLE ROW LEVEL SECURITY;
 
-CREATE POLICY "Public profiles are viewable by everyone"
-  ON profiles FOR SELECT
-  USING (true);
+DROP POLICY IF EXISTS "Public select" ON profiles;
+DROP POLICY IF EXISTS "Public insert" ON profiles;
+DROP POLICY IF EXISTS "Public update" ON profiles;
+DROP POLICY IF EXISTS "Public delete" ON profiles;
+DROP POLICY IF EXISTS "Public profiles are viewable by everyone" ON profiles;
 
--- Allow all operations for authenticated users (admin)
-CREATE POLICY "Authenticated users can insert profiles"
-  ON profiles FOR INSERT
-  WITH CHECK (true);
-
-CREATE POLICY "Authenticated users can update profiles"
-  ON profiles FOR UPDATE
-  USING (true);
-
-CREATE POLICY "Authenticated users can delete profiles"
-  ON profiles FOR DELETE
-  USING (true);
+CREATE POLICY "Public select" ON profiles FOR SELECT USING (true);
+CREATE POLICY "Public insert" ON profiles FOR INSERT WITH CHECK (true);
+CREATE POLICY "Public update" ON profiles FOR UPDATE USING (true) WITH CHECK (true);
+CREATE POLICY "Public delete" ON profiles FOR DELETE USING (true);
 
 -- Create index for faster queries
 CREATE INDEX IF NOT EXISTS idx_profiles_category ON profiles(category);
