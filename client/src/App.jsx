@@ -60,28 +60,20 @@ export const saveStoredDeletedIds = (setOrArr) => {
   } catch (_) {}
 };
 
-// Seamlessly merge server profiles with custom admin profiles
-// Custom admin profiles appear at the top and override any matching ID
-const mergeAndDeduplicateProfiles = (serverList = [], customList = [], excludeIds = new Set()) => {
+// Seamlessly merge profiles with strict cloud truth priority
+// Cloud profiles and newest admin edits have top priority and override fallback/stale data
+const mergeAndDeduplicateProfiles = (sources = [], excludeIds = new Set()) => {
   const result = [];
   const seenIds = new Set();
   const normalizedExclude = new Set(Array.from(excludeIds || []).map(id => String(id).trim()));
 
-  // 1. Custom admin profiles come FIRST (latest creations/edits have top priority)
-  if (Array.isArray(customList)) {
-    for (const p of customList) {
-      if (!p || !p.id) continue;
-      const cleanId = String(p.id).trim();
-      if (normalizedExclude.has(cleanId)) continue;
-      if (seenIds.has(cleanId)) continue;
-      seenIds.add(cleanId);
-      result.push(p);
-    }
-  }
+  const sourceArrays = Array.isArray(sources) && sources.length > 0 && Array.isArray(sources[0])
+    ? sources
+    : [sources];
 
-  // 2. Server / fallback profiles come next
-  if (Array.isArray(serverList)) {
-    for (const p of serverList) {
+  for (const list of sourceArrays) {
+    if (!Array.isArray(list)) continue;
+    for (const p of list) {
       if (!p || !p.id) continue;
       const cleanId = String(p.id).trim();
       if (normalizedExclude.has(cleanId)) continue;
@@ -134,7 +126,7 @@ export default function App() {
     const fallbackDeleted = new Set((fallbackDeletedIds || []).map(String));
     const allDeleted = new Set([...localDeleted, ...fallbackDeleted]);
     const custom = getStoredCustomProfiles();
-    return mergeAndDeduplicateProfiles(fallbackProfiles || [], custom, allDeleted);
+    return mergeAndDeduplicateProfiles([custom, fallbackProfiles || []], allDeleted);
   });
   const [favorites, setFavorites] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -209,7 +201,10 @@ export default function App() {
       let serverProfiles = [];
       let serverDeleted = new Set();
       try {
-        const res = await fetch(`${API_BASE}/profiles`);
+        const res = await fetch(`${API_BASE}/profiles?_t=${Date.now()}`, {
+          cache: 'no-store',
+          headers: { 'Cache-Control': 'no-cache', 'Pragma': 'no-cache' }
+        });
         if (res.ok) {
           const data = await res.json();
           if (data.success && Array.isArray(data.profiles)) {
@@ -230,31 +225,21 @@ export default function App() {
         ...(fallbackDeletedIds || []).map(String)
       ]);
 
-      // Cache any cloud deleted IDs locally
-      if (cloudDeleted.size > 0) {
-        saveStoredDeletedIds(allDeleted);
-      }
-
-      // Cache any cloud profiles into local custom profiles for instant offline & cross-device availability
-      let mergedCustom = custom;
-      if (cloudProfiles.length > 0) {
-        const existingCustomIds = new Set(custom.map(p => String(p.id)));
-        const newCloudCustom = cloudProfiles.filter(p => !existingCustomIds.has(String(p.id)) && !allDeleted.has(String(p.id)));
-        if (newCloudCustom.length > 0) {
-          mergedCustom = [...custom, ...newCloudCustom];
-          saveStoredCustomProfiles(mergedCustom);
-        }
-      }
-
-      // Merge: cloud custom profiles + server profiles + fallback profiles
-      const baseList = [...cloudProfiles, ...serverProfiles, ...(fallbackProfiles || [])];
-      const unified = mergeAndDeduplicateProfiles(baseList, mergedCustom, allDeleted);
+      // Prioritized merge:
+      // 1. cloudProfiles (Live Supabase database - source of truth)
+      // 2. serverProfiles (Server API)
+      // 3. custom (Unsynced admin edits)
+      // 4. fallbackProfiles (Bundled static JSON)
+      const unified = mergeAndDeduplicateProfiles(
+        [cloudProfiles, serverProfiles, custom, fallbackProfiles || []],
+        allDeleted
+      );
       setProfiles(unified);
     } catch (err) {
       console.warn('Profile fetch note:', err.message);
       const fallbackDeleted = new Set((fallbackDeletedIds || []).map(String));
       const allDeleted = new Set([...localDeleted, ...fallbackDeleted]);
-      const unified = mergeAndDeduplicateProfiles(fallbackProfiles || [], custom, allDeleted);
+      const unified = mergeAndDeduplicateProfiles([custom, fallbackProfiles || []], allDeleted);
       setProfiles(unified);
     } finally {
       setLoading(false);
@@ -302,10 +287,15 @@ export default function App() {
   };
 
   useEffect(() => {
-    // Clean up any legacy localStorage profile cache
+    // Clean up any legacy or stale localStorage profile cache on visitor devices
     try {
       localStorage.removeItem('nikah_custom_profiles');
       localStorage.removeItem('nikah_deleted_profiles');
+      // If visitor is not actively authenticated as admin, clear stale custom profiles and stale deleted ids
+      if (!checkIsAdminRoute() && sessionStorage.getItem('nikah_admin_authenticated') !== 'true') {
+        localStorage.removeItem(ADMIN_CUSTOM_PROFILES_KEY);
+        localStorage.removeItem(ADMIN_DELETED_IDS_KEY);
+      }
     } catch (_) {}
     fetchProfiles();
     fetchFavorites();
