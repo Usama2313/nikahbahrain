@@ -109,7 +109,7 @@ export default function SplashIntro({ onEnter, isVisible = true }) {
     setDragStartY(null);
   };
 
-  if (!isVisible && !isExiting) return null;
+  if (!isVisible) return null;
 
   const secondsRemaining = Math.max(0, Math.ceil((READING_DURATION_MS - elapsedRef.current) / 1000));
 

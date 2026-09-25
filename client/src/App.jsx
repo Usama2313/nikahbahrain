@@ -109,8 +109,8 @@ const checkIsAdminRoute = () => {
 export default function App() {
   const isInitialAdmin = checkIsAdminRoute();
 
-  // 1. Splash Intro Screen State — NEVER show splash if directly accessing /admin
-  const [showSplash, setShowSplash] = useState(() => !isInitialAdmin);
+  // 1. Splash Intro Screen State — disabled by default so mobile loads instantly
+  const [showSplash, setShowSplash] = useState(false);
 
   // 2. Navigation State ('home' default)
   const [activeTab, setActiveTab] = useState('home');
