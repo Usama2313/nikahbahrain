@@ -38,10 +38,7 @@ import WhatsAppGroupInvite from './WhatsAppGroupInvite';
 import {
   supabaseUpsertProfile,
   supabaseDeleteProfile,
-  supabaseFetchProfiles,
-  supabaseFetchDeletedIds,
-  supabaseSyncLocalCustomProfiles,
-  supabaseRemoveDeletedId
+  supabaseFetchProfiles
 } from '../supabaseClient';
 
 // Standard Admin Credentials
@@ -114,40 +111,8 @@ export default function AdminPanel({ onBackToPortal, onProfilesChange }) {
   const [loginError, setLoginError] = useState('');
   const [showPassword, setShowPassword] = useState(false);
 
-  // Data — Synchronized with persistent local storage + backend database
-  const [profiles, setProfiles] = useState(() => {
-    const localDeleted = (() => {
-      try {
-        const raw = localStorage.getItem('nikah_admin_deleted_ids');
-        if (raw) return new Set(JSON.parse(raw).map(String));
-      } catch (_) {}
-      return new Set();
-    })();
-    const fallbackDeleted = new Set((fallbackDeletedIds || []).map(String));
-    const allDeleted = new Set([...localDeleted, ...fallbackDeleted]);
-    const custom = (() => {
-      try {
-        const raw = localStorage.getItem('nikah_admin_custom_profiles');
-        if (raw) return JSON.parse(raw);
-      } catch (_) {}
-      return [];
-    })();
-    const seen = new Set();
-    const result = [];
-    if (Array.isArray(custom)) {
-      for (const p of custom) {
-        if (!p || !p.id || allDeleted.has(String(p.id)) || seen.has(String(p.id))) continue;
-        seen.add(String(p.id));
-        result.push(p);
-      }
-    }
-    for (const p of (fallbackProfiles || [])) {
-      if (!p || !p.id || allDeleted.has(String(p.id)) || seen.has(String(p.id))) continue;
-      seen.add(String(p.id));
-      result.push(p);
-    }
-    return result;
-  });
+  // Data — Loaded directly from Supabase database (no localStorage)
+  const [profiles, setProfiles] = useState(() => fallbackProfiles || []);
 
   const [stats, setStats] = useState(() => {
     const pList = profiles;
@@ -550,22 +515,22 @@ export default function AdminPanel({ onBackToPortal, onProfilesChange }) {
           updatedAt: new Date().toISOString()
         };
 
-        // 1. Immediately update persistent localStorage custom profiles
-        try {
-          const raw = localStorage.getItem('nikah_admin_custom_profiles');
-          const custom = raw ? JSON.parse(raw) : [];
-          const updatedCustom = [updated, ...custom.filter(p => p.id !== updated.id)];
-          localStorage.setItem('nikah_admin_custom_profiles', JSON.stringify(updatedCustom));
-        } catch (_) {}
-
-        // 2. Immediately update React state for instant UI update
+        // 1. Immediately update React state for instant UI feedback
         setProfiles((prev) => {
           const next = prev.map((p) => (p.id === updated.id ? updated : p));
           if (onProfilesChange) onProfilesChange(next);
           return next;
         });
 
-        // 3. Save to backend database (server API and direct Supabase cloud)
+        // 2. Save directly to Supabase database (source of truth for all devices)
+        try {
+          await supabaseUpsertProfile(updated);
+          console.log('[Admin] Profile updated in Supabase database:', updated.id);
+        } catch (sbErr) {
+          console.warn('[Admin] Supabase update error:', sbErr.message);
+        }
+
+        // 3. Also sync to server API
         try {
           await fetch(`${API_BASE}/profiles/${editingProfile.id}`, {
             method: 'PUT',
@@ -574,14 +539,6 @@ export default function AdminPanel({ onBackToPortal, onProfilesChange }) {
           });
         } catch (serverErr) {
           console.warn('[Admin] Server update note:', serverErr.message);
-        }
-
-        // Direct Supabase cloud persistence (guarantees cross-device availability on mobile & desktop)
-        try {
-          await supabaseUpsertProfile(updated);
-          console.log('[Admin] Profile updated in Supabase cloud:', updated.id);
-        } catch (sbErr) {
-          console.warn('[Admin] Supabase cloud upsert warning:', sbErr.message);
         }
 
         showNotification(`✓ Updated profile ${updated.id} successfully!`);
@@ -626,36 +583,22 @@ export default function AdminPanel({ onBackToPortal, onProfilesChange }) {
           createdAt: new Date().toISOString()
         };
 
-        // 1. Immediately update persistent localStorage custom profiles & un-delete ID if needed
-        try {
-          const raw = localStorage.getItem('nikah_admin_custom_profiles');
-          const custom = raw ? JSON.parse(raw) : [];
-          const updatedCustom = [newProf, ...custom.filter(p => p.id !== newProf.id)];
-          localStorage.setItem('nikah_admin_custom_profiles', JSON.stringify(updatedCustom));
-
-          const delRaw = localStorage.getItem('nikah_admin_deleted_ids');
-          if (delRaw) {
-            const delSet = new Set(JSON.parse(delRaw).map(String));
-            if (delSet.has(String(newProf.id))) {
-              delSet.delete(String(newProf.id));
-              localStorage.setItem('nikah_admin_deleted_ids', JSON.stringify(Array.from(delSet)));
-            }
-          }
-        } catch (_) {}
-
-        // Un-delete from cloud if needed
-        try {
-          await supabaseRemoveDeletedId(newProf.id);
-        } catch (_) {}
-
-        // 2. Immediately update React state for instant UI update
+        // 1. Immediately update React state for instant UI feedback
         setProfiles((prev) => {
           const next = [newProf, ...prev.filter(p => p.id !== newProf.id)];
           if (onProfilesChange) onProfilesChange(next);
           return next;
         });
 
-        // 3. Save to backend database (server API and direct Supabase cloud)
+        // 2. Save directly to Supabase database (source of truth for all devices)
+        try {
+          await supabaseUpsertProfile(newProf);
+          console.log('[Admin] Profile saved to Supabase database:', newProf.id);
+        } catch (sbErr) {
+          console.warn('[Admin] Supabase create error:', sbErr.message);
+        }
+
+        // 3. Also sync to server API
         try {
           await fetch(`${API_BASE}/profiles`, {
             method: 'POST',
@@ -664,14 +607,6 @@ export default function AdminPanel({ onBackToPortal, onProfilesChange }) {
           });
         } catch (serverErr) {
           console.warn('[Admin] Server create note:', serverErr.message);
-        }
-
-        // Direct Supabase cloud persistence (guarantees cross-device availability on mobile & desktop)
-        try {
-          await supabaseUpsertProfile(newProf);
-          console.log('[Admin] Profile saved to Supabase cloud:', newProf.id);
-        } catch (sbErr) {
-          console.warn('[Admin] Supabase cloud upsert warning:', sbErr.message);
         }
 
         showNotification(`✓ Published new profile ${newProf.id} successfully!`);
@@ -756,97 +691,50 @@ export default function AdminPanel({ onBackToPortal, onProfilesChange }) {
     try {
       setLoading(true);
 
-      const localDeleted = (() => {
-        try {
-          const raw = localStorage.getItem('nikah_admin_deleted_ids');
-          if (raw) return new Set(JSON.parse(raw).map(String));
-        } catch (_) {}
-        return new Set();
-      })();
-
-      const custom = (() => {
-        try {
-          const raw = localStorage.getItem('nikah_admin_custom_profiles');
-          if (raw) return JSON.parse(raw);
-        } catch (_) {}
-        return [];
-      })();
-
-      // In background, sync any local custom profiles to Supabase cloud
-      if (custom.length > 0) {
-        supabaseSyncLocalCustomProfiles(custom).catch(() => {});
+      // Fetch directly from Supabase database (source of truth — works on mobile & desktop)
+      let cloudProfiles = [];
+      try {
+        cloudProfiles = await supabaseFetchProfiles();
+      } catch (sbErr) {
+        console.warn('[Admin] Supabase fetch note:', sbErr.message);
       }
 
-      const [statsRes, profilesRes, sbProfiles, sbDeleted] = await Promise.all([
-        fetch(`${API_BASE}/stats`).catch(() => null),
-        fetch(`${API_BASE}/profiles`).catch(() => null),
-        supabaseFetchProfiles().catch(() => []),
-        supabaseFetchDeletedIds().catch(() => new Set()),
-      ]);
-
+      // Also fetch from server API as fallback
       let serverProfiles = [];
-      let serverDeleted = new Set();
-      if (profilesRes && profilesRes.ok) {
-        try {
+      try {
+        const profilesRes = await fetch(`${API_BASE}/profiles`);
+        if (profilesRes && profilesRes.ok) {
           const profilesData = await profilesRes.json();
           if (profilesData.success && Array.isArray(profilesData.profiles)) {
             serverProfiles = profilesData.profiles;
-            if (Array.isArray(profilesData.deletedIds)) {
-              serverDeleted = new Set(profilesData.deletedIds.map(String));
-            }
           }
-        } catch (_) {}
-      }
-
-      const cloudProfiles = Array.isArray(sbProfiles) ? sbProfiles : [];
-      const cloudDeleted = sbDeleted instanceof Set ? sbDeleted : new Set();
-
-      const allDeleted = new Set([
-        ...localDeleted,
-        ...cloudDeleted,
-        ...serverDeleted,
-        ...(fallbackDeletedIds || []).map(String),
-      ]);
-
-      // Cache cloud profiles locally for cross-device & offline support
-      if (cloudProfiles.length > 0) {
-        const existingCustomIds = new Set(custom.map(p => String(p.id)));
-        const newCloudCustom = cloudProfiles.filter(p => !existingCustomIds.has(String(p.id)));
-        if (newCloudCustom.length > 0) {
-          try {
-            localStorage.setItem('nikah_admin_custom_profiles', JSON.stringify([...custom, ...newCloudCustom]));
-          } catch (_) {}
         }
-      }
+      } catch (_) {}
 
-      // Merge: custom (local) first, then cloud profiles, server profiles, fallback
-      const combined = [
-        ...(Array.isArray(custom) ? custom : []),
-        ...cloudProfiles,
-        ...serverProfiles,
-        ...(fallbackProfiles || []),
-      ];
-
-      const seen = new Set();
-      const unified = [];
-      for (const p of combined) {
-        if (!p || !p.id) continue;
-        const cleanId = String(p.id).trim();
-        if (allDeleted.has(cleanId) || seen.has(cleanId)) continue;
-        seen.add(cleanId);
-        unified.push(p);
+      // Use cloud as source of truth, fall back to server, then to bundled fallback
+      let unified = [];
+      if (cloudProfiles.length > 0) {
+        unified = cloudProfiles;
+      } else if (serverProfiles.length > 0) {
+        unified = serverProfiles;
+      } else {
+        unified = fallbackProfiles || [];
       }
 
       setProfiles(unified);
       if (onProfilesChange) onProfilesChange(unified);
 
-      if (statsRes && statsRes.ok) {
-        const statsData = await statsRes.json();
-        if (statsData.success) {
-          setStats(statsData.stats);
-          return;
+      // Fetch stats from server
+      try {
+        const statsRes = await fetch(`${API_BASE}/stats`);
+        if (statsRes && statsRes.ok) {
+          const statsData = await statsRes.json();
+          if (statsData.success) {
+            setStats(statsData.stats);
+            return;
+          }
         }
-      }
+      } catch (_) {}
 
       setStats({
         total: unified.length,
@@ -858,7 +746,7 @@ export default function AdminPanel({ onBackToPortal, onProfilesChange }) {
         indian: unified.filter(p => p.nationality === 'Indian').length,
       });
     } catch (err) {
-      console.warn('Admin fetch API fallback used:', err.message);
+      console.warn('[Admin] fetchData error:', err.message);
     } finally {
       setLoading(false);
     }
@@ -878,39 +766,28 @@ export default function AdminPanel({ onBackToPortal, onProfilesChange }) {
   const handleDeleteProfile = async (id) => {
     if (!window.confirm(`Permanently delete profile ${id}?`)) return;
 
-    // 1. Immediately record in persistent localStorage deleted IDs & remove from custom
-    try {
-      const delRaw = localStorage.getItem('nikah_admin_deleted_ids');
-      const delSet = delRaw ? new Set(JSON.parse(delRaw).map(String)) : new Set();
-      delSet.add(String(id));
-      localStorage.setItem('nikah_admin_deleted_ids', JSON.stringify(Array.from(delSet)));
-
-      const raw = localStorage.getItem('nikah_admin_custom_profiles');
-      if (raw) {
-        const custom = JSON.parse(raw);
-        localStorage.setItem('nikah_admin_custom_profiles', JSON.stringify(custom.filter(p => p.id !== id)));
-      }
-    } catch (_) {}
-
-    // 2. Immediately remove from Admin UI state AND notify parent App
+    // 1. Immediately remove from Admin UI state AND notify parent App
     setProfiles((prev) => {
       const next = prev.filter(p => p.id !== id);
       if (onProfilesChange) onProfilesChange(next);
       return next;
     });
 
-    // 3. Delete from backend database (server API and Supabase direct)
+    // 2. Delete directly from Supabase database (source of truth)
+    try {
+      await supabaseDeleteProfile(id);
+      console.log('[Admin] Profile deleted from Supabase database:', id);
+    } catch (sbErr) {
+      console.warn('[Admin] Supabase delete error:', sbErr.message);
+    }
+
+    // 3. Also delete from server API
     try {
       await fetch(`${API_BASE}/profiles/${id}`, { method: 'DELETE' });
     } catch (err) {
       console.warn('[Admin] Server delete note:', err.message);
     }
-    try {
-      await supabaseDeleteProfile(id);
-      console.log('[Admin] Profile deleted from Supabase:', id);
-    } catch (sbErr) {
-      console.warn('[Admin] Supabase delete note:', sbErr.message);
-    }
+
     showNotification(`✓ Profile ${id} permanently deleted.`);
   };
 

@@ -14,51 +14,7 @@ import { Sparkles, AlertCircle, RefreshCw, RotateCcw } from './icons';
 
 import API_BASE from './api';
 import fallbackProfiles from './data/profiles.json';
-import fallbackDeletedIds from './data/deleted_ids.json';
-import {
-  supabaseFetchProfiles,
-  supabaseFetchDeletedIds,
-  supabaseSyncLocalCustomProfiles
-} from './supabaseClient';
-
-// Persistent storage keys for custom admin created/edited profiles
-const ADMIN_CUSTOM_PROFILES_KEY = 'nikah_admin_custom_profiles';
-const ADMIN_DELETED_IDS_KEY = 'nikah_admin_deleted_ids';
-
-export const getStoredCustomProfiles = () => {
-  try {
-    const raw = localStorage.getItem(ADMIN_CUSTOM_PROFILES_KEY);
-    if (raw) {
-      const parsed = JSON.parse(raw);
-      if (Array.isArray(parsed)) return parsed;
-    }
-  } catch (_) {}
-  return [];
-};
-
-export const saveStoredCustomProfiles = (list) => {
-  try {
-    localStorage.setItem(ADMIN_CUSTOM_PROFILES_KEY, JSON.stringify(list || []));
-  } catch (_) {}
-};
-
-export const getStoredDeletedIds = () => {
-  try {
-    const raw = localStorage.getItem(ADMIN_DELETED_IDS_KEY);
-    if (raw) {
-      const parsed = JSON.parse(raw);
-      if (Array.isArray(parsed)) return new Set(parsed.map(String));
-    }
-  } catch (_) {}
-  return new Set();
-};
-
-export const saveStoredDeletedIds = (setOrArr) => {
-  try {
-    const arr = Array.from(setOrArr || []);
-    localStorage.setItem(ADMIN_DELETED_IDS_KEY, JSON.stringify(arr));
-  } catch (_) {}
-};
+import { supabaseFetchProfiles } from './supabaseClient';
 
 // Seamlessly merge profiles with strict cloud truth priority
 // Cloud profiles and newest admin edits have top priority and override fallback/stale data
@@ -119,15 +75,8 @@ export default function App() {
     return id;
   });
 
-  // 4. Profiles & Favorites Data State
-  // Initialize by merging bundled profiles with locally stored admin custom profiles
-  const [profiles, setProfiles] = useState(() => {
-    const localDeleted = getStoredDeletedIds();
-    const fallbackDeleted = new Set((fallbackDeletedIds || []).map(String));
-    const allDeleted = new Set([...localDeleted, ...fallbackDeleted]);
-    const custom = getStoredCustomProfiles();
-    return mergeAndDeduplicateProfiles([custom, fallbackProfiles || []], allDeleted);
-  });
+  // 4. Profiles & Favorites Data State — Direct Database Driven
+  const [profiles, setProfiles] = useState(() => fallbackProfiles || []);
   const [favorites, setFavorites] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -170,36 +119,24 @@ export default function App() {
     };
   }, []);
 
-  // Fetch profiles from database/server with seamless admin custom profiles persistence
+  // Fetch profiles directly from database (Supabase cloud & server API)
   const fetchProfiles = async () => {
-    const localDeleted = getStoredDeletedIds();
-    let custom = getStoredCustomProfiles();
-
-    // In background, sync any locally cached custom profiles up to Supabase cloud
-    if (custom.length > 0) {
-      supabaseSyncLocalCustomProfiles(custom).catch(() => {});
-    }
-
     try {
       setError(null);
 
-      // 1. Fetch directly from cloud Supabase
+      // 1. Fetch directly from live Supabase database
       let cloudProfiles = [];
-      let cloudDeleted = new Set();
       try {
-        const [sbList, sbDel] = await Promise.all([
-          supabaseFetchProfiles(),
-          supabaseFetchDeletedIds()
-        ]);
-        if (Array.isArray(sbList)) cloudProfiles = sbList;
-        if (sbDel instanceof Set) cloudDeleted = sbDel;
+        const sbList = await supabaseFetchProfiles();
+        if (Array.isArray(sbList) && sbList.length > 0) {
+          cloudProfiles = sbList;
+        }
       } catch (sbErr) {
         console.warn('[App] Supabase cloud fetch note:', sbErr.message);
       }
 
-      // 2. Fetch from server API
+      // 2. Fetch from server API as secondary database channel
       let serverProfiles = [];
-      let serverDeleted = new Set();
       try {
         const res = await fetch(`${API_BASE}/profiles?_t=${Date.now()}`, {
           cache: 'no-store',
@@ -207,40 +144,28 @@ export default function App() {
         });
         if (res.ok) {
           const data = await res.json();
-          if (data.success && Array.isArray(data.profiles)) {
+          if (data.success && Array.isArray(data.profiles) && data.profiles.length > 0) {
             serverProfiles = data.profiles;
-            if (Array.isArray(data.deletedIds)) {
-              serverDeleted = new Set(data.deletedIds.map(String));
-            }
           }
         }
       } catch (apiErr) {
         console.warn('[App] Server API fetch note:', apiErr.message);
       }
 
-      const allDeleted = new Set([
-        ...localDeleted,
-        ...cloudDeleted,
-        ...serverDeleted,
-        ...(fallbackDeletedIds || []).map(String)
-      ]);
-
-      // Prioritized merge:
-      // 1. cloudProfiles (Live Supabase database - source of truth)
-      // 2. serverProfiles (Server API)
-      // 3. custom (Unsynced admin edits)
-      // 4. fallbackProfiles (Bundled static JSON)
-      const unified = mergeAndDeduplicateProfiles(
-        [cloudProfiles, serverProfiles, custom, fallbackProfiles || []],
-        allDeleted
-      );
-      setProfiles(unified);
+      // Prioritize live database sources of truth:
+      // 1. Supabase Cloud Database (real-time cross-device sync)
+      // 2. Server API
+      // 3. Fallback bundled JSON (only if completely offline)
+      if (cloudProfiles.length > 0) {
+        setProfiles(cloudProfiles);
+      } else if (serverProfiles.length > 0) {
+        setProfiles(serverProfiles);
+      } else {
+        setProfiles(fallbackProfiles || []);
+      }
     } catch (err) {
       console.warn('Profile fetch note:', err.message);
-      const fallbackDeleted = new Set((fallbackDeletedIds || []).map(String));
-      const allDeleted = new Set([...localDeleted, ...fallbackDeleted]);
-      const unified = mergeAndDeduplicateProfiles([custom, fallbackProfiles || []], allDeleted);
-      setProfiles(unified);
+      setProfiles(fallbackProfiles || []);
     } finally {
       setLoading(false);
     }
@@ -287,15 +212,12 @@ export default function App() {
   };
 
   useEffect(() => {
-    // Clean up any legacy or stale localStorage profile cache on visitor devices
+    // Purge any legacy localStorage keys to ensure clean database-driven experience
     try {
+      localStorage.removeItem('nikah_admin_custom_profiles');
+      localStorage.removeItem('nikah_admin_deleted_ids');
       localStorage.removeItem('nikah_custom_profiles');
       localStorage.removeItem('nikah_deleted_profiles');
-      // If visitor is not actively authenticated as admin, clear stale custom profiles and stale deleted ids
-      if (!checkIsAdminRoute() && sessionStorage.getItem('nikah_admin_authenticated') !== 'true') {
-        localStorage.removeItem(ADMIN_CUSTOM_PROFILES_KEY);
-        localStorage.removeItem(ADMIN_DELETED_IDS_KEY);
-      }
     } catch (_) {}
     fetchProfiles();
     fetchFavorites();

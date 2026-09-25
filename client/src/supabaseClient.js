@@ -1,8 +1,6 @@
-// Resilient Supabase client with seamless multi-table fallback
-// Connects directly to Supabase from the browser using the public anon key.
-// If the 'profiles' table exists, it uses it directly.
-// If 'profiles' does not exist in the schema cache, it seamlessly uses 'properties'
-// with status = 'nikah_profile', guaranteeing 100% persistence on any device (desktop & mobile).
+// Supabase client — Direct Database CRUD on 'profiles' table
+// All operations (Create, Read, Update, Delete) are executed directly on the Supabase database.
+// No local storage dependencies — guarantees real-time synchronization across mobile phones & desktops.
 import { createClient } from '@supabase/supabase-js';
 
 const SUPABASE_URL =
@@ -25,16 +23,27 @@ export function getSupabase() {
   return _supabase;
 }
 
-// Convert app profile to Supabase 'profiles' table row
+// Convert app profile object to Supabase 'profiles' table row
 export function profileToRow(p) {
+  let cleanAge = null;
+  if (p.age !== null && p.age !== undefined && p.age !== '') {
+    const parsed = parseInt(String(p.age).replace(/\D+/g, ''), 10);
+    if (!isNaN(parsed) && parsed > 0 && parsed < 120) {
+      cleanAge = parsed;
+    }
+  }
+
+  const gender = (p.gender || 'male').toLowerCase().trim() === 'female' ? 'female' : 'male';
+  let cat = p.category || (gender === 'female' ? 'brides' : 'grooms');
+
   return {
     id: String(p.id || '').trim(),
     name: p.name || '',
-    gender: p.gender || 'male',
+    gender: gender,
     marital_status: p.maritalStatus || '',
-    category: p.category || 'grooms',
+    category: cat,
     nationality: p.nationality || '',
-    age: p.age ? Number(p.age) : null,
+    age: cleanAge,
     height: p.height || '',
     sect: p.sect || '',
     caste: p.caste || '',
@@ -60,20 +69,21 @@ export function profileToRow(p) {
     verified: p.verified !== false,
     featured: p.featured === true,
     created_at: p.createdAt || new Date().toISOString(),
-    updated_at: p.updatedAt || null,
+    updated_at: new Date().toISOString(),
   };
 }
 
-// Convert Supabase 'profiles' table row back to app profile
+// Convert Supabase 'profiles' row back to app profile object
 export function rowToProfile(row) {
+  const gender = (row.gender || 'male').toLowerCase().trim() === 'female' ? 'female' : 'male';
   return {
-    id: row.id || '',
+    id: String(row.id || '').trim(),
     name: row.name || '',
-    gender: row.gender || 'male',
+    gender: gender,
     maritalStatus: row.marital_status || '',
-    category: row.category || 'grooms',
+    category: row.category || (gender === 'female' ? 'brides' : 'grooms'),
     nationality: row.nationality || '',
-    age: row.age || null,
+    age: row.age ? Number(row.age) : null,
     height: row.height || '',
     sect: row.sect || '',
     caste: row.caste || '',
@@ -103,256 +113,92 @@ export function rowToProfile(row) {
   };
 }
 
-// Check whether an error is due to missing 'profiles' table
-function isMissingTableError(error) {
-  if (!error) return false;
-  const msg = (error.message || '').toLowerCase();
-  const code = error.code || '';
-  return code === 'PGRST205' || code === '42P01' || msg.includes('could not find the table') || msg.includes('relation "public.profiles" does not exist');
+// ─── Direct Database CRUD Operations ─────────────────────────────────────────
+
+/**
+ * READ: Fetch all profiles directly from Supabase database
+ * Uses pagination to support 1,000+ profiles seamlessly.
+ */
+export async function supabaseFetchProfiles() {
+  const db = getSupabase();
+  try {
+    const BATCH_SIZE = 1000;
+    let allRows = [];
+    let from = 0;
+    let hasMore = true;
+
+    while (hasMore) {
+      const { data, error } = await db
+        .from('profiles')
+        .select('*')
+        .order('created_at', { ascending: false })
+        .range(from, from + BATCH_SIZE - 1);
+
+      if (error) {
+        console.error('[Supabase DB] Fetch error:', error.message);
+        break;
+      }
+
+      if (data && data.length > 0) {
+        allRows = allRows.concat(data);
+        from += BATCH_SIZE;
+        hasMore = data.length === BATCH_SIZE;
+      } else {
+        hasMore = false;
+      }
+    }
+
+    if (allRows.length > 0) {
+      return allRows.map(rowToProfile);
+    }
+  } catch (err) {
+    console.error('[Supabase DB] Exception fetching profiles:', err.message);
+  }
+  return [];
 }
 
-// Direct upsert to Supabase with automatic table fallback
+/**
+ * CREATE / UPDATE: Upsert profile directly into Supabase database
+ */
 export async function supabaseUpsertProfile(profile) {
   const db = getSupabase();
   const cleanId = String(profile.id || '').trim();
   if (!cleanId) throw new Error('Profile must have an ID');
 
-  // Try 1: Upsert to 'profiles' table
-  try {
-    const row = profileToRow(profile);
-    const { data, error } = await db
-      .from('profiles')
-      .upsert(row, { onConflict: 'id' })
-      .select()
-      .single();
-    if (!error && data) {
-      return rowToProfile(data);
-    }
-    if (error && !isMissingTableError(error)) {
-      throw error;
-    }
-  } catch (err) {
-    if (!isMissingTableError(err)) {
-      console.warn('[Supabase] profiles table upsert error, trying fallback:', err.message);
-    }
+  const row = profileToRow(profile);
+  const { data, error } = await db
+    .from('profiles')
+    .upsert(row, { onConflict: 'id' })
+    .select()
+    .single();
+
+  if (error) {
+    console.error('[Supabase DB] Upsert error for ID:', cleanId, error.message);
+    throw error;
   }
 
-  // Try 2: Resilient storage in 'properties' table (status = 'nikah_profile')
-  try {
-    const serialized = JSON.stringify(profile);
-    const now = new Date().toISOString();
-
-    const { data: existing } = await db
-      .from('properties')
-      .select('id')
-      .eq('title', cleanId)
-      .eq('status', 'nikah_profile')
-      .limit(1);
-
-    if (existing && existing.length > 0) {
-        const { data, error } = await db
-        .from('properties')
-        .update({
-          description: serialized,
-          category: profile.category || 'grooms',
-          isApproved: profile.verified !== false,
-          isFeatured: profile.featured === true,
-          updatedAt: now,
-        })
-        .eq('id', existing[0].id)
-        .select('id, title, status')
-        .single();
-      if (error) throw error;
-      return profile;
-    } else {
-      const { data, error } = await db
-        .from('properties')
-        .insert({
-          title: cleanId,
-          description: serialized,
-          status: 'nikah_profile',
-          category: profile.category || 'grooms',
-          isApproved: profile.verified !== false,
-          isFeatured: profile.featured === true,
-          createdAt: profile.createdAt || now,
-          updatedAt: now,
-        })
-        .select('id, title, status')
-        .single();
-      if (error) throw error;
-      return profile;
-    }
-  } catch (propErr) {
-    console.error('[Supabase] Both profiles and properties storage failed:', propErr.message);
-    throw propErr;
-  }
+  console.log('[Supabase DB] Successfully upserted profile into database:', cleanId);
+  return rowToProfile(data);
 }
 
-// Direct delete from Supabase with automatic table fallback
+/**
+ * DELETE: Delete profile directly from Supabase database
+ */
 export async function supabaseDeleteProfile(id) {
   const db = getSupabase();
   const cleanId = String(id || '').trim();
   if (!cleanId) return true;
 
-  // Try delete from 'profiles'
-  try {
-    await db.from('profiles').delete().eq('id', cleanId);
-  } catch (_) {}
+  const { error } = await db
+    .from('profiles')
+    .delete()
+    .eq('id', cleanId);
 
-  // Also delete from 'properties'
-  try {
-    await db.from('properties').delete().eq('title', cleanId).eq('status', 'nikah_profile');
-  } catch (_) {}
+  if (error) {
+    console.error('[Supabase DB] Delete error for ID:', cleanId, error.message);
+    throw error;
+  }
 
-  // Record into persistent deleted IDs
-  await supabaseAddDeletedId(cleanId);
+  console.log('[Supabase DB] Successfully deleted profile from database:', cleanId);
   return true;
-}
-
-// Fetch all profiles directly from Supabase with automatic table fallback
-export async function supabaseFetchProfiles() {
-  const db = getSupabase();
-
-  // Try 1: Fetch from 'profiles'
-  try {
-    const { data, error } = await db
-      .from('profiles')
-      .select('*')
-      .order('created_at', { ascending: false });
-    if (!error && Array.isArray(data) && data.length > 0) {
-      return data.map(rowToProfile);
-    }
-  } catch (_) {}
-
-  // Try 2: Fetch from 'properties' table (status = 'nikah_profile')
-  try {
-    const { data, error } = await db
-      .from('properties')
-      .select('id, title, description, status, createdAt, updatedAt')
-      .eq('status', 'nikah_profile')
-      .order('createdAt', { ascending: false });
-
-    if (!error && Array.isArray(data) && data.length > 0) {
-      const parsed = [];
-      for (const item of data) {
-        try {
-          if (item.description) {
-            const p = JSON.parse(item.description);
-            if (p && p.id) parsed.push(p);
-          }
-        } catch (_) {}
-      }
-      return parsed;
-    }
-  } catch (err) {
-    console.warn('[Supabase] properties fetch note:', err.message);
-  }
-
-  return [];
-}
-
-// Fetch deleted profile IDs from Supabase
-export async function supabaseFetchDeletedIds() {
-  const db = getSupabase();
-  try {
-    const { data, error } = await db
-      .from('properties')
-      .select('description')
-      .eq('title', '__NIKAH_DELETED_IDS__')
-      .eq('status', 'nikah_deleted_ids')
-      .limit(1);
-
-    if (!error && data && data.length > 0 && data[0].description) {
-      const arr = JSON.parse(data[0].description);
-      if (Array.isArray(arr)) return new Set(arr.map(String));
-    }
-  } catch (_) {}
-  return new Set();
-}
-
-// Record a deleted ID in Supabase
-export async function supabaseAddDeletedId(id) {
-  if (!id) return;
-  const db = getSupabase();
-  const cleanId = String(id).trim();
-  try {
-    const currentSet = await supabaseFetchDeletedIds();
-    currentSet.add(cleanId);
-    const arr = Array.from(currentSet);
-    const now = new Date().toISOString();
-
-    const { data: existing } = await db
-      .from('properties')
-      .select('id')
-      .eq('title', '__NIKAH_DELETED_IDS__')
-      .eq('status', 'nikah_deleted_ids')
-      .limit(1);
-
-    if (existing && existing.length > 0) {
-      await db
-        .from('properties')
-        .update({ description: JSON.stringify(arr), updatedAt: now })
-        .eq('id', existing[0].id);
-    } else {
-      await db
-        .from('properties')
-        .insert({
-          title: '__NIKAH_DELETED_IDS__',
-          description: JSON.stringify(arr),
-          status: 'nikah_deleted_ids',
-          createdAt: now,
-          updatedAt: now,
-        });
-    }
-  } catch (err) {
-    console.warn('[Supabase] Could not sync deleted ID:', err.message);
-  }
-}
-
-// Un-delete an ID if a profile is re-published with that ID
-export async function supabaseRemoveDeletedId(id) {
-  if (!id) return;
-  const db = getSupabase();
-  const cleanId = String(id).trim();
-  try {
-    const currentSet = await supabaseFetchDeletedIds();
-    if (currentSet.has(cleanId)) {
-      currentSet.delete(cleanId);
-      const arr = Array.from(currentSet);
-      const now = new Date().toISOString();
-      const { data: existing } = await db
-        .from('properties')
-        .select('id')
-        .eq('title', '__NIKAH_DELETED_IDS__')
-        .eq('status', 'nikah_deleted_ids')
-        .limit(1);
-      if (existing && existing.length > 0) {
-        await db
-          .from('properties')
-          .update({ description: JSON.stringify(arr), updatedAt: now })
-          .eq('id', existing[0].id);
-      }
-    }
-  } catch (_) {}
-}
-
-// Auto-sync any locally cached custom profiles up to Supabase in the background
-export async function supabaseSyncLocalCustomProfiles(localList) {
-  if (!Array.isArray(localList) || localList.length === 0) return;
-  try {
-    const cloudProfiles = await supabaseFetchProfiles();
-    const cloudIds = new Set((cloudProfiles || []).map(p => String(p.id)));
-
-    for (const p of localList) {
-      if (!p || !p.id) continue;
-      const cleanId = String(p.id).trim();
-      // If not yet in Supabase, upload it immediately
-      if (!cloudIds.has(cleanId)) {
-        await supabaseUpsertProfile(p);
-        console.log('[SupabaseSync] Uploaded local profile to cloud:', cleanId);
-      }
-    }
-  } catch (err) {
-    console.warn('[SupabaseSync] Auto-sync note:', err.message);
-  }
 }
