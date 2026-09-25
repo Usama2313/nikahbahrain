@@ -143,7 +143,7 @@ export async function supabaseUpsertProfile(profile) {
       .limit(1);
 
     if (existing && existing.length > 0) {
-      const { data, error } = await db
+        const { data, error } = await db
         .from('properties')
         .update({
           description: serialized,
@@ -153,7 +153,7 @@ export async function supabaseUpsertProfile(profile) {
           updatedAt: now,
         })
         .eq('id', existing[0].id)
-        .select()
+        .select('id, title, status')
         .single();
       if (error) throw error;
       return profile;
@@ -170,7 +170,7 @@ export async function supabaseUpsertProfile(profile) {
           createdAt: profile.createdAt || now,
           updatedAt: now,
         })
-        .select()
+        .select('id, title, status')
         .single();
       if (error) throw error;
       return profile;
@@ -221,7 +221,7 @@ export async function supabaseFetchProfiles() {
   try {
     const { data, error } = await db
       .from('properties')
-      .select('*')
+      .select('id, title, description, status, createdAt, updatedAt')
       .eq('status', 'nikah_profile')
       .order('createdAt', { ascending: false });
 

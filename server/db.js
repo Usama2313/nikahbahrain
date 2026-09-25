@@ -210,7 +210,7 @@ export async function dbGetProfiles() {
     try {
       const { data, error } = await db
         .from('properties')
-        .select('*')
+        .select('id, title, description, status, createdAt, updatedAt')
         .eq('status', 'nikah_profile')
         .order('createdAt', { ascending: false });
 
@@ -227,9 +227,15 @@ export async function dbGetProfiles() {
           } catch (_) {}
         }
         if (parsed.length > 0) {
-          memoryProfilesCache = parsed;
-          console.log(`[DB] Fetched ${parsed.length} profiles from Supabase properties table`);
-          return parsed;
+          const localList = getLocalProfiles();
+          const customIds = new Set(parsed.map(p => String(p.id)));
+          const combined = [
+            ...parsed,
+            ...localList.filter(p => !customIds.has(String(p.id)) && !deletedIds.has(String(p.id)))
+          ];
+          memoryProfilesCache = combined;
+          console.log(`[DB] Merged ${parsed.length} custom cloud profiles with ${localList.length} local profiles`);
+          return combined;
         }
       }
     } catch (err) {
@@ -424,6 +430,40 @@ export async function dbDeleteProfile(id) {
     } catch (_) {}
     try {
       await db.from('properties').delete().eq('title', id).eq('status', 'nikah_profile');
+    } catch (_) {}
+    try {
+      const { data: existing } = await db
+        .from('properties')
+        .select('id, description')
+        .eq('title', '__NIKAH_DELETED_IDS__')
+        .eq('status', 'nikah_deleted_ids')
+        .limit(1);
+
+      let currentArr = [String(id)];
+      if (existing && existing.length > 0 && existing[0].description) {
+        try {
+          const arr = JSON.parse(existing[0].description);
+          if (Array.isArray(arr)) {
+            const set = new Set(arr.map(String));
+            set.add(String(id));
+            currentArr = Array.from(set);
+          }
+        } catch (_) {}
+        await db
+          .from('properties')
+          .update({ description: JSON.stringify(currentArr), updatedAt: new Date().toISOString() })
+          .eq('id', existing[0].id);
+      } else {
+        await db
+          .from('properties')
+          .insert({
+            title: '__NIKAH_DELETED_IDS__',
+            description: JSON.stringify(currentArr),
+            status: 'nikah_deleted_ids',
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+          });
+      }
     } catch (_) {}
   }
 

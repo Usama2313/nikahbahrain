@@ -65,13 +65,14 @@ export const saveStoredDeletedIds = (setOrArr) => {
 const mergeAndDeduplicateProfiles = (serverList = [], customList = [], excludeIds = new Set()) => {
   const result = [];
   const seenIds = new Set();
+  const normalizedExclude = new Set(Array.from(excludeIds || []).map(id => String(id).trim()));
 
   // 1. Custom admin profiles come FIRST (latest creations/edits have top priority)
   if (Array.isArray(customList)) {
     for (const p of customList) {
       if (!p || !p.id) continue;
       const cleanId = String(p.id).trim();
-      if (excludeIds.has(cleanId)) continue;
+      if (normalizedExclude.has(cleanId)) continue;
       if (seenIds.has(cleanId)) continue;
       seenIds.add(cleanId);
       result.push(p);
@@ -83,7 +84,7 @@ const mergeAndDeduplicateProfiles = (serverList = [], customList = [], excludeId
     for (const p of serverList) {
       if (!p || !p.id) continue;
       const cleanId = String(p.id).trim();
-      if (excludeIds.has(cleanId)) continue;
+      if (normalizedExclude.has(cleanId)) continue;
       if (seenIds.has(cleanId)) continue;
       seenIds.add(cleanId);
       result.push(p);
@@ -180,7 +181,7 @@ export default function App() {
   // Fetch profiles from database/server with seamless admin custom profiles persistence
   const fetchProfiles = async () => {
     const localDeleted = getStoredDeletedIds();
-    const custom = getStoredCustomProfiles();
+    let custom = getStoredCustomProfiles();
 
     // In background, sync any locally cached custom profiles up to Supabase cloud
     if (custom.length > 0) {
@@ -229,18 +230,25 @@ export default function App() {
         ...(fallbackDeletedIds || []).map(String)
       ]);
 
+      // Cache any cloud deleted IDs locally
+      if (cloudDeleted.size > 0) {
+        saveStoredDeletedIds(allDeleted);
+      }
+
       // Cache any cloud profiles into local custom profiles for instant offline & cross-device availability
+      let mergedCustom = custom;
       if (cloudProfiles.length > 0) {
         const existingCustomIds = new Set(custom.map(p => String(p.id)));
-        const newCloudCustom = cloudProfiles.filter(p => !existingCustomIds.has(String(p.id)));
+        const newCloudCustom = cloudProfiles.filter(p => !existingCustomIds.has(String(p.id)) && !allDeleted.has(String(p.id)));
         if (newCloudCustom.length > 0) {
-          saveStoredCustomProfiles([...custom, ...newCloudCustom]);
+          mergedCustom = [...custom, ...newCloudCustom];
+          saveStoredCustomProfiles(mergedCustom);
         }
       }
 
       // Merge: cloud custom profiles + server profiles + fallback profiles
       const baseList = [...cloudProfiles, ...serverProfiles, ...(fallbackProfiles || [])];
-      const unified = mergeAndDeduplicateProfiles(baseList, custom, allDeleted);
+      const unified = mergeAndDeduplicateProfiles(baseList, mergedCustom, allDeleted);
       setProfiles(unified);
     } catch (err) {
       console.warn('Profile fetch note:', err.message);
