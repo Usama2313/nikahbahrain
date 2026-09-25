@@ -703,22 +703,21 @@ export default function App() {
                 </div>
               ) : (
                 <>
-                  {/* Grid of Profile Cards (without images, text-based modern glass design) */}
+                  {/* Grid of Profile Cards */}
                   <div className="profiles-grid">
-                    {cardTrail.map((style, index) => {
-                      const profile = paginatedProfiles[index];
+                    {paginatedProfiles.map((profile) => {
                       if (!profile) return null;
                       const isFav = favorites.includes(profile.id);
 
                       return (
-                        <animated.div key={`${profile.id}-${index}`} style={style}>
+                        <div key={profile.id} className="profile-card-wrapper" style={{ minWidth: 0, width: '100%' }}>
                           <ProfileCard
                             profile={profile}
                             isFavorite={isFav}
                             onToggleFavorite={handleToggleFavorite}
                             onViewDetails={(p) => setSelectedProfile(p)}
                           />
-                        </animated.div>
+                        </div>
                       );
                     })}
                   </div>
