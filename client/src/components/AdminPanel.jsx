@@ -438,14 +438,14 @@ export default function AdminPanel({ onBackToPortal, onProfilesChange }) {
 
     setIsSaving(true);
     try {
-      const maxNpf = profiles.reduce((max, p) => {
-        const m = (p.id || '').match(/NPF-?(\d+)/i);
-        if (m) {
-          const n = parseInt(m[1], 10);
-          return n > max && n < 9000 ? n : max;
-        }
-        return max;
-      }, 228);
+      // Find highest NPF number from all profiles
+      const allNpfNumbers = profiles
+        .map(p => {
+          const m = (p.id || '').match(/NPF-?(\d+)/i);
+          return m ? parseInt(m[1], 10) : 0;
+        })
+        .filter(n => !isNaN(n) && n > 0 && n < 9000);
+      const maxNpf = allNpfNumbers.length > 0 ? Math.max(...allNpfNumbers, 230) : 230;
       const nextAutoId = `NPF-${maxNpf + 1}`;
 
       let candidateName = formData.name?.trim();
@@ -515,40 +515,47 @@ export default function AdminPanel({ onBackToPortal, onProfilesChange }) {
           updatedAt: new Date().toISOString()
         };
 
-        // 1. Immediately update React state for instant UI feedback
-        setProfiles((prev) => {
-          const next = prev.map((p) => (p.id === updated.id ? updated : p));
-          if (onProfilesChange) onProfilesChange(next);
-          return next;
-        });
+        // 1. Save directly to Supabase database (source of truth for all devices)
+        const savedProfile = await supabaseUpsertProfile(updated);
+        console.log('[Admin] Profile updated in Supabase database:', savedProfile.id);
 
-        // 2. Save directly to Supabase database (source of truth for all devices)
-        try {
-          await supabaseUpsertProfile(updated);
-          console.log('[Admin] Profile updated in Supabase database:', updated.id);
-        } catch (sbErr) {
-          console.warn('[Admin] Supabase update error:', sbErr.message);
-        }
-
-        // 3. Also sync to server API
+        // 2. Also sync to server API
         try {
           await fetch(`${API_BASE}/profiles/${editingProfile.id}`, {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(updated)
+            body: JSON.stringify(savedProfile)
           });
         } catch (serverErr) {
           console.warn('[Admin] Server update note:', serverErr.message);
         }
 
-        showNotification(`✓ Updated profile ${updated.id} successfully!`);
+        // 3. Immediately re-fetch full verified list directly from Supabase
+        let updatedList = profiles.map(p => (p.id === savedProfile.id ? savedProfile : p));
+        try {
+          const freshProfiles = await supabaseFetchProfiles();
+          if (Array.isArray(freshProfiles) && freshProfiles.length > 0) {
+            updatedList = freshProfiles;
+          }
+        } catch (_) {}
+
+        setProfiles(updatedList);
+        if (onProfilesChange) onProfilesChange(updatedList);
+
+        showNotification(`✓ Updated profile ${savedProfile.id} successfully!`);
         setIsFormOpen(false);
-        if (openInstagram) setInstagramModalProfile(updated);
+        if (openInstagram) setInstagramModalProfile(savedProfile);
       } else {
         let nextCustomId = nextAutoId;
         const npfMatch = candidateName.match(/NPF-?(\d+)/i);
         if (npfMatch) {
-          nextCustomId = `NPF-${npfMatch[1]}`;
+          const extractedId = `NPF-${npfMatch[1]}`;
+          // Only reuse ID if it does NOT already exist in the database!
+          if (!profiles.some(p => p.id === extractedId)) {
+            nextCustomId = extractedId;
+          } else {
+            nextCustomId = nextAutoId;
+          }
         }
 
         let newProf = {
@@ -583,35 +590,36 @@ export default function AdminPanel({ onBackToPortal, onProfilesChange }) {
           createdAt: new Date().toISOString()
         };
 
-        // 1. Immediately update React state for instant UI feedback
-        setProfiles((prev) => {
-          const next = [newProf, ...prev.filter(p => p.id !== newProf.id)];
-          if (onProfilesChange) onProfilesChange(next);
-          return next;
-        });
+        // 1. Save directly to Supabase database (source of truth for all devices)
+        const savedProfile = await supabaseUpsertProfile(newProf);
+        console.log('[Admin] Profile saved to Supabase database:', savedProfile.id);
 
-        // 2. Save directly to Supabase database (source of truth for all devices)
-        try {
-          await supabaseUpsertProfile(newProf);
-          console.log('[Admin] Profile saved to Supabase database:', newProf.id);
-        } catch (sbErr) {
-          console.warn('[Admin] Supabase create error:', sbErr.message);
-        }
-
-        // 3. Also sync to server API
+        // 2. Also sync to server API
         try {
           await fetch(`${API_BASE}/profiles`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(newProf)
+            body: JSON.stringify(savedProfile)
           });
         } catch (serverErr) {
           console.warn('[Admin] Server create note:', serverErr.message);
         }
 
-        showNotification(`✓ Published new profile ${newProf.id} successfully!`);
+        // 3. Immediately re-fetch full verified list directly from Supabase
+        let updatedList = [savedProfile, ...profiles.filter(p => p.id !== savedProfile.id)];
+        try {
+          const freshProfiles = await supabaseFetchProfiles();
+          if (Array.isArray(freshProfiles) && freshProfiles.length > 0) {
+            updatedList = freshProfiles;
+          }
+        } catch (_) {}
+
+        setProfiles(updatedList);
+        if (onProfilesChange) onProfilesChange(updatedList);
+
+        showNotification(`✓ Published new profile ${savedProfile.id} successfully!`);
         setIsFormOpen(false);
-        if (openInstagram) setInstagramModalProfile(newProf);
+        if (openInstagram) setInstagramModalProfile(savedProfile);
       }
     } catch (err) {
       console.error('[Admin] Save error:', err);
@@ -766,29 +774,35 @@ export default function AdminPanel({ onBackToPortal, onProfilesChange }) {
   const handleDeleteProfile = async (id) => {
     if (!window.confirm(`Permanently delete profile ${id}?`)) return;
 
-    // 1. Immediately remove from Admin UI state AND notify parent App
-    setProfiles((prev) => {
-      const next = prev.filter(p => p.id !== id);
-      if (onProfilesChange) onProfilesChange(next);
-      return next;
-    });
-
-    // 2. Delete directly from Supabase database (source of truth)
     try {
+      // 1. Delete directly from Supabase database (source of truth)
       await supabaseDeleteProfile(id);
       console.log('[Admin] Profile deleted from Supabase database:', id);
-    } catch (sbErr) {
-      console.warn('[Admin] Supabase delete error:', sbErr.message);
-    }
 
-    // 3. Also delete from server API
-    try {
-      await fetch(`${API_BASE}/profiles/${id}`, { method: 'DELETE' });
+      // 2. Also delete from server API
+      try {
+        await fetch(`${API_BASE}/profiles/${id}`, { method: 'DELETE' });
+      } catch (err) {
+        console.warn('[Admin] Server delete note:', err.message);
+      }
+
+      // 3. Immediately re-fetch full verified list directly from Supabase
+      let updatedList = profiles.filter(p => p.id !== id);
+      try {
+        const freshProfiles = await supabaseFetchProfiles();
+        if (Array.isArray(freshProfiles)) {
+          updatedList = freshProfiles;
+        }
+      } catch (_) {}
+
+      setProfiles(updatedList);
+      if (onProfilesChange) onProfilesChange(updatedList);
+
+      showNotification(`✓ Profile ${id} permanently deleted.`);
     } catch (err) {
-      console.warn('[Admin] Server delete note:', err.message);
+      console.error('[Admin] Delete error:', err);
+      showNotification(`Delete Error: ${err.message}`);
     }
-
-    showNotification(`✓ Profile ${id} permanently deleted.`);
   };
 
   const handleToggleVerified = async (profile) => {

@@ -4,14 +4,11 @@
 import { createClient } from '@supabase/supabase-js';
 
 const SUPABASE_URL =
-  import.meta.env.VITE_SUPABASE_URL ||
-  import.meta.env.NEXT_PUBLIC_SUPABASE_URL ||
+  (typeof import.meta !== 'undefined' && import.meta.env && (import.meta.env.VITE_SUPABASE_URL || import.meta.env.NEXT_PUBLIC_SUPABASE_URL)) ||
   'https://qfjwpsglllvoztwgqitw.supabase.co';
 
 const SUPABASE_ANON_KEY =
-  import.meta.env.VITE_SUPABASE_ANON_KEY ||
-  import.meta.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ||
-  import.meta.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ||
+  (typeof import.meta !== 'undefined' && import.meta.env && (import.meta.env.VITE_SUPABASE_ANON_KEY || import.meta.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || import.meta.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY)) ||
   'sb_publishable_u1s9_wcNHOOUjYZXvt5dcw_VJveOlDz';
 
 let _supabase = null;
@@ -169,16 +166,16 @@ export async function supabaseUpsertProfile(profile) {
   const { data, error } = await db
     .from('profiles')
     .upsert(row, { onConflict: 'id' })
-    .select()
-    .single();
+    .select();
 
   if (error) {
-    console.error('[Supabase DB] Upsert error for ID:', cleanId, error.message);
+    console.error('[Supabase DB] Upsert error for ID:', cleanId, error.message, error.details || '');
     throw error;
   }
 
+  const savedRow = Array.isArray(data) && data.length > 0 ? data[0] : row;
   console.log('[Supabase DB] Successfully upserted profile into database:', cleanId);
-  return rowToProfile(data);
+  return rowToProfile(savedRow);
 }
 
 /**

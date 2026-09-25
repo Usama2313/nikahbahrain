@@ -166,8 +166,15 @@ Please provide more details. JazakAllah Khair!`;
         position: 'relative',
       }}
     >
-      {/* ── Image Section: Portrait 4:5 with contain so 100% of flyer text is readable and never zoomed in ── */}
-      <div style={{ position: 'relative', width: '100%', aspectRatio: '4 / 5', overflow: 'hidden', background: '#0f172a' }}>
+      {/* ── Image Section: 4:5 for flyer images, compact typography header for bio-data text cards ── */}
+      <div style={{
+        position: 'relative',
+        width: '100%',
+        aspectRatio: (imgSrc && !imgError) ? '4 / 5' : 'auto',
+        minHeight: (imgSrc && !imgError) ? 'auto' : '150px',
+        overflow: 'hidden',
+        background: '#0f172a'
+      }}>
         {imgSrc && !imgError ? (
           <img
             src={imgSrc}
@@ -187,13 +194,12 @@ Please provide more details. JazakAllah Khair!`;
         ) : (
           <div style={{
             width: '100%',
-            height: '100%',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            background: profile.gender === 'male'
-              ? 'linear-gradient(135deg, #0f172a 0%, #1e293b 100%)'
-              : 'linear-gradient(135deg, #831843 0%, #500724 100%)',
+            background: profile.gender === 'female'
+              ? 'linear-gradient(135deg, #831843 0%, #500724 100%)'
+              : 'linear-gradient(135deg, #0f172a 0%, #1e293b 100%)',
             flexDirection: 'column',
             gap: '8px',
             padding: '24px 16px',
@@ -406,10 +412,17 @@ Please provide more details. JazakAllah Khair!`;
           </div>
         )}
 
-        {/* Profession if authentic */}
+        {/* Profession */}
         {profile.profession && profile.profession !== 'Professional' && (
           <div style={{ fontSize: '0.75rem', color: '#334155', fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
             💼 {profile.profession}
+          </div>
+        )}
+
+        {/* Education */}
+        {profile.education && (
+          <div style={{ fontSize: '0.74rem', color: '#475569', fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+            🎓 {profile.education}
           </div>
         )}
 
