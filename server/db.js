@@ -7,15 +7,24 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 // Initialize Supabase client with real configuration check
-const SUPABASE_URL = process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://qfjwpsglllvoztwgqitw.supabase.co';
-const SUPABASE_ANON_KEY = process.env.SUPABASE_ANON_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'sb_publishable_u1s9_wcNHOOUjYZXvt5dcw_VJveOlDz';
+const rawDbUrl = process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL || '';
+const rawDbKey = process.env.SUPABASE_ANON_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
+
+const SUPABASE_URL = (rawDbUrl && !rawDbUrl.includes('awweckttcpgzxbvntiyv'))
+  ? rawDbUrl
+  : 'https://qfjwpsglllvoztwgqitw.supabase.co';
+
+const SUPABASE_ANON_KEY = (rawDbKey && !rawDbKey.includes('awweckttcpgzxbvntiyv') && !rawDbKey.startsWith('eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImF3d2Vja3R0Y3Bnenhidm50aXl2'))
+  ? rawDbKey
+  : 'sb_publishable_u1s9_wcNHOOUjYZXvt5dcw_VJveOlDz';
 
 function isConfiguredSupabase(url, key) {
   return (
     !!url &&
     !!key &&
     !url.includes('your-project') &&
-    !key.includes('your_supabase') &&
+    !url.includes('your_supabase') &&
+    !url.includes('awweckttcpgzxbvntiyv') &&
     url.startsWith('https://')
   );
 }

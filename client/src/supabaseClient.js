@@ -3,13 +3,16 @@
 // No local storage dependencies — guarantees real-time synchronization across mobile phones & desktops.
 import { createClient } from '@supabase/supabase-js';
 
-const SUPABASE_URL =
-  (typeof import.meta !== 'undefined' && import.meta.env && (import.meta.env.VITE_SUPABASE_URL || import.meta.env.NEXT_PUBLIC_SUPABASE_URL)) ||
-  'https://qfjwpsglllvoztwgqitw.supabase.co';
+const RAW_URL = (typeof import.meta !== 'undefined' && import.meta.env && (import.meta.env.VITE_SUPABASE_URL || import.meta.env.NEXT_PUBLIC_SUPABASE_URL)) || '';
+const RAW_KEY = (typeof import.meta !== 'undefined' && import.meta.env && (import.meta.env.VITE_SUPABASE_ANON_KEY || import.meta.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || import.meta.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY)) || '';
 
-const SUPABASE_ANON_KEY =
-  (typeof import.meta !== 'undefined' && import.meta.env && (import.meta.env.VITE_SUPABASE_ANON_KEY || import.meta.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || import.meta.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY)) ||
-  'sb_publishable_u1s9_wcNHOOUjYZXvt5dcw_VJveOlDz';
+const SUPABASE_URL = (RAW_URL && !RAW_URL.includes('awweckttcpgzxbvntiyv'))
+  ? RAW_URL
+  : 'https://qfjwpsglllvoztwgqitw.supabase.co';
+
+const SUPABASE_ANON_KEY = (RAW_KEY && !RAW_KEY.includes('awweckttcpgzxbvntiyv') && !RAW_KEY.startsWith('eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImF3d2Vja3R0Y3Bnenhidm50aXl2'))
+  ? RAW_KEY
+  : 'sb_publishable_u1s9_wcNHOOUjYZXvt5dcw_VJveOlDz';
 
 let _supabase = null;
 

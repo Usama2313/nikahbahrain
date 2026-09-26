@@ -124,32 +124,28 @@ export default function App() {
     try {
       setError(null);
 
-      // 1. Fetch directly from live Supabase database
-      let cloudProfiles = [];
-      try {
-        const sbList = await supabaseFetchProfiles();
-        if (Array.isArray(sbList) && sbList.length > 0) {
-          cloudProfiles = sbList;
-        }
-      } catch (sbErr) {
-        console.warn('[App] Supabase cloud fetch note:', sbErr.message);
-      }
-
-      // 2. Fetch from server API as secondary database channel
-      let serverProfiles = [];
-      try {
-        const res = await fetch(`${API_BASE}/profiles?_t=${Date.now()}`, {
+      // Concurrent parallel fetch from Supabase Cloud DB and server API
+      const [sbResult, apiResult] = await Promise.allSettled([
+        supabaseFetchProfiles(),
+        fetch(`${API_BASE}/profiles?_t=${Date.now()}`, {
           cache: 'no-store',
           headers: { 'Cache-Control': 'no-cache', 'Pragma': 'no-cache' }
-        });
-        if (res.ok) {
-          const data = await res.json();
-          if (data.success && Array.isArray(data.profiles) && data.profiles.length > 0) {
-            serverProfiles = data.profiles;
-          }
-        }
-      } catch (apiErr) {
-        console.warn('[App] Server API fetch note:', apiErr.message);
+        }).then((r) => (r.ok ? r.json() : null))
+      ]);
+
+      const cloudProfiles =
+        sbResult.status === 'fulfilled' && Array.isArray(sbResult.value) && sbResult.value.length > 0
+          ? sbResult.value
+          : [];
+
+      let serverProfiles = [];
+      if (
+        apiResult.status === 'fulfilled' &&
+        apiResult.value?.success &&
+        Array.isArray(apiResult.value?.profiles) &&
+        apiResult.value.profiles.length > 0
+      ) {
+        serverProfiles = apiResult.value.profiles;
       }
 
       // Prioritize live database sources of truth:
